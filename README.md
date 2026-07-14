@@ -39,7 +39,7 @@ This prototype is built entirely as a **Frontend Application** using dummy data,
 
 The application is structured around **3 distinct user roles**, totaling over **30 meticulously designed screens**.
 
-### 1. 🛡️ Admin Role (19 Dedicated Pages)
+### 1. 🛡️ Admin (19 Dedicated Pages)
 *Credentials: `admin@cricketverse.ai` / `admin123`*
 The Admin has full control over the ecosystem.
 *   **Dashboards**: Admin Home Dashboard
@@ -50,15 +50,15 @@ The Admin has full control over the ecosystem.
 *   **AI & Analytics**: AI Commentary Feed, Prediction Engine, Analytics & Statistics
 *   **System**: Notifications, Admin Profile, AI Settings, Help & Support, About Project
 
-### 2. 📝 Scorer Role (2 Dedicated Pages)
+### 2. 📝 Match Scorer (Official/Moderator) (2 Dedicated Pages)
 *Credentials: `scorer@cricketverse.ai` / `scorer123`*
-The Scorer is responsible for updating live match events.
+The Match Scorer is responsible for updating live match events.
 *   **Dashboards**: Scorer Dashboard (Active Matches)
 *   **Live Operations**: Live Ball-by-Ball Entry Screen
 
-### 3. 👤 End-User Role (2 Dedicated Pages)
+### 3. 👤 User (Cricket Fan) (2 Dedicated Pages)
 *Credentials: `user@gmail.com` / `user123`*
-The End-User consumes the live data, statistics, and predictions.
+The User consumes the live data, statistics, and predictions.
 *   **Dashboards**: Fan Dashboard (Live Scores, News, Standing)
 *   **Export**: Match Summary Download / Export Screen
 
