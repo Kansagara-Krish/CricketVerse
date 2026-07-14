@@ -110,11 +110,43 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
 
+    final inputDecorationTheme = InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF0284C7)),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+      ),
+      labelStyle: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 13),
+      hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
+    );
+
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Schedule Match', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFFF8FAFC),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Schedule Match', 
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), fontSize: 18),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -126,23 +158,34 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               // Header
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: AppTheme.glassCard,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
+                        color: const Color(0xFFE0F2FE),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.sports_cricket, color: Colors.white),
+                      child: const Icon(Icons.sports_cricket, color: Color(0xFF0284C7)),
                     ),
                     const SizedBox(width: 14),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('New Match', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Fill in the match details below', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54)),
+                        Text('New Match', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text('Fill in the match details below', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B))),
                       ],
                     ),
                   ],
@@ -150,33 +193,31 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               ),
               const SizedBox(height: 24),
 
-              _Label('TEAMS'),
+              const _Label('TEAMS'),
               const SizedBox(height: 10),
               // Team A
-              Text('Team A (Home)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white60)),
+              Text('Team A (Home)', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                dropdownColor: AppTheme.bgMedium,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 value: _teamAId,
+                decoration: inputDecorationTheme.copyWith(hintText: 'Select Team A'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamAId = v),
-                hint: Text('Select Team A', style: GoogleFonts.outfit(color: Colors.white30)),
               ),
               const SizedBox(height: 14),
-              Text('Team B (Away)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white60)),
+              Text('Team B (Away)', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                dropdownColor: AppTheme.bgMedium,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 value: _teamBId,
+                decoration: inputDecorationTheme.copyWith(hintText: 'Select Team B'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamBId = v),
-                hint: Text('Select Team B', style: GoogleFonts.outfit(color: Colors.white30)),
               ),
 
               const SizedBox(height: 20),
-              _Label('MATCH FORMAT'),
+              const _Label('MATCH FORMAT'),
               const SizedBox(height: 10),
               Row(
                 children: ['T20', 'ODI'].map((type) {
@@ -188,19 +229,22 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         margin: EdgeInsets.only(right: type == 'T20' ? 8 : 0),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: selected ? AppTheme.primaryBlue.withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                          color: selected ? const Color(0xFFE0F2FE) : Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: selected ? AppTheme.primaryBlue : Colors.white.withOpacity(0.1),
+                            color: selected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
                             width: selected ? 2 : 1,
                           ),
                         ),
                         child: Center(
-                          child: Text(type,
-                              style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                                  color: selected ? AppTheme.primaryBlue : Colors.white60)),
+                          child: Text(
+                            type,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                              color: selected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -209,21 +253,20 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               ),
 
               const SizedBox(height: 20),
-              _Label('VENUE'),
+              const _Label('VENUE'),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                dropdownColor: AppTheme.bgMedium,
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13),
                 value: _venue.isEmpty ? null : _venue,
+                decoration: inputDecorationTheme.copyWith(hintText: 'Select Venue'),
                 items: AppConstants.venues
                     .map((v) => DropdownMenuItem(value: v, child: Text(v, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: (v) => setState(() => _venue = v ?? ''),
-                hint: Text('Select Venue', style: GoogleFonts.outfit(color: Colors.white30)),
               ),
 
               const SizedBox(height: 20),
-              _Label('DATE & TIME'),
+              const _Label('DATE & TIME'),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -234,10 +277,10 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         controller: _dateCtrl,
                         readOnly: true,
                         onTap: _pickDate,
-                        style: GoogleFonts.outfit(color: Colors.white),
-                        decoration: InputDecoration(
+                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                        decoration: inputDecorationTheme.copyWith(
                           hintText: 'DD-MM-YYYY',
-                          prefixIcon: const Icon(Icons.calendar_today_outlined, color: Colors.white38, size: 18),
+                          prefixIcon: const Icon(Icons.calendar_today_outlined, color: Color(0xFF94A3B8), size: 18),
                         ),
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                       ),
@@ -251,10 +294,10 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         controller: _timeCtrl,
                         readOnly: true,
                         onTap: _pickTime,
-                        style: GoogleFonts.outfit(color: Colors.white),
-                        decoration: InputDecoration(
+                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                        decoration: inputDecorationTheme.copyWith(
                           hintText: '--:--',
-                          prefixIcon: const Icon(Icons.access_time, color: Colors.white38, size: 18),
+                          prefixIcon: const Icon(Icons.access_time, color: Color(0xFF94A3B8), size: 18),
                         ),
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                       ),
@@ -264,20 +307,22 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               ),
 
               const SizedBox(height: 20),
-              _Label('SCORER CREDENTIALS'),
+              const _Label('SCORER CREDENTIALS'),
               const SizedBox(height: 4),
-              Text('The scorer will use these to log in and update the score',
-                  style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+              Text(
+                'The scorer will use these to log in and update the score',
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF64748B)),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _scorerUserCtrl,
-                      style: GoogleFonts.outfit(color: Colors.white),
-                      decoration: const InputDecoration(
+                      style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                      decoration: inputDecorationTheme.copyWith(
                         labelText: 'Scorer Username',
-                        prefixIcon: Icon(Icons.person_outline, color: Colors.white38, size: 18),
+                        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF94A3B8), size: 18),
                       ),
                       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                     ),
@@ -287,10 +332,10 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     child: TextFormField(
                       controller: _scorerPassCtrl,
                       obscureText: true,
-                      style: GoogleFonts.outfit(color: Colors.white),
-                      decoration: const InputDecoration(
+                      style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                      decoration: inputDecorationTheme.copyWith(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline, color: Colors.white38, size: 18),
+                        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF94A3B8), size: 18),
                       ),
                       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                     ),
@@ -307,7 +352,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                   icon: const Icon(Icons.check_circle_rounded),
                   label: const Text('Schedule Match'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
+                    backgroundColor: const Color(0xFF0284C7),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -330,8 +375,14 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: GoogleFonts.outfit(
-            fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white38, letterSpacing: 1.3));
+    return Text(
+      text,
+      style: GoogleFonts.outfit(
+        fontSize: 11, 
+        fontWeight: FontWeight.w700, 
+        color: const Color(0xFF64748B), 
+        letterSpacing: 1.3,
+      ),
+    );
   }
 }

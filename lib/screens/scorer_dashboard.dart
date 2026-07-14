@@ -5,6 +5,7 @@ import '../services/storage_service.dart';
 import '../models/models.dart';
 import 'auth_screen.dart';
 import 'scorer/edit_ball_screen.dart';
+import '../core/theme/app_theme.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({Key? key}) : super(key: key);
@@ -34,12 +35,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
     
     if (matchId == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppTheme.bgDark,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('No Match Assigned', style: TextStyle(color: Colors.white, fontSize: 18)),
+              const Text('No Match Assigned', style: TextStyle(color: const Color(0xFF0F172A), fontSize: 18)),
               const SizedBox(height: 20),
               ElevatedButton(onPressed: _logout, child: const Text('Logout')),
             ],
@@ -51,13 +52,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
     final match = storage.matches.firstWhere((m) => m.id == matchId);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: AppTheme.bgDeep,
         elevation: 2,
         title: Text(
           'Match Official Portal',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
         actions: [
           if (match?.status == 'Live')
@@ -92,26 +93,26 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: const Color(0xFF0F172A).withOpacity(0.04),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.08)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Assigned Match',
-                  style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${match.teamA.name} vs ${match.teamB.name}',
-                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${match.matchType} • ${match.venue} • ${match.date} ${match.time}',
-                  style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
+                  style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 13),
                 ),
               ],
             ),
@@ -120,19 +121,19 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
 
           Text(
             'Toss Configuration',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
           ),
           const SizedBox(height: 16),
 
-          Text('Toss Winner', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+          Text('Toss Winner', style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 13)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            dropdownColor: const Color(0xFF1E293B),
-            style: GoogleFonts.outfit(color: Colors.white),
+            dropdownColor: AppTheme.bgMedium,
+            style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
             value: _tossWinner,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.03),
+              fillColor: Colors.black.withOpacity(0.03),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: [
@@ -140,19 +141,19 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
               DropdownMenuItem(value: match.teamB.name, child: Text(match.teamB.name)),
             ],
             onChanged: (val) => setState(() => _tossWinner = val),
-            hint: const Text('Select Toss Winner', style: TextStyle(color: Colors.white30)),
+            hint: const Text('Select Toss Winner', style: TextStyle(color: const Color(0x4D0F172A))),
           ),
           const SizedBox(height: 16),
 
-          Text('Toss Decision', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+          Text('Toss Decision', style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 13)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            dropdownColor: const Color(0xFF1E293B),
-            style: GoogleFonts.outfit(color: Colors.white),
+            dropdownColor: AppTheme.bgMedium,
+            style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
             value: _tossDecision,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.03),
+              fillColor: Colors.black.withOpacity(0.03),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: const [
@@ -222,7 +223,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: AppTheme.bgMedium,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
@@ -232,7 +233,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                   children: [
                     Text(
                       '${match.teamA.shortName} vs ${match.teamB.shortName} - ${match.matchType}',
-                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                      style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 12),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -260,18 +261,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                   children: [
                     Text(
                       '${battingTeam.shortName} ',
-                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white70),
+                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xDE0F172A)),
                     ),
                     Text(
                       '$runs/$wickets',
-                      style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Overs: ${overs.toStringAsFixed(1)} (CRR: ${crr.toStringAsFixed(1)})',
-                  style: GoogleFonts.outfit(fontSize: 13, color: Colors.white60),
+                  style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x990F172A)),
                 ),
                 const SizedBox(height: 16),
 
@@ -279,7 +280,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -288,15 +289,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${striker.name}*', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                          Text('${nonStriker.name}', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
+                          Text('${striker.name}*', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text('${nonStriker.name}', style: GoogleFonts.outfit(color: const Color(0x990F172A), fontSize: 13)),
                         ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('Bowler: ${bowler.name}', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                          Text('Overs: ${bowler.oversBowled.toStringAsFixed(1)}', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
+                          Text('Bowler: ${bowler.name}', style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 13, fontWeight: FontWeight.w500)),
+                          Text('Overs: ${bowler.oversBowled.toStringAsFixed(1)}', style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 12)),
                         ],
                       )
                     ],
@@ -316,12 +317,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
             mainAxisSpacing: 10,
             childAspectRatio: 1.5,
             children: [
-              _buildScoreBtn('0', 'Dot', Colors.white38, () => _scoreBall(storage, 0, 'None', 0, false)),
-              _buildScoreBtn('1', 'Run', Colors.white70, () => _scoreBall(storage, 1, 'None', 0, false)),
-              _buildScoreBtn('2', 'Runs', Colors.white70, () => _scoreBall(storage, 2, 'None', 0, false)),
-              _buildScoreBtn('3', 'Runs', Colors.white70, () => _scoreBall(storage, 3, 'None', 0, false)),
-              _buildScoreBtn('4', 'Boundary', const Color(0xFFFBBF24), () => _scoreBall(storage, 4, 'None', 0, false)),
-              _buildScoreBtn('6', 'Maximum', const Color(0xFF60A5FA), () => _scoreBall(storage, 6, 'None', 0, false), isMaximum: true),
+              _buildScoreBtn('0', 'Dot', const Color(0xFF64748B), () => _scoreBall(storage, 0, 'None', 0, false)),
+              _buildScoreBtn('1', 'Run', const Color(0xFF0F172A), () => _scoreBall(storage, 1, 'None', 0, false)),
+              _buildScoreBtn('2', 'Runs', const Color(0xFF0F172A), () => _scoreBall(storage, 2, 'None', 0, false)),
+              _buildScoreBtn('3', 'Runs', const Color(0xFF0F172A), () => _scoreBall(storage, 3, 'None', 0, false)),
+              _buildScoreBtn('4', 'Boundary', const Color(0xFFD97706), () => _scoreBall(storage, 4, 'None', 0, false)),
+              _buildScoreBtn('6', 'Maximum', Colors.white, () => _scoreBall(storage, 6, 'None', 0, false), isMaximum: true),
             ],
           ),
           const SizedBox(height: 16),
@@ -371,7 +372,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: const Color(0xFF0F172A).withOpacity(0.03),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -383,7 +384,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                     const SizedBox(width: 12),
                     Text(
                       'Auto-Gen AI Commentary',
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -415,8 +416,8 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                   icon: const Icon(Icons.skip_next),
                   label: const Text('End Over'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white10,
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFF0F172A).withOpacity(0.05),
+                    foregroundColor: const Color(0xFF0F172A),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -453,9 +454,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isMaximum ? const Color(0xFF1E3A8A) : Colors.white.withOpacity(0.04),
+          color: isMaximum ? const Color(0xFF1E3A8A) : Colors.black.withOpacity(0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.08)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -467,7 +468,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
             const SizedBox(height: 2),
             Text(
               sub,
-              style: GoogleFonts.outfit(fontSize: 10, color: Colors.white30),
+              style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x4D0F172A)),
             ),
           ],
         ),
@@ -481,18 +482,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: const Color(0xFF0F172A).withOpacity(0.03),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white60, size: 16),
+            Icon(icon, color: const Color(0x990F172A), size: 16),
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
+              style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 13),
             ),
           ],
         ),
@@ -517,11 +518,11 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: const Color(0xFF1E293B),
-              title: const Text('Select Wicket Type', style: TextStyle(color: Colors.white)),
+              backgroundColor: Colors.white,
+              title: const Text('Select Wicket Type', style: TextStyle(color: Color(0xFF0F172A))),
               content: DropdownButtonFormField<String>(
-                dropdownColor: const Color(0xFF1E293B),
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: Colors.white,
+                style: const TextStyle(color: Color(0xFF0F172A)),
                 value: _selectedWicketType,
                 items: const [
                   DropdownMenuItem(value: 'Bowled', child: Text('Bowled')),
@@ -538,7 +539,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                  child: const Text('Cancel', style: TextStyle(color: Color(0xDE0F172A))),
                 ),
                 ElevatedButton(
                   onPressed: () {

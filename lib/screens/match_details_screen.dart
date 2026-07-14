@@ -109,21 +109,34 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     final winProb = storage.calculateWinProbability(match);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFFF8FAFC),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Live Match Details',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+        title: Row(
+          children: [
+            const CircleAvatar(
+              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop'),
+              radius: 16,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'CricketVerse AI',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+            ),
+          ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.analytics_outlined, color: Colors.white),
+            icon: const Icon(Icons.search, color: Color(0xFF0F172A)),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined, color: Color(0xFF0284C7)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -144,9 +157,16 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
             ),
             child: Column(
               children: [
@@ -156,20 +176,20 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.15),
+                        color: const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                          const CircleAvatar(radius: 3, backgroundColor: Color(0xFF22C55E)),
                           const SizedBox(width: 4),
-                          Text('LIVE', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text('LIVE', style: GoogleFonts.outfit(color: const Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                     Text(
-                      match.matchType == 'T20' ? 'T20 World Cup - Final' : 'ODI Series',
-                      style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11),
+                      'T20 World Cup - Final',
+                      style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -184,16 +204,23 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                       children: [
                         Text(
                           battingTeam.shortName,
-                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '$runs/$wickets',
-                          style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
-                        ),
-                        Text(
-                          '($overs overs)',
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '$runs/$wickets',
+                              style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '($overs)',
+                              style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -202,44 +229,37 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                       children: [
                         Text(
                           bowlingTeam.shortName,
-                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white70),
+                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'CRR: ${crr.toStringAsFixed(1)}',
-                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                         ),
-                        if (!match.isFirstInnings)
-                          Text(
-                            'Target: ${match.target}',
-                            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
-                          ),
                       ],
                     )
                   ],
                 ),
 
                 // Target statement
-                if (match.status == 'Live') ...[
-                  const SizedBox(height: 12),
-                  const Divider(color: Colors.white10),
-                  Text(
-                    match.isFirstInnings
-                        ? 'First Innings in progress. Team A setting target.'
-                        : 'Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls.',
-                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFFFBBF24), fontWeight: FontWeight.w500),
-                  ),
-                ],
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFFE2E8F0)),
+                Text(
+                  match.isFirstInnings
+                      ? 'First Innings in progress. Team A setting target.'
+                      : 'Target 215 • Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls.',
+                  style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF334155), fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
 
-          // Tab Bar
+          // Tab Bar (Styled for Light Theme)
           TabBar(
             controller: _tabController,
             indicatorColor: const Color(0xFF0284C7),
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white54,
+            labelColor: const Color(0xFF0F172A),
+            unselectedLabelColor: const Color(0xFF64748B),
             labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: const [
               Tab(text: 'Live Details'),
@@ -281,17 +301,25 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.psychology, color: Color(0xFFFBBF24), size: 18),
+                    const Icon(Icons.lightbulb_outline, color: Color(0xFFFBBF24), size: 18),
                     const SizedBox(width: 8),
-                    Text('AI Win Probability', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('AI Win Probability', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -303,11 +331,27 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                       children: [
                         Expanded(
                           flex: winProb.round(),
-                          child: Container(color: const Color(0xFF0284C7), child: Center(child: Text('${match.teamA.shortName} ${winProb.toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
+                          child: Container(
+                            color: const Color(0xFF0284C7), 
+                            child: Center(
+                              child: Text(
+                                '${match.teamA.shortName} ${winProb.toStringAsFixed(0)}%', 
+                                style: const TextStyle(color: const Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
                         ),
                         Expanded(
                           flex: (100 - winProb).round(),
-                          child: Container(color: const Color(0xFFEF4444), child: Center(child: Text('${match.teamB.shortName} ${(100 - winProb).toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
+                          child: Container(
+                            color: const Color(0xFFEF4444), 
+                            child: Center(
+                              child: Text(
+                                '${match.teamB.shortName} ${(100 - winProb).toStringAsFixed(0)}%', 
+                                style: const TextStyle(color: const Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -319,7 +363,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           const SizedBox(height: 20),
 
           // RECENT timeline
-          Text('RECENT', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          Text('RECENT', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
           const SizedBox(height: 10),
           SizedBox(
             height: 40,
@@ -327,23 +371,22 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
               scrollDirection: Axis.horizontal,
               itemCount: match.balls.length > 6 ? 6 : match.balls.length,
               itemBuilder: (context, index) {
-                // Get from back
                 final ball = match.balls[match.balls.length - 1 - index];
                 
-                Color bg = Colors.white.withOpacity(0.08);
-                Color textCol = Colors.white70;
+                Color bg = const Color(0xFFE2E8F0);
+                Color textCol = const Color(0xFF0F172A);
                 String display = ball.run.toString();
 
                 if (ball.isWicket) {
-                  bg = Colors.redAccent;
+                  bg = const Color(0xFFEF4444);
                   textCol = Colors.white;
                   display = 'W';
                 } else if (ball.run == 6) {
-                  bg = const Color(0xFF1E3A8A);
+                  bg = const Color(0xFF1D4ED8);
                   textCol = Colors.white;
                 } else if (ball.run == 4) {
-                  bg = const Color(0xFF78350F);
-                  textCol = const Color(0xFFFBBF24);
+                  bg = const Color(0xFFFEF08A);
+                  textCol = const Color(0xFF854D0E);
                 } else if (ball.extraType == 'Wide') {
                   display = 'WD';
                 } else if (ball.extraType == 'No Ball') {
@@ -366,18 +409,25 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           const SizedBox(height: 24),
 
           // BATTERS Section
-          Text('BATTERS', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          Text('BATTERS', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+              color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.01),
+                  blurRadius: 6,
+                )
+              ]
             ),
             child: Column(
               children: [
                 _buildBatterRow('${striker.name}*', '${striker.runsScored}', '${striker.ballsFaced}', isStriker: true),
-                const Divider(color: Colors.white10),
+                const Divider(color: Color(0xFFE2E8F0)),
                 _buildBatterRow('${nonStriker.name}', '${nonStriker.runsScored}', '${nonStriker.ballsFaced}'),
               ],
             ),
@@ -385,23 +435,68 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           const SizedBox(height: 24),
 
           // BOWLER Section
-          Text('BOWLER', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          Text('BOWLER', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+              color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.01),
+                  blurRadius: 6,
+                )
+              ]
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(bowler.name, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
-                Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                Text(bowler.name, style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.outfit(color: const Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // MATCH PROGRESSION Section matching Screenshot 2026-07-09 152247.png
+          Text('MATCH PROGRESSION', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          const SizedBox(height: 10),
+          Container(
+            height: 120,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildProgressionBar(10, 30),
+                _buildProgressionBar(20, 50),
+                _buildProgressionBar(15, 40),
+                _buildProgressionBar(30, 80),
+                _buildProgressionBar(45, 100),
+                _buildProgressionBar(25, 60),
+                _buildProgressionBar(40, 90),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProgressionBar(double height, double maxVal) {
+    return Container(
+      width: 16,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0284C7),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
@@ -412,12 +507,26 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
       children: [
         Row(
           children: [
-            if (isStriker) const Icon(Icons.star, color: Color(0xFFFBBF24), size: 14),
-            const SizedBox(width: 4),
-            Text(name, style: GoogleFonts.outfit(color: isStriker ? Colors.white : Colors.white70, fontWeight: isStriker ? FontWeight.bold : FontWeight.normal)),
+            if (isStriker) 
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0284C7), // Blue striker dot matching screenshot
+                  shape: BoxShape.circle,
+                ),
+              ),
+            Text(
+              name, 
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF0F172A), 
+                fontWeight: isStriker ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
-        Text('$runs ($balls)', style: GoogleFonts.outfit(color: Colors.white70, fontWeight: FontWeight.w600)),
+        Text('$runs ($balls)', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -425,7 +534,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
   // --- 2. AI Commentary Feed ---
   Widget _buildCommentaryFeed(CricketMatch match) {
     if (match.balls.isEmpty) {
-      return const Center(child: Text('Waiting for match scoring events to start...', style: TextStyle(color: Colors.white54)));
+      return const Center(child: Text('Waiting for match scoring events to start...', style: TextStyle(color: const Color(0x8A0F172A))));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -439,9 +548,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            color: const Color(0xFF0F172A).withOpacity(0.03),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
+            border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +560,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                 children: [
                   Text(
                     'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x8A0F172A), fontWeight: FontWeight.bold),
                   ),
                   Row(
                     children: [
@@ -472,7 +581,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
               const SizedBox(height: 6),
               Text(
                 ball.commentary,
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, height: 1.4),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13, height: 1.4),
               ),
             ],
           ),
@@ -488,7 +597,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Wagon Wheel (AI Spatial Analysis)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70)),
+          Text('Wagon Wheel (AI Spatial Analysis)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xDE0F172A))),
           const SizedBox(height: 10),
           
           // Wagon Wheel canvas
@@ -498,7 +607,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.02),
+                color: const Color(0xFF0F172A).withOpacity(0.02),
                 border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 2),
               ),
               child: CustomPaint(
@@ -508,7 +617,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           ),
           const SizedBox(height: 32),
 
-          Text('Manhattan Chart (Runs Per Over)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70)),
+          Text('Manhattan Chart (Runs Per Over)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xDE0F172A))),
           const SizedBox(height: 16),
           
           // Manhattan custom chart
@@ -543,7 +652,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: isAi ? Colors.white.withOpacity(0.05) : const Color(0xFF0F4C81),
+                    color: isAi ? Colors.black.withOpacity(0.05) : const Color(0xFF0F4C81),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -555,7 +664,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                   child: Text(
                     msg['text'] ?? '',
-                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, height: 1.4),
+                    style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13, height: 1.4),
                   ),
                 ),
               );
@@ -572,10 +681,10 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
               Expanded(
                 child: TextField(
                   controller: _chatController,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: const Color(0xFF0F172A), fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Ask: Who is winning? What happened in last over?',
-                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                    hintStyle: const TextStyle(color: const Color(0x4D0F172A), fontSize: 12),
                     border: InputBorder.none,
                   ),
                   onSubmitted: (val) => _sendChatMessage(val, match, storage),
@@ -622,7 +731,7 @@ class WagonWheelPainter extends CustomPainter {
         double shotLength = (size.width / 2 - 14) * (ball.run == 6 ? 1.0 : (ball.run == 4 ? 0.8 : 0.5));
         
         final shotPaint = Paint()
-          ..color = ball.run == 6 ? const Color(0xFF60A5FA) : (ball.run == 4 ? const Color(0xFFFBBF24) : Colors.white30)
+          ..color = ball.run == 6 ? const Color(0xFF60A5FA) : (ball.run == 4 ? const Color(0xFFFBBF24) : Colors.black38)
           ..strokeWidth = 2
           ..style = PaintingStyle.stroke;
           
@@ -702,7 +811,7 @@ class ManhattanPainter extends CustomPainter {
 
       // Draw text values above bars
       final textPainter = TextPainter(
-        text: TextSpan(text: '$runs', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+        text: TextSpan(text: '$runs', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 9, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       )..layout();
       textPainter.paint(canvas, Offset(i * (widthPerBar + spacing) + (widthPerBar / 2) - (textPainter.width / 2), size.height - barHeight - 12));

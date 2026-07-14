@@ -17,7 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingData(
       title: "Follow Every Match Live",
       description: "Get real-time scores, deep AI insights, and immersive ball-by-ball commentary right from the stadium.",
-      icon: Icons.stadium_outlined,
+      imagePath: "assets/images/onboarding_stadium.png",
       gradientStart: Color(0xFF0F4C81),
       gradientEnd: Color(0xFF1E3A8A),
       stepText: "STEP 1 OF 3",
@@ -25,7 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingData(
       title: "AI Voice Commentary",
       description: "Experience personalized match insights delivered via intelligent voice synthesis during live action.",
-      icon: Icons.headphones_outlined,
+      imagePath: "assets/images/onboarding_commentary.png",
       gradientStart: Color(0xFF0284C7),
       gradientEnd: Color(0xFF0D9488),
       stepText: "STEP 2 OF 3",
@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingData(
       title: "Real-Time Predictions",
       description: "Harness AI-driven match probabilities, live scorecards, and intelligent insights to stay ahead of every play.",
-      icon: Icons.online_prediction_rounded,
+      imagePath: "assets/images/onboarding_prediction.png",
       gradientStart: Color(0xFF0284C7),
       gradientEnd: Color(0xFF10B981),
       stepText: "STEP 3 OF 3",
@@ -61,11 +61,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final currentSlide = _slides[_currentPage];
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Stack(
         children: [
-          // Background Gradient decoration
+          // Background Gradient decoration (Subtle light mode circles)
           Positioned(
             top: -100,
             right: -100,
@@ -74,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _slides[_currentPage].gradientStart.withOpacity(0.15),
+                color: currentSlide.gradientStart.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -86,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _slides[_currentPage].gradientEnd.withOpacity(0.15),
+                color: currentSlide.gradientEnd.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -102,7 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       _currentPage > 0
                           ? IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                              icon: const Icon(Icons.arrow_back, color: Colors.black87),
                               onPressed: () {
                                 _pageController.previousPage(
                                   duration: const Duration(milliseconds: 300),
@@ -145,41 +147,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           children: [
                             // Illustration Container (High-fidelity Mockup style)
                             Container(
-                              width: size.width * 0.8,
-                              height: size.width * 0.8,
+                              width: size.width * 0.85,
+                              height: size.width * 0.85,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.03),
+                                color: const Color(0xFF0F172A),
                                 borderRadius: BorderRadius.circular(32),
-                                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: slide.gradientStart.withOpacity(0.08),
+                                    color: slide.gradientStart.withValues(alpha: 0.12),
                                     blurRadius: 30,
                                     spreadRadius: 2,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Container(
-                                  width: size.width * 0.6,
-                                  height: size.width * 0.6,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [slide.gradientStart, slide.gradientEnd],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    slide.icon,
-                                    size: 100,
-                                    color: Colors.white,
-                                  ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(32),
+                                child: Image.asset(
+                                  slide.imagePath,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       );
@@ -187,15 +178,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
 
-                // Content Panel (floating card)
+                // Content Panel (floating card - Light theme white card)
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.all(20),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +211,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               borderRadius: BorderRadius.circular(3),
                               color: _currentPage == index
                                   ? const Color(0xFF0284C7)
-                                  : Colors.white.withOpacity(0.2),
+                                  : Colors.black.withValues(alpha: 0.1),
                             ),
                           ),
                         ),
@@ -222,24 +220,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                       // Title
                       Text(
-                        _slides[_currentPage].title,
+                        currentSlide.title,
                         style: GoogleFonts.outfit(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(height: 12),
 
                       // Subtitle
                       Text(
-                        _slides[_currentPage].description,
+                        currentSlide.description,
                         style: GoogleFonts.outfit(
                           fontSize: 14,
                           height: 1.5,
-                          color: Colors.white.withOpacity(0.65),
+                          color: const Color(0xFF475569),
                         ),
                       ),
+                      
+                      // Audio waves indicator for Step 2
+                      if (_currentPage == 1) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(width: 3, height: 16, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
+                            const SizedBox(width: 3),
+                            Container(width: 3, height: 26, decoration: BoxDecoration(color: const Color(0xFF0284C7), borderRadius: BorderRadius.circular(2))),
+                            const SizedBox(width: 3),
+                            Container(width: 3, height: 12, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
+                            const SizedBox(width: 3),
+                            Container(width: 3, height: 22, decoration: BoxDecoration(color: const Color(0xFF0284C7), borderRadius: BorderRadius.circular(2))),
+                            const SizedBox(width: 3),
+                            Container(width: 3, height: 8, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
 
                       // Action bar: Step indicator and next button
@@ -247,11 +264,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _slides[_currentPage].stepText,
+                            currentSlide.stepText,
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.4),
+                              color: const Color(0xFF94A3B8),
                               letterSpacing: 1.0,
                             ),
                           ),
@@ -284,12 +301,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ),
                                 )
                               : Container(
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Color(0xFF0284C7),
+                                    color: _currentPage == 1
+                                        ? const Color(0xFFFBBF24) // Yellow button for Step 2
+                                        : const Color(0xFF0284C7), // Blue button for Step 1
                                   ),
                                   child: IconButton(
-                                    icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                                    icon: Icon(
+                                      Icons.arrow_forward,
+                                      color: _currentPage == 1 ? Colors.black87 : Colors.white,
+                                    ),
                                     onPressed: _onNext,
                                     padding: const EdgeInsets.all(16),
                                   ),
@@ -311,7 +333,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class OnboardingData {
   final String title;
   final String description;
-  final IconData icon;
+  final String imagePath;
   final Color gradientStart;
   final Color gradientEnd;
   final String stepText;
@@ -319,7 +341,7 @@ class OnboardingData {
   OnboardingData({
     required this.title,
     required this.description,
-    required this.icon,
+    required this.imagePath,
     required this.gradientStart,
     required this.gradientEnd,
     required this.stepText,

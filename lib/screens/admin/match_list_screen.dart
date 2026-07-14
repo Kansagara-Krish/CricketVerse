@@ -41,8 +41,8 @@ class _MatchListScreenState extends State<MatchListScreen> with SingleTickerProv
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.accentGold,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white38,
+          labelColor: const Color(0xFF0F172A),
+          unselectedLabelColor: const Color(0xFF64748B),
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13),
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 13),
           tabs: [
@@ -123,10 +123,10 @@ class _MatchTile extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: const Color(0xFF0F172A).withOpacity(0.04),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isLive ? AppTheme.primaryGreen.withOpacity(0.4) : Colors.white.withOpacity(0.07),
+            color: isLive ? AppTheme.primaryGreen.withOpacity(0.4) : Colors.black.withOpacity(0.07),
           ),
           boxShadow: isLive
               ? [BoxShadow(color: AppTheme.primaryGreen.withOpacity(0.1), blurRadius: 12)]
@@ -157,15 +157,15 @@ class _MatchTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(match.matchType,
-                      style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                   const Spacer(),
-                  const Icon(Icons.location_on_outlined, size: 12, color: Colors.white38),
+                  const Icon(Icons.location_on_outlined, size: 12, color: const Color(0x610F172A)),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       match.venue.split(',').first,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38),
+                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A)),
                     ),
                   ),
                 ],
@@ -184,16 +184,16 @@ class _MatchTile extends StatelessWidget {
                       children: [
                         Text(match.teamA.shortName,
                             style: GoogleFonts.outfit(
-                                fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white)),
+                                fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
                         Text(match.teamA.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                         if (match.runsA > 0) ...[
                           const SizedBox(height: 4),
                           Text('${match.runsA}/${match.wicketsA}',
                               style: GoogleFonts.outfit(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white70)),
+                                  fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xDE0F172A))),
                           Text('(${match.oversA} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                         ],
                       ],
                     ),
@@ -203,7 +203,7 @@ class _MatchTile extends StatelessWidget {
                     children: [
                       Text('VS',
                           style: GoogleFonts.outfit(
-                              fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white12)),
+                              fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0x1F0F172A))),
                       if (match.target > 0 && !match.isFirstInnings)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
@@ -224,16 +224,16 @@ class _MatchTile extends StatelessWidget {
                       children: [
                         Text(match.teamB.shortName,
                             style: GoogleFonts.outfit(
-                                fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white)),
+                                fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
                         Text(match.teamB.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                         if (match.runsB > 0) ...[
                           const SizedBox(height: 4),
                           Text('${match.runsB}/${match.wicketsB}',
                               style: GoogleFonts.outfit(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white70)),
+                                  fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xDE0F172A))),
                           Text('(${match.oversB} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                         ],
                       ],
                     ),
@@ -248,7 +248,7 @@ class _MatchTile extends StatelessWidget {
               child: Row(
                 children: [
                   Text('${match.date} • ${match.time}',
-                      style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                   const Spacer(),
                   if (isLive)
                     _ActionChip(

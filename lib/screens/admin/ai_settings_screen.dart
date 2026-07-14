@@ -28,7 +28,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('AI Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('AI Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         actions: [
           TextButton(
             onPressed: () {
@@ -54,24 +54,24 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 36),
+                  const Icon(Icons.auto_awesome_rounded, color: const Color(0xFF0F172A), size: 36),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CricketVerse AI Engine', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Configure AI features for your app', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70)),
+                        Text('CricketVerse AI Engine', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text('Configure AI features for your app', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xDE0F172A))),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: const Color(0xFF0F172A).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text('v1.0', style: GoogleFonts.outfit(fontSize: 11, color: Colors.white)),
+                    child: Text('v1.0', style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF0F172A))),
                   ),
                 ],
               ),
@@ -94,7 +94,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Commentary Frequency', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
+                      Text('Commentary Frequency', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
                       Text('${_commentaryFrequency.toInt()}s', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -154,7 +154,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 children: [
                   const Icon(Icons.analytics_outlined, color: AppTheme.accentPurple, size: 16),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(item[0], style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70))),
+                  Expanded(child: Text(item[0], style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A)))),
                   Text(item[1], style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentPurple, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -194,7 +194,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(label,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white38, letterSpacing: 1.4));
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.4));
   }
 }
 
@@ -212,20 +212,20 @@ class _SwitchTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: value ? color.withOpacity(0.06) : Colors.white.withOpacity(0.04),
+        color: value ? color.withOpacity(0.06) : Colors.black.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: value ? color.withOpacity(0.2) : Colors.white.withOpacity(0.08)),
+        border: Border.all(color: value ? color.withOpacity(0.2) : Colors.black.withOpacity(0.08)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: value ? color : Colors.white38, size: 22),
+          Icon(icon, color: value ? color : Colors.black38, size: 22),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
               ],
             ),
           ),
@@ -249,14 +249,14 @@ class _DropdownTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: const Color(0xFF0F172A).withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.08)),
       ),
       child: DropdownButtonFormField<String>(
         value: current,
         dropdownColor: AppTheme.bgMedium,
-        style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13),
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,

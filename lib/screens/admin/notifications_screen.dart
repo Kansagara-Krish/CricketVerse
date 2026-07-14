@@ -94,7 +94,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: AppTheme.bgDeep,
         title: Row(
           children: [
-            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             if (_unreadCount > 0) ...[
               const SizedBox(width: 10),
               Container(
@@ -104,7 +104,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('$_unreadCount new',
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
               ),
             ],
           ],
@@ -122,10 +122,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.notifications_off_outlined, color: Colors.white24, size: 60),
+                  const Icon(Icons.notifications_off_outlined, color: const Color(0x3D0F172A), size: 60),
                   const SizedBox(height: 16),
-                  Text('No Notifications', style: GoogleFonts.outfit(fontSize: 18, color: Colors.white54, fontWeight: FontWeight.bold)),
-                  Text('You\'re all caught up!', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38)),
+                  Text('No Notifications', style: GoogleFonts.outfit(fontSize: 18, color: const Color(0x8A0F172A), fontWeight: FontWeight.bold)),
+                  Text('You\'re all caught up!', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x610F172A))),
                 ],
               ),
             )
@@ -212,14 +212,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   n['body'] as String,
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
-                                    color: Colors.white38,
+                                    color: const Color(0x610F172A),
                                     height: 1.4,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   n['time'] as String,
-                                  style: GoogleFonts.outfit(fontSize: 10, color: Colors.white24),
+                                  style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x3D0F172A)),
                                 ),
                               ],
                             ),

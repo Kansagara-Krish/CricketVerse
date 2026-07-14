@@ -36,7 +36,7 @@ class PlayerDetailScreen extends StatelessWidget {
             backgroundColor: AppTheme.bgDeep,
             actions: [
               IconButton(
-                icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                icon: const Icon(Icons.edit_rounded, color: const Color(0xFF0F172A)),
                 onPressed: () => _showEditSheet(context),
               ),
             ],
@@ -65,7 +65,7 @@ class PlayerDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(player.name,
                         style: GoogleFonts.outfit(
-                            fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                            fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -82,10 +82,10 @@ class PlayerDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
                         Text(player.nationality,
-                            style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                            style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
                         const SizedBox(width: 6),
                         Text('• ${player.matchesPlayed} matches',
-                            style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                            style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
                       ],
                     ),
                   ],
@@ -180,7 +180,7 @@ class PlayerDetailScreen extends StatelessWidget {
           children: [
             const Icon(Icons.star, color: AppTheme.accentGold, size: 16),
             const SizedBox(width: 10),
-            Text(h, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
+            Text(h, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
           ],
         ),
       ),
@@ -201,12 +201,12 @@ class PlayerDetailScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Edit Player', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Edit Player', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             const SizedBox(height: 16),
-            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: Colors.white),
+            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 decoration: const InputDecoration(labelText: 'Player Name')),
             const SizedBox(height: 12),
-            TextField(controller: natCtrl, style: GoogleFonts.outfit(color: Colors.white),
+            TextField(controller: natCtrl, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 decoration: const InputDecoration(labelText: 'Nationality')),
             const SizedBox(height: 20),
             SizedBox(
@@ -239,7 +239,7 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Container(width: 3, height: 18, color: color, margin: const EdgeInsets.only(right: 8)),
         Text(title, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-            color: Colors.white38, letterSpacing: 1.3)),
+            color: const Color(0x610F172A), letterSpacing: 1.3)),
       ],
     );
   }
@@ -268,7 +268,7 @@ class _StatBox extends StatelessWidget {
             const SizedBox(height: 4),
             Text(label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 10, color: Colors.white38)),
+                style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
           ],
         ),
       ),

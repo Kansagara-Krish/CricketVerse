@@ -14,7 +14,7 @@ void main() {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
   ));
   runApp(
     ChangeNotifierProvider(
@@ -33,6 +33,8 @@ class CricketVerseApp extends StatelessWidget {
       title: 'CricketVerse AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light,
       onGenerateRoute: AppRoutes.generateRoute,
       home: const SplashScreen(),
     );

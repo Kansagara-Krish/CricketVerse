@@ -49,9 +49,9 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
 
   void _seedDummyCommentary() {
     final items = [
-      _CommentaryItem(label: '1', color: Colors.white54, text: 'Quick single. Kohli taps it to mid-on and they cross comfortably.', batsman: 'V. Kohli', bowler: 'M. Starc'),
+      _CommentaryItem(label: '1', color: const Color(0x8A0F172A), text: 'Quick single. Kohli taps it to mid-on and they cross comfortably.', batsman: 'V. Kohli', bowler: 'M. Starc'),
       _CommentaryItem(label: '4', color: AppTheme.primaryBlue, text: 'FOUR! Beautiful cover drive by Kohli through extra cover!', batsman: 'V. Kohli', bowler: 'M. Starc'),
-      _CommentaryItem(label: '0', color: Colors.white24, text: 'Dot ball. Good length, Yadav pushes back to the bowler.', batsman: 'S. Yadav', bowler: 'P. Cummins'),
+      _CommentaryItem(label: '0', color: const Color(0x3D0F172A), text: 'Dot ball. Good length, Yadav pushes back to the bowler.', batsman: 'S. Yadav', bowler: 'P. Cummins'),
       _CommentaryItem(label: '6', color: AppTheme.primaryGreen, text: 'SIX! Suryakumar steps out and launches it over long-on!', batsman: 'S. Yadav', bowler: 'P. Cummins'),
       _CommentaryItem(label: 'W', color: AppTheme.accentRed, text: 'WICKET! Clean bowled! Starc gets one through the gate!', batsman: 'R. Sharma', bowler: 'M. Starc'),
     ];
@@ -118,7 +118,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('AI Commentary', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('AI Commentary', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         actions: [
           TextButton.icon(
             onPressed: _generateOne,
@@ -147,10 +147,10 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                 ),
                 const SizedBox(width: 10),
                 Text('${widget.match.teamA.shortName} vs ${widget.match.teamB.shortName}',
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Text('${widget.match.runsA}/${widget.match.wicketsA}',
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xDE0F172A), fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -161,7 +161,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
             child: Row(
               children: [
                 Text('Auto Commentary',
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
+                    style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
                 const Spacer(),
                 Switch(
                   value: _isAutoGenerating,
@@ -203,7 +203,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                 ? Center(
                     child: Text('No commentary yet.\nTap Generate to start.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(fontSize: 14, color: Colors.white38)),
+                        style: GoogleFonts.outfit(fontSize: 14, color: const Color(0x610F172A))),
                   )
                 : ListView.builder(
                     controller: _scrollCtrl,
@@ -255,7 +255,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                                         Text(item.batsman,
                                             style: GoogleFonts.outfit(
                                                 fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.w700)),
-                                        Text(' to ', style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                                        Text(' to ', style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                                         Text(item.bowler,
                                             style: GoogleFonts.outfit(
                                                 fontSize: 11, color: AppTheme.accentRed, fontWeight: FontWeight.w700)),
@@ -264,7 +264,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                                     const SizedBox(height: 4),
                                     Text(item.text,
                                         style: GoogleFonts.outfit(
-                                            fontSize: 13, color: Colors.white70, height: 1.5)),
+                                            fontSize: 13, color: const Color(0xDE0F172A), height: 1.5)),
                                   ],
                                 ),
                               ),
@@ -280,8 +280,8 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _generateOne,
         backgroundColor: AppTheme.primaryBlue,
-        icon: const Icon(Icons.mic_rounded, color: Colors.white),
-        label: Text('AI Generate', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        icon: const Icon(Icons.mic_rounded, color: const Color(0xFF0F172A)),
+        label: Text('AI Generate', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -316,7 +316,7 @@ class _Legend extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label == '6' ? 'Six' : label == '4' ? 'Four' : label == 'W' ? 'Wicket' : label == 'Ext' ? 'Extra' : 'Dot/Run',
-            style: GoogleFonts.outfit(fontSize: 10, color: Colors.white38)),
+            style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
       ],
     );
   }

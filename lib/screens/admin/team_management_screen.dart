@@ -53,33 +53,33 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
             children: [
               Center(
                 child: Container(width: 40, height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                    decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
               ),
               const SizedBox(height: 20),
               Text('Add New Team', style: GoogleFonts.outfit(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
               const SizedBox(height: 20),
               TextField(
                 controller: nameCtrl,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 decoration: InputDecoration(
                   labelText: 'Team Name',
-                  prefixIcon: const Icon(Icons.groups, color: Colors.white38),
+                  prefixIcon: const Icon(Icons.groups, color: const Color(0x610F172A)),
                 ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: shortCtrl,
                 maxLength: 4,
-                style: GoogleFonts.outfit(color: Colors.white, letterSpacing: 2),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A), letterSpacing: 2),
                 decoration: InputDecoration(
                   labelText: 'Short Code (e.g. IND)',
-                  prefixIcon: const Icon(Icons.label, color: Colors.white38),
-                  counterStyle: GoogleFonts.outfit(color: Colors.white38),
+                  prefixIcon: const Icon(Icons.label, color: const Color(0x610F172A)),
+                  counterStyle: GoogleFonts.outfit(color: const Color(0x610F172A)),
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Team Color', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white60)),
+              Text('Team Color', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x990F172A))),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 10,
@@ -150,54 +150,175 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Team Management'),
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: const Color(0xFFF8FAFC),
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: CircleAvatar(
+            backgroundColor: const Color(0xFF0284C7),
+            radius: 18,
+            child: Text(
+              'UP',
+              style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+        ),
+        title: Text(
+          'CricketVerse AI',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add_rounded),
-            tooltip: 'Manage Players',
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.playerManagement),
+            icon: const Icon(Icons.search, color: Color(0xFF0F172A)),
+            onPressed: () {},
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTeamDialog,
-        backgroundColor: AppTheme.primaryBlue,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Add Team', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: 1, // Teams active
+          onTap: (index) {
+            if (index == 0) {
+              Navigator.pop(context);
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF854D0E),
+          unselectedItemColor: const Color(0xFF64748B),
+          selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: 'Teams'),
+            BottomNavigationBarItem(icon: Icon(Icons.sports_cricket_outlined), activeIcon: Icon(Icons.sports_cricket), label: 'Matches'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search bar
+          // Header title and subtitle
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: TextField(
-              style: GoogleFonts.outfit(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search teams...',
-                prefixIcon: const Icon(Icons.search, color: Colors.white38),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white38),
-                        onPressed: () => setState(() => _searchQuery = ''),
-                      )
-                    : null,
-              ),
-              onChanged: (v) => setState(() => _searchQuery = v),
-            ),
-          ),
-          // Count
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${filtered.length} teams',
-                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white38)),
+                Text(
+                  'Team & Player Management',
+                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Manage your franchise roster, add new talent, and organize squads.',
+                  style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
+                ),
               ],
             ),
           ),
+
+          // Tabs row (Teams / Players)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xFF0F172A), width: 2)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Teams',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.playerManagement),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Players',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF64748B), fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Search Box & Add button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          style: const TextStyle(color: Color(0xFF0F172A)),
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          decoration: InputDecoration(
+                            hintText: 'Search teams...',
+                            hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
+                            border: InputBorder.none,
+                            filled: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _showAddTeamDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF094CB2),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 16),
+                      const SizedBox(width: 6),
+                      Text('Add Team', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           Expanded(
             child: filtered.isEmpty
                 ? EmptyState(
@@ -208,69 +329,92 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     onButtonTap: _showAddTeamDialog,
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     itemCount: filtered.length,
                     itemBuilder: (_, i) {
                       final team = filtered[i];
                       final color = Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7);
-                      return GestureDetector(
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.teamDetail, arguments: team),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: AppTheme.glassCard,
-                          child: Row(
-                            children: [
-                              Hero(
-                                tag: 'team_avatar_${team.id}',
-                                child: CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: color.withOpacity(0.2),
-                                  child: Text(
-                                    team.shortName.substring(0, team.shortName.length > 2 ? 2 : team.shortName.length),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: color.withValues(alpha: 0.15),
+                              child: Icon(Icons.shield_outlined, color: color, size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    team.name,
                                     style: GoogleFonts.outfit(
-                                        color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                                      fontSize: 15, 
+                                      fontWeight: FontWeight.bold, 
+                                      color: const Color(0xFF0F172A),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${team.players.length} Players • 8 Support Staff',
+                                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF64748B)),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Active',
+                                      style: GoogleFonts.outfit(
+                                        color: const Color(0xFF16A34A),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(team.name,
-                                        style: GoogleFonts.outfit(
-                                            fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                                    const SizedBox(height: 3),
-                                    Text('${team.players.length} Players • ${team.shortName}',
-                                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54)),
-                                  ],
-                                ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Color(0xFF0284C7), size: 20),
+                              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Edit ${team.name} — open detail to edit')),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: 20),
-                                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Edit ${team.name} — open detail to edit')),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: AppTheme.accentRed, size: 20),
-                                onPressed: () async {
-                                  final confirmed = await ConfirmDialog.show(
-                                    context,
-                                    title: 'Delete Team',
-                                    message: 'Are you sure you want to delete "${team.name}"? This action cannot be undone.',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
+                              onPressed: () async {
+                                final confirmed = await ConfirmDialog.show(
+                                  context,
+                                  title: 'Delete Team',
+                                  message: 'Are you sure you want to delete "${team.name}"? This action cannot be undone.',
+                                );
+                                if (confirmed == true) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('🗑️ ${team.name} deleted'), backgroundColor: const Color(0xFFEF4444)),
                                   );
-                                  if (confirmed == true) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('🗑️ ${team.name} deleted'), backgroundColor: AppTheme.accentRed),
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       );
                     },

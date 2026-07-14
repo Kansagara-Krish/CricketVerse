@@ -18,12 +18,12 @@ class ShimmerLoader extends StatelessWidget {
       shrinkWrap: true,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: const Color(0xFF1E293B),
-        highlightColor: const Color(0xFF334155),
+        baseColor: const Color(0xFFE2E8F0),
+        highlightColor: const Color(0xFFF1F5F9),
         child: Container(
           height: itemHeight,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
+            color: const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(16),
           ),
         ),
@@ -47,13 +47,13 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF1E293B),
-      highlightColor: const Color(0xFF334155),
+      baseColor: const Color(0xFFE2E8F0),
+      highlightColor: const Color(0xFFF1F5F9),
       child: Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: const Color(0xFFE2E8F0),
           borderRadius: BorderRadius.circular(borderRadius),
         ),
       ),

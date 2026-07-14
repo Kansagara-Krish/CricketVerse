@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_theme.dart';
 
 class NewsDetailsScreen extends StatelessWidget {
   const NewsDetailsScreen({Key? key}) : super(key: key);
@@ -7,14 +8,14 @@ class NewsDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.bgDark,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 240.0,
             floating: false,
             pinned: true,
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: AppTheme.bgDeep,
             elevation: 0,
             leading: CircleAvatar(
               backgroundColor: Colors.black38,
@@ -50,15 +51,15 @@ class NewsDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'How CricketVerse AI predicted the live win probability swing during final over.',
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, height: 1.3),
+                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), height: 1.3),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Published on July 9, 2026 • By AI Engine Core',
-                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x8A0F172A)),
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Colors.white10),
+                  const Divider(color: const Color(0x1A0F172A)),
                   const SizedBox(height: 20),
                   
                   _buildParagraph(
@@ -85,7 +86,7 @@ class NewsDetailsScreen extends StatelessWidget {
       child: Text(
         text,
         style: GoogleFonts.outfit(
-          color: Colors.white.withOpacity(0.8),
+          color: const Color(0xFF0F172A).withOpacity(0.8),
           fontSize: 14,
           height: 1.6,
         ),

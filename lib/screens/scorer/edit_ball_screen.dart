@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
+import '../../core/theme/app_theme.dart';
 
 class EditBallScreen extends StatefulWidget {
   const EditBallScreen({Key? key}) : super(key: key);
@@ -66,17 +67,17 @@ class _EditBallScreenState extends State<EditBallScreen> {
     final match = storage.matches.firstWhere((m) => m.id == matchId);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppTheme.bgDeep,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: const Color(0xFF0F172A)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Official Timeline Editor',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
       ),
       body: Padding(
@@ -88,9 +89,9 @@ class _EditBallScreenState extends State<EditBallScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: const Color(0xFF0F172A).withOpacity(0.03),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -100,11 +101,11 @@ class _EditBallScreenState extends State<EditBallScreen> {
                     children: [
                       Text(
                         _isPaused ? 'Match Paused' : 'Match Active',
-                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         _isPaused ? 'Status broadcasts halted' : 'Broadcasting real-time data...',
-                        style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11),
+                        style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 11),
                       ),
                     ],
                   ),
@@ -131,13 +132,13 @@ class _EditBallScreenState extends State<EditBallScreen> {
 
             Text(
               'BALL TIMELINE',
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white60, letterSpacing: 1.0),
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0x990F172A), letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
 
             Expanded(
               child: match.balls.isEmpty
-                  ? Center(child: Text('No balls bowled in this innings yet.', style: GoogleFonts.outfit(color: Colors.white38)))
+                  ? Center(child: Text('No balls bowled in this innings yet.', style: GoogleFonts.outfit(color: const Color(0x610F172A))))
                   : ListView.builder(
                       itemCount: match.balls.length,
                       itemBuilder: (context, index) {
@@ -148,9 +149,9 @@ class _EditBallScreenState extends State<EditBallScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.02),
+                            color: const Color(0xFF0F172A).withOpacity(0.02),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.04)),
+                            border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.04)),
                           ),
                           child: Row(
                             children: [
@@ -169,11 +170,11 @@ class _EditBallScreenState extends State<EditBallScreen> {
                                   children: [
                                     Text(
                                       'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
-                                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                                      style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 12),
                                     ),
                                     Text(
                                       ball.commentary,
-                                      style: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
+                                      style: GoogleFonts.outfit(color: const Color(0x610F172A), fontSize: 11),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

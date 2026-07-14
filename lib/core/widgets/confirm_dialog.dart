@@ -16,7 +16,7 @@ class ConfirmDialog {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -33,7 +33,7 @@ class ConfirmDialog {
               child: Text(
                 title,
                 style: GoogleFonts.outfit(
-                  color: Colors.white,
+                  color: const Color(0xFF0F172A),
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -43,14 +43,14 @@ class ConfirmDialog {
         ),
         content: Text(
           message,
-          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14, height: 1.5),
+          style: GoogleFonts.outfit(color: const Color(0xFF475569), fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(color: Colors.white60, fontWeight: FontWeight.w600),
+              style: GoogleFonts.outfit(color: const Color(0xFF475569), fontWeight: FontWeight.w600),
             ),
           ),
           ElevatedButton(

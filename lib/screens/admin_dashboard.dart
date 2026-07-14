@@ -55,14 +55,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: Text(
           'CricketVerse AI',
           style: GoogleFonts.outfit(
-            color: Colors.white,
+            color: const Color(0xFF0F172A),
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white70),
+            icon: const Icon(Icons.search, color: const Color(0xDE0F172A)),
             onPressed: () {
               showSearch(context: context, delegate: _CricketSearchDelegate());
             },
@@ -70,7 +70,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white70),
+                icon: const Icon(Icons.notifications_outlined, color: const Color(0xDE0F172A)),
                 onPressed: () {
                   setState(() => _notificationCount = 0);
                   Navigator.pushNamed(context, AppRoutes.notifications);
@@ -88,7 +88,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     child: Text(
                       '$_notificationCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: const Color(0xFF0F172A), fontSize: 9, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -105,15 +105,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.bgMedium,
-          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+          border: Border(top: BorderSide(color: const Color(0xFF0F172A).withOpacity(0.06))),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (i) => setState(() => _currentIndex = i),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          selectedItemColor: AppTheme.accentGold,
-          unselectedItemColor: Colors.white38,
+          selectedItemColor: AppTheme.primaryBlue,
+          unselectedItemColor: const Color(0xFF64748B),
           selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600),
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
           type: BottomNavigationBarType.fixed,
@@ -165,9 +165,9 @@ class _AdminDrawer extends StatelessWidget {
                     children: [
                       Text('Rajesh Kumar',
                           style: GoogleFonts.outfit(
-                              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                              fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                       Text('Tournament Admin',
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54)),
+                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x8A0F172A))),
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -280,7 +280,7 @@ class _AdminDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text(
                 'CricketVerse AI v1.0.0',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white24),
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x3D0F172A)),
               ),
             ),
           ],
@@ -303,7 +303,7 @@ class _DrawerSection extends StatelessWidget {
         style: GoogleFonts.outfit(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: Colors.white24,
+          color: const Color(0x3D0F172A),
           letterSpacing: 1.5,
         ),
       ),
@@ -321,9 +321,9 @@ class _DrawerItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       dense: true,
-      leading: Icon(icon, color: Colors.white60, size: 22),
+      leading: Icon(icon, color: const Color(0x990F172A), size: 22),
       title: Text(label,
-          style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
+          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xDE0F172A), fontWeight: FontWeight.w500)),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       hoverColor: Colors.white.withOpacity(0.04),
@@ -360,10 +360,10 @@ class _DashboardHomeView extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Good Morning,', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                    Text('Good Morning,', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
                     Text('Rajesh Kumar 👋',
                         style: GoogleFonts.outfit(
-                            fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                            fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                   ],
                 ),
               ],
@@ -395,16 +395,16 @@ class _DashboardHomeView extends StatelessWidget {
                         ),
                         child: Text('● LIVE',
                             style: GoogleFonts.outfit(
-                                fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                                fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           '$liveCount match${liveCount > 1 ? "es" : ""} in progress right now',
-                          style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 14),
+                      const Icon(Icons.arrow_forward_ios, color: const Color(0xDE0F172A), size: 14),
                     ],
                   ),
                 ),
@@ -413,7 +413,7 @@ class _DashboardHomeView extends StatelessWidget {
             // Stats Grid
             Text('SYSTEM OVERVIEW',
                 style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                    color: Colors.white38, letterSpacing: 1.5)),
+                    color: const Color(0x610F172A), letterSpacing: 1.5)),
             const SizedBox(height: 12),
 
             GridView.count(
@@ -474,7 +474,7 @@ class _DashboardHomeView extends StatelessWidget {
             // Quick Actions
             Text('QUICK ACTIONS',
                 style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                    color: Colors.white38, letterSpacing: 1.5)),
+                    color: const Color(0x610F172A), letterSpacing: 1.5)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -500,7 +500,7 @@ class _DashboardHomeView extends StatelessWidget {
               children: [
                 Text('RECENT MATCHES',
                     style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                        color: Colors.white38, letterSpacing: 1.5)),
+                        color: const Color(0x610F172A), letterSpacing: 1.5)),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, AppRoutes.matchList),
                   child: Text('View All',
@@ -544,7 +544,7 @@ class _QuickAction extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xDE0F172A), fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -585,10 +585,10 @@ class _MatchCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(match.matchType,
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                 const SizedBox(width: 8),
                 Text(match.date,
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
               ],
             ),
             const SizedBox(height: 12),
@@ -600,32 +600,32 @@ class _MatchCard extends StatelessWidget {
                     children: [
                       Text(match.teamA.shortName,
                           style: GoogleFonts.outfit(
-                              fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                              fontSize: 18, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                       Text(match.teamA.name,
-                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.white54)),
+                          style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x8A0F172A))),
                       if (match.runsA > 0)
                         Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
                             style: GoogleFonts.outfit(
-                                fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70)),
+                                fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xDE0F172A))),
                     ],
                   ),
                 ),
                 Text('VS',
                     style: GoogleFonts.outfit(
-                        fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white24)),
+                        fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0x3D0F172A))),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(match.teamB.shortName,
                           style: GoogleFonts.outfit(
-                              fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                              fontSize: 18, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                       Text(match.teamB.name,
-                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.white54)),
+                          style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x8A0F172A))),
                       if (match.runsB > 0)
                         Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
                             style: GoogleFonts.outfit(
-                                fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70)),
+                                fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xDE0F172A))),
                     ],
                   ),
                 ),
@@ -634,10 +634,10 @@ class _MatchCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 12, color: Colors.white38),
+                const Icon(Icons.location_on_outlined, size: 12, color: const Color(0x610F172A)),
                 const SizedBox(width: 4),
                 Text(match.venue,
-                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
               ],
             ),
           ],
@@ -658,11 +658,11 @@ class _MatchesView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.sports_cricket, color: Colors.white24, size: 60),
+          const Icon(Icons.sports_cricket, color: const Color(0x3D0F172A), size: 60),
           const SizedBox(height: 16),
-          Text('Match Management', style: GoogleFonts.outfit(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.bold)),
+          Text('Match Management', style: GoogleFonts.outfit(fontSize: 18, color: const Color(0xDE0F172A), fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Use the buttons below to navigate', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38)),
+          Text('Use the buttons below to navigate', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x610F172A))),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.matchList),
@@ -675,8 +675,8 @@ class _MatchesView extends StatelessWidget {
             icon: const Icon(Icons.add),
             label: const Text('Schedule New Match'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white24),
+              foregroundColor: const Color(0xFF475569),
+              side: const BorderSide(color: const Color(0x3D0F172A)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             ),
@@ -697,11 +697,11 @@ class _TeamsView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.groups, color: Colors.white24, size: 60),
+          const Icon(Icons.groups, color: const Color(0x3D0F172A), size: 60),
           const SizedBox(height: 16),
-          Text('Team Management', style: GoogleFonts.outfit(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.bold)),
+          Text('Team Management', style: GoogleFonts.outfit(fontSize: 18, color: const Color(0xDE0F172A), fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Manage teams, players and rosters', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38)),
+          Text('Manage teams, players and rosters', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x610F172A))),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.teamManagement),
@@ -714,8 +714,8 @@ class _TeamsView extends StatelessWidget {
             icon: const Icon(Icons.person),
             label: const Text('Manage Players'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white24),
+              foregroundColor: const Color(0xFF475569),
+              side: const BorderSide(color: const Color(0x3D0F172A)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             ),
@@ -738,8 +738,8 @@ class _ProfileView extends StatelessWidget {
         children: [
           const AppLogo(size: 72, withGlow: true),
           const SizedBox(height: 16),
-          Text('Rajesh Kumar', style: GoogleFonts.outfit(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
-          Text('admin@cricketverse.ai', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+          Text('Rajesh Kumar', style: GoogleFonts.outfit(fontSize: 20, color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+          Text('admin@cricketverse.ai', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.adminProfile),
@@ -790,8 +790,8 @@ class _CricketSearchDelegate extends SearchDelegate<String> {
       child: ListView.builder(
         itemCount: results.length,
         itemBuilder: (_, i) => ListTile(
-          leading: const Icon(Icons.search, color: Colors.white38),
-          title: Text(results[i], style: GoogleFonts.outfit(color: Colors.white)),
+          leading: const Icon(Icons.search, color: const Color(0x610F172A)),
+          title: Text(results[i], style: GoogleFonts.outfit(color: const Color(0xFF0F172A))),
           onTap: () => close(context, results[i]),
         ),
       ),
@@ -802,8 +802,8 @@ class _CricketSearchDelegate extends SearchDelegate<String> {
   ThemeData appBarTheme(BuildContext context) => Theme.of(context).copyWith(
         scaffoldBackgroundColor: AppTheme.bgDark,
         inputDecorationTheme: InputDecorationTheme(
-          hintStyle: GoogleFonts.outfit(color: Colors.white38),
+          hintStyle: GoogleFonts.outfit(color: const Color(0x610F172A)),
         ),
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
       );
 }

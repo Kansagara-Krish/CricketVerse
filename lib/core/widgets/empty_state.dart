@@ -32,10 +32,10 @@ class EmptyState extends StatelessWidget {
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.04),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                color: const Color(0xFF0F172A).withOpacity(0.03),
+                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
               ),
-              child: Icon(icon, size: 52, color: Colors.white24),
+              child: Icon(icon, size: 52, color: const Color(0x3D0F172A)),
             ),
             const SizedBox(height: 24),
             Text(
@@ -44,7 +44,7 @@ class EmptyState extends StatelessWidget {
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Colors.white70,
+                color: const Color(0xFF0F172A),
               ),
             ),
             const SizedBox(height: 10),
@@ -53,7 +53,7 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.outfit(
                 fontSize: 13,
-                color: Colors.white38,
+                color: const Color(0xFF475569),
                 height: 1.5,
               ),
             ),

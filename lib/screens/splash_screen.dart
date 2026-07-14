@@ -33,8 +33,8 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0F172A), // Dark slate
-              Color(0xFF1E293B),
+              Color(0xFFF8FAFC),
+              Color(0xFFF1F5F9),
             ],
           ),
         ),
@@ -47,20 +47,17 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
+                  color: Colors.black.withAlpha(12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: Colors.black.withAlpha(25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)), // Emerald Green
-                      ),
+                    const Icon(
+                      Icons.sync,
+                      size: 14,
+                      color: Color(0xFF10B981),
                     ),
                     const SizedBox(width: 10),
                     Text(
@@ -68,7 +65,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.8),
+                        color: const Color(0xFF475569),
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -81,35 +78,19 @@ class _SplashScreenState extends State<SplashScreen> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Mock abstract logo (representing a neural cricket ball)
+                // Top logo overlay/gradient line
                 Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0284C7).withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/logo.jpg',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback if logo is missing
-                        return Container(
-                          color: const Color(0xFF0284C7),
-                          child: const Icon(
-                            Icons.online_prediction_outlined,
-                            size: 44,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
+                  width: 80,
+                  height: 80,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  child: ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF0284C7), Color(0xFF10B981)],
+                    ).createShader(bounds),
+                    child: const Icon(
+                      Icons.online_prediction_outlined,
+                      size: 80,
+                      color: const Color(0xFF0F172A),
                     ),
                   ),
                 ),
@@ -118,14 +99,14 @@ class _SplashScreenState extends State<SplashScreen> {
                 // Title
                 ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Colors.white, Color(0xFF10B981)],
+                    colors: [Color(0xFF0F172A), Color(0xFF0284C7)],
                   ).createShader(bounds),
                   child: Text(
                     'CricketVerse AI',
                     style: GoogleFonts.outfit(
                       fontSize: 38,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: const Color(0xFF0F172A),
                       letterSpacing: 1.0,
                     ),
                   ),
@@ -138,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.5),
+                    color: const Color(0xFF64748B),
                     letterSpacing: 3.5,
                   ),
                 ),

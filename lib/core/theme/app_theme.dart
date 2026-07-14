@@ -15,16 +15,16 @@ class AppTheme {
   static const Color accentOrange  = Color(0xFFF97316);
 
   // ─── Background Layers ──────────────────────────────────────────────────────
-  static const Color bgDeep    = Color(0xFF070F1E);
-  static const Color bgDark    = Color(0xFF0F172A);
-  static const Color bgMedium  = Color(0xFF1E293B);
-  static const Color bgCard    = Color(0xFF253046);
-  static const Color bgSurface = Color(0xFF2D3F5A);
+  static const Color bgDeep    = Color(0xFFF1F5F9);
+  static const Color bgDark    = Color(0xFFF8FAFC);
+  static const Color bgMedium  = Colors.white;
+  static const Color bgCard    = Colors.white;
+  static const Color bgSurface = Color(0xFFE2E8F0);
 
   // ─── Text Colors ────────────────────────────────────────────────────────────
-  static const Color textPrimary   = Colors.white;
-  static const Color textSecondary = Color(0xFFB0BEC5);
-  static const Color textMuted     = Color(0xFF64748B);
+  static const Color textPrimary   = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  static const Color textMuted     = Color(0xFF94A3B8);
 
   // ─── Gradients ──────────────────────────────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
@@ -59,12 +59,12 @@ class AppTheme {
 
   // ─── Glass Card Decoration ──────────────────────────────────────────────────
   static BoxDecoration get glassCard => BoxDecoration(
-    color: Colors.white.withOpacity(0.05),
+    color: Colors.white,
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: Colors.white.withOpacity(0.08)),
+    border: Border.all(color: const Color(0xFFE2E8F0)),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withAlpha(12),
         blurRadius: 12,
         offset: const Offset(0, 4),
       ),
@@ -72,9 +72,9 @@ class AppTheme {
   );
 
   static BoxDecoration get glassCardSmall => BoxDecoration(
-    color: Colors.white.withOpacity(0.04),
+    color: Colors.white,
     borderRadius: BorderRadius.circular(14),
-    border: Border.all(color: Colors.white.withOpacity(0.07)),
+    border: Border.all(color: const Color(0xFFE2E8F0)),
   );
 
   static BoxDecoration get accentCard => BoxDecoration(
@@ -82,7 +82,7 @@ class AppTheme {
     borderRadius: BorderRadius.circular(20),
     boxShadow: [
       BoxShadow(
-        color: primaryBlue.withOpacity(0.3),
+        color: primaryBlue.withAlpha(76),
         blurRadius: 16,
         offset: const Offset(0, 6),
       ),
@@ -120,16 +120,15 @@ class AppTheme {
 
   // ─── MaterialApp ThemeData ──────────────────────────────────────────────────
   static ThemeData get darkTheme => ThemeData(
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     useMaterial3: true,
     scaffoldBackgroundColor: bgDark,
     primaryColor: primaryBlue,
-    colorScheme: const ColorScheme.dark(
+    colorScheme: const ColorScheme.light(
       primary: primaryBlue,
       secondary: primaryGreen,
       tertiary: accentGold,
       surface: bgMedium,
-      background: bgDark,
       error: accentRed,
     ),
     appBarTheme: AppBarTheme(
@@ -137,13 +136,13 @@ class AppTheme {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: GoogleFonts.outfit(
-        fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
+        fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary,
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: textPrimary),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: bgMedium,
-      selectedItemColor: accentGold,
+      selectedItemColor: primaryBlue,
       unselectedItemColor: Color(0xFF64748B),
       type: BottomNavigationBarType.fixed,
       elevation: 0,
@@ -164,25 +163,25 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.04),
+      fillColor: Colors.black.withAlpha(12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: Colors.black.withAlpha(25)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: Colors.black.withAlpha(25)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: primaryBlue),
       ),
-      hintStyle: GoogleFonts.outfit(color: Colors.white30, fontSize: 13),
-      labelStyle: GoogleFonts.outfit(color: Colors.white60, fontSize: 13),
+      hintStyle: GoogleFonts.outfit(color: textMuted, fontSize: 13),
+      labelStyle: GoogleFonts.outfit(color: textSecondary, fontSize: 13),
     ),
-    dividerColor: Colors.white.withOpacity(0.08),
-    textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+    dividerColor: Colors.black.withAlpha(20),
+    textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
   );
 
   // ─── Helpers ────────────────────────────────────────────────────────────────

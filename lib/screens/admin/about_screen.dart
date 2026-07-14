@@ -15,7 +15,7 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('About', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('About', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -25,9 +25,9 @@ class AboutScreen extends StatelessWidget {
             const AppLogo(size: 100, withGlow: true),
             const SizedBox(height: 20),
             Text(AppConstants.appName,
-                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
             Text('Version ${AppConstants.appVersion}',
-                style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38)),
+                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x610F172A))),
             const SizedBox(height: 8),
             Text(AppConstants.appTagline,
                 style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
@@ -44,7 +44,7 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'CricketVerse AI is an intelligent mobile application for live cricket scoring, AI-powered commentary, match prediction, and real-time analytics. Designed as a production-quality B.Tech Major Project prototype.',
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70, height: 1.6),
+                    style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), height: 1.6),
                   ),
                 ],
               ),
@@ -75,7 +75,7 @@ class AboutScreen extends StatelessWidget {
                         Icon(item[1] as IconData, color: item[2] as Color, size: 20),
                         const SizedBox(width: 12),
                         Text(item[0] as String,
-                            style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500)),
+                            style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), fontWeight: FontWeight.w500)),
                       ],
                     ),
                   )).toList(),
@@ -104,7 +104,7 @@ class AboutScreen extends StatelessWidget {
                     '🌙 Premium Dark UI Design',
                   ].map((f) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(f, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
+                    child: Text(f, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
                   )).toList(),
                 ],
               ),
@@ -130,7 +130,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text('© 2026 CricketVerse AI. All rights reserved.',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white24)),
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x3D0F172A))),
             const SizedBox(height: 40),
           ],
         ),
@@ -146,7 +146,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(label,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white38, letterSpacing: 1.4));
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.4));
   }
 }
 
@@ -160,8 +160,8 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
-          Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600))),
+          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
+          Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), fontWeight: FontWeight.w600))),
         ],
       ),
     );

@@ -74,7 +74,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgMedium,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Wicket Type', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text('Wicket Type', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18)),
         content: Wrap(
           spacing: 8, runSpacing: 8,
           children: ['Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Hit Wicket'].map((type) =>
@@ -123,9 +123,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgMedium,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('End First Innings?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('End First Innings?', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
         content: Text('This will start the second innings. Are you sure?',
-            style: GoogleFonts.outfit(color: Colors.white70)),
+            style: GoogleFonts.outfit(color: const Color(0xDE0F172A))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
@@ -149,9 +149,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgMedium,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Finish Match?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Finish Match?', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
         content: Text('This will mark the match as Completed.',
-            style: GoogleFonts.outfit(color: Colors.white70)),
+            style: GoogleFonts.outfit(color: const Color(0xDE0F172A))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
@@ -193,7 +193,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('Live Scoring', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('Live Scoring', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.aiCommentary, arguments: m),
@@ -225,11 +225,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: AppTheme.primaryGreen, borderRadius: BorderRadius.circular(6)),
-                        child: Text('● LIVE', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                        child: Text('● LIVE', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
                       ),
                       const SizedBox(width: 8),
                       Text('${m.matchType} • ${m.isFirstInnings ? "1st" : "2nd"} Innings',
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54)),
+                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x8A0F172A))),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -239,11 +239,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                     child: Text(
                       '$currentRuns/$currentWickets',
                       style: GoogleFonts.outfit(
-                          fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0),
+                          fontSize: 52, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A), height: 1.0),
                     ),
                   ),
                   Text('($currentOvers overs)',
-                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60)),
+                      style: GoogleFonts.outfit(fontSize: 14, color: const Color(0x990F172A))),
                   if (m.target > 0 && !m.isFirstInnings)
                     Text('Target: ${m.target} • Need: ${m.target - currentRuns} off ${(20 - currentOvers).toStringAsFixed(1)} ov',
                         style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentGold)),
@@ -280,8 +280,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                         width: 32, height: 32,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          color: const Color(0xFF0F172A).withOpacity(0.05),
+                          border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.1)),
                         ),
                       )),
                     ],
@@ -329,7 +329,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                         padding: const EdgeInsets.all(4),
                         child: _RunButton(
                           label: '$r',
-                          color: r == 0 ? Colors.white24 : AppTheme.primaryBlue,
+                          color: r == 0 ? Colors.black26 : AppTheme.primaryBlue,
                           onTap: () => _recordRun(r),
                         ),
                       ),
@@ -361,9 +361,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
                           child: _RunButton(label: 'No Ball', color: AppTheme.accentOrange, onTap: () => _recordExtra('No Ball'), small: true))),
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
-                          child: _RunButton(label: 'Bye', color: Colors.white38, onTap: () => _recordExtra('Bye'), small: true))),
+                          child: _RunButton(label: 'Bye', color: const Color(0x610F172A), onTap: () => _recordExtra('Bye'), small: true))),
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
-                          child: _RunButton(label: 'Leg Bye', color: Colors.white38, onTap: () => _recordExtra('Leg Bye'), small: true))),
+                          child: _RunButton(label: 'Leg Bye', color: const Color(0x610F172A), onTap: () => _recordExtra('Leg Bye'), small: true))),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -399,8 +399,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                           icon: const Icon(Icons.undo_rounded, size: 18),
                           label: const Text('Undo'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white70,
-                            side: const BorderSide(color: Colors.white24),
+                            foregroundColor: const Color(0xFF475569),
+                            side: const BorderSide(color: const Color(0x3D0F172A)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
@@ -463,14 +463,14 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('LAST BALL', style: GoogleFonts.outfit(fontSize: 10, color: Colors.white38, letterSpacing: 1.5, fontWeight: FontWeight.w700)),
+                    Text('LAST BALL', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A), letterSpacing: 1.5, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: AppTheme.glassCardSmall,
                       child: Text(
                         m.balls.last.commentary,
-                        style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70, height: 1.4),
+                        style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), height: 1.4),
                       ),
                     ),
                   ],
@@ -552,7 +552,7 @@ class _PlayerChip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: GoogleFonts.outfit(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                Text(name, style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
                 Text(stats, style: GoogleFonts.outfit(fontSize: 11, color: color)),
               ],
             ),

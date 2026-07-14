@@ -53,12 +53,12 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
-              style: GoogleFonts.outfit(color: Colors.white),
+              style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: 'Search players by name or nationality...',
-                prefixIcon: const Icon(Icons.search, color: Colors.white38),
+                prefixIcon: const Icon(Icons.search, color: const Color(0x610F172A)),
                 suffixIcon: _search.isNotEmpty
-                    ? IconButton(icon: const Icon(Icons.clear, color: Colors.white38),
+                    ? IconButton(icon: const Icon(Icons.clear, color: const Color(0x610F172A)),
                         onPressed: () => setState(() => _search = ''))
                     : null,
               ),
@@ -86,9 +86,9 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: selected ? col.withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                      color: selected ? col.withOpacity(0.2) : Colors.black.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: selected ? col : Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: selected ? col : Colors.black.withOpacity(0.1)),
                     ),
                     child: Text(r,
                         style: GoogleFonts.outfit(
@@ -106,7 +106,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
             child: Row(
               children: [
                 Text('${allPlayers.length} players',
-                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white38)),
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x610F172A))),
               ],
             ),
           ),
@@ -151,7 +151,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                   children: [
                                     Text(pw.player.name,
                                         style: GoogleFonts.outfit(
-                                            fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                                            fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
@@ -167,10 +167,10 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(pw.teamShort,
-                                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                                         const SizedBox(width: 4),
                                         Text('• ${pw.player.nationality}',
-                                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                                       ],
                                     ),
                                   ],
@@ -183,11 +183,11 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                       style: GoogleFonts.outfit(
                                           fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primaryBlue)),
                                   Text('runs',
-                                      style: GoogleFonts.outfit(fontSize: 10, color: Colors.white38)),
+                                      style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
                                 ],
                               ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+                              const Icon(Icons.chevron_right, color: const Color(0x3D0F172A), size: 18),
                             ],
                           ),
                         ),

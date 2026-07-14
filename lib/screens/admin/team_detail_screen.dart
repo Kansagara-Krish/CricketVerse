@@ -55,16 +55,16 @@ class TeamDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(team.name,
                         style: GoogleFonts.outfit(
-                            fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                            fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                     Text('${team.players.length} Players in Squad',
-                        style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                        style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
                   ],
                 ),
               ),
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                icon: const Icon(Icons.edit_rounded, color: const Color(0xFF0F172A)),
                 onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Edit team details')),
                 ),
@@ -117,7 +117,7 @@ class TeamDetailScreen extends StatelessWidget {
                   Text(title,
                       style: GoogleFonts.outfit(
                           fontSize: 11, fontWeight: FontWeight.w700,
-                          color: Colors.white38, letterSpacing: 1.5)),
+                          color: const Color(0x610F172A), letterSpacing: 1.5)),
                 ],
               ),
             ),
@@ -141,9 +141,9 @@ class TeamDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.name,
-                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                           Text(p.nationality,
-                              style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                         ],
                       ),
                     ),
@@ -153,11 +153,11 @@ class TeamDetailScreen extends StatelessWidget {
                         Text('${p.runsScored} runs',
                             style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
                         Text('${p.wicketsTaken} wkts',
-                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                       ],
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+                    const Icon(Icons.chevron_right, color: const Color(0x3D0F172A), size: 18),
                   ],
                 ),
               ),
@@ -191,7 +191,7 @@ class _StatChip extends StatelessWidget {
                 style: GoogleFonts.outfit(
                     fontSize: 22, fontWeight: FontWeight.w800, color: color)),
             Text(label,
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white54)),
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x8A0F172A))),
           ],
         ),
       ),

@@ -32,7 +32,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('Create Tournament', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('Create Tournament', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.tournamentList),
@@ -59,13 +59,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 40),
+                    const Icon(Icons.emoji_events_rounded, color: const Color(0xFF0F172A), size: 40),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('New Tournament', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Set up your cricket competition', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70)),
+                        Text('New Tournament', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                        Text('Set up your cricket competition', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xDE0F172A))),
                       ],
                     ),
                   ],
@@ -77,10 +77,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameCtrl,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 decoration: InputDecoration(
                   hintText: 'e.g. CricketVerse Premier League 2026',
-                  prefixIcon: const Icon(Icons.emoji_events_outlined, color: Colors.white38, size: 20),
+                  prefixIcon: const Icon(Icons.emoji_events_outlined, color: const Color(0x610F172A), size: 20),
                 ),
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
@@ -98,10 +98,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                         margin: EdgeInsets.only(right: type != 'Test' ? 8 : 0),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: selected ? AppTheme.accentPurple.withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                          color: selected ? AppTheme.accentPurple.withOpacity(0.2) : Colors.black.withOpacity(0.04),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: selected ? AppTheme.accentPurple : Colors.white.withOpacity(0.1),
+                            color: selected ? AppTheme.accentPurple : Colors.black.withOpacity(0.1),
                             width: selected ? 2 : 1,
                           ),
                         ),
@@ -124,7 +124,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               DropdownButtonFormField<String>(
                 dropdownColor: AppTheme.bgMedium,
                 value: _knockoutType,
-                style: GoogleFonts.outfit(color: Colors.white),
+                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                 items: ['Single Elimination', 'Double Elimination', 'Round Robin', 'Group Stage + Knockouts']
                     .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                     .toList(),
@@ -150,10 +150,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       child: TextFormField(
                         controller: _startCtrl,
                         readOnly: true,
-                        style: GoogleFonts.outfit(color: Colors.white),
+                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                         decoration: InputDecoration(
                           hintText: 'Start Date',
-                          prefixIcon: const Icon(Icons.play_arrow_rounded, color: Colors.white38, size: 18),
+                          prefixIcon: const Icon(Icons.play_arrow_rounded, color: const Color(0x610F172A), size: 18),
                         ),
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                       ),
@@ -174,10 +174,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       child: TextFormField(
                         controller: _endCtrl,
                         readOnly: true,
-                        style: GoogleFonts.outfit(color: Colors.white),
+                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
                         decoration: InputDecoration(
                           hintText: 'End Date',
-                          prefixIcon: const Icon(Icons.stop_rounded, color: Colors.white38, size: 18),
+                          prefixIcon: const Icon(Icons.stop_rounded, color: const Color(0x610F172A), size: 18),
                         ),
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                       ),
@@ -201,10 +201,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: selected ? color.withOpacity(0.12) : Colors.white.withOpacity(0.04),
+                      color: selected ? color.withOpacity(0.12) : Colors.black.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: selected ? color.withOpacity(0.5) : Colors.white.withOpacity(0.08),
+                        color: selected ? color.withOpacity(0.5) : Colors.black.withOpacity(0.08),
                         width: selected ? 1.5 : 1,
                       ),
                     ),
@@ -218,7 +218,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(team.name, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w500)),
+                          child: Text(team.name, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500)),
                         ),
                         if (selected) Icon(Icons.check_circle_rounded, color: color, size: 20),
                       ],
@@ -274,6 +274,6 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white38, letterSpacing: 1.3));
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.3));
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
+import '../core/theme/app_theme.dart';
 
 class PlayerDetailsScreen extends StatelessWidget {
   final Player player;
@@ -12,17 +13,17 @@ class PlayerDetailsScreen extends StatelessWidget {
     final economy = player.oversBowled > 0 ? player.runsConceded / player.oversBowled : 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppTheme.bgDeep,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: const Color(0xFF0F172A)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Player Profile',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
       ),
       body: SingleChildScrollView(
@@ -42,19 +43,19 @@ class PlayerDetailsScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFF0284C7),
                       child: Text(
                         player.name.substring(0, 1),
-                        style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     player.name,
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${player.role} • ${player.nationality}',
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54),
+                    style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A)),
                   ),
                 ],
               ),
@@ -64,35 +65,35 @@ class PlayerDetailsScreen extends StatelessWidget {
             // Career Stats Card
             Text(
               'CAREER STATISTICS',
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white60, letterSpacing: 1.0),
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0x990F172A), letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: const Color(0xFF0F172A).withOpacity(0.03),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
               ),
               child: Column(
                 children: [
                   _buildStatRow('Matches Played', '${player.matchesPlayed}'),
-                  const Divider(color: Colors.white10),
+                  const Divider(color: const Color(0x1A0F172A)),
                   if (player.role != 'Bowler') ...[
                     _buildStatRow('Runs Scored', '${player.runsScored}'),
-                    const Divider(color: Colors.white10),
+                    const Divider(color: const Color(0x1A0F172A)),
                     _buildStatRow('Balls Faced', '${player.ballsFaced}'),
-                    const Divider(color: Colors.white10),
+                    const Divider(color: const Color(0x1A0F172A)),
                     _buildStatRow('Strike Rate', strikeRate.toStringAsFixed(1)),
-                    if (player.role == 'All-rounder') const Divider(color: Colors.white10),
+                    if (player.role == 'All-rounder') const Divider(color: const Color(0x1A0F172A)),
                   ],
                   if (player.role != 'Batter') ...[
                     _buildStatRow('Wickets Taken', '${player.wicketsTaken}'),
-                    const Divider(color: Colors.white10),
+                    const Divider(color: const Color(0x1A0F172A)),
                     _buildStatRow('Runs Conceded', '${player.runsConceded}'),
-                    const Divider(color: Colors.white10),
+                    const Divider(color: const Color(0x1A0F172A)),
                     _buildStatRow('Overs Bowled', player.oversBowled.toStringAsFixed(1)),
-                    const Divider(color: Colors.white10),
+                    const Divider(color: const Color(0x1A0F172A)),
                     _buildStatRow('Economy Rate', economy.toStringAsFixed(2)),
                   ],
                 ],
@@ -103,7 +104,7 @@ class PlayerDetailsScreen extends StatelessWidget {
             // Performance Graph Section
             Text(
               'PERFORMANCE WORM (LAST 8 MATCHES)',
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white60, letterSpacing: 1.0),
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0x990F172A), letterSpacing: 1.0),
             ),
             const SizedBox(height: 16),
             Container(
@@ -127,8 +128,8 @@ class PlayerDetailsScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
-          Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(label, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
+          Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         ],
       ),
     );
@@ -182,7 +183,7 @@ class PlayerPerformancePainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: isBowler ? '${values[i].toInt()}W' : '${values[i].toInt()}',
-          style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 9, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       )..layout();

@@ -42,19 +42,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           children: [
             Center(
               child: Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
             ),
             const SizedBox(height: 20),
-            Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             const SizedBox(height: 20),
-            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, color: Colors.white38))),
+            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, color: const Color(0x610F172A)))),
             const SizedBox(height: 14),
-            TextField(controller: emailCtrl, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, color: Colors.white38))),
+            TextField(controller: emailCtrl, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, color: const Color(0x610F172A)))),
             const SizedBox(height: 14),
-            TextField(controller: orgCtrl, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Organization', prefixIcon: Icon(Icons.business_outlined, color: Colors.white38))),
+            TextField(controller: orgCtrl, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'Organization', prefixIcon: Icon(Icons.business_outlined, color: const Color(0x610F172A)))),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -92,16 +92,16 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Change Password', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Change Password', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             const SizedBox(height: 20),
-            TextField(controller: oldPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Current Password', prefixIcon: Icon(Icons.lock_outline, color: Colors.white38))),
+            TextField(controller: oldPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'Current Password', prefixIcon: Icon(Icons.lock_outline, color: const Color(0x610F172A)))),
             const SizedBox(height: 14),
-            TextField(controller: newPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline, color: Colors.white38))),
+            TextField(controller: newPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline, color: const Color(0x610F172A)))),
             const SizedBox(height: 14),
-            TextField(controller: confirmCtrl, obscureText: true, style: GoogleFonts.outfit(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline, color: Colors.white38))),
+            TextField(controller: confirmCtrl, obscureText: true, style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline, color: const Color(0x610F172A)))),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -127,7 +127,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
-        title: Text('My Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('My Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
         actions: [
           TextButton(
             onPressed: _editProfile,
@@ -160,9 +160,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             ),
             const SizedBox(height: 16),
             Text('Rajesh Kumar',
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             Text('Tournament Administrator',
-                style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
             Text('admin@cricketverse.ai',
                 style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primaryBlue)),
             const SizedBox(height: 8),
@@ -173,7 +173,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text('Admin Access',
-                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700)),
+                  style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
             ),
 
             const SizedBox(height: 32),
@@ -216,9 +216,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     builder: (ctx) => AlertDialog(
                       backgroundColor: AppTheme.bgMedium,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: Text('Logout', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                      title: Text('Logout', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
                       content: Text('Are you sure you want to logout?',
-                          style: GoogleFonts.outfit(color: Colors.white70)),
+                          style: GoogleFonts.outfit(color: const Color(0xDE0F172A))),
                       actions: [
                         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
                         ElevatedButton(
@@ -265,7 +265,7 @@ class _SectionHeader extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Text(title,
             style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                color: Colors.white38, letterSpacing: 1.4)),
+                color: const Color(0x610F172A), letterSpacing: 1.4)),
       ),
     );
   }
@@ -293,12 +293,12 @@ class _SettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600)),
-                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+            const Icon(Icons.chevron_right, color: const Color(0x3D0F172A), size: 18),
           ],
         ),
       ),
@@ -327,8 +327,8 @@ class _SwitchTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white38)),
+                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
               ],
             ),
           ),

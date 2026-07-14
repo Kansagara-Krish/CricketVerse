@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import 'player_details_screen.dart';
+import '../core/theme/app_theme.dart';
 
 class TeamDetailsScreen extends StatefulWidget {
   final Team team;
@@ -25,23 +26,23 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
     final intColor = int.tryParse(widget.team.logoColorHex) ?? 0xFF0284C7;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppTheme.bgDeep,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Team Profile',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Color(intColor),
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white54,
+          labelColor: const Color(0xFF0F172A),
+          unselectedLabelColor: const Color(0xFF64748B),
           tabs: const [
             Tab(text: 'Squad'),
             Tab(text: 'Matches'),
@@ -60,9 +61,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
+                  color: const Color(0xFF0F172A).withOpacity(0.03),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                  border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
                 ),
                 child: ListTile(
                   leading: CircleAvatar(
@@ -70,9 +71,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
                     foregroundColor: Color(intColor),
                     child: Text(player.name.substring(0, 1)),
                   ),
-                  title: Text(player.name, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text(player.role, style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white30),
+                  title: Text(player.name, style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                  subtitle: Text(player.role, style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 12)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0x4D0F172A)),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -105,9 +106,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: const Color(0xFF0F172A).withOpacity(0.03),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -115,8 +116,8 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(opponent, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(date, style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11)),
+              Text(opponent, style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(date, style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 11)),
             ],
           ),
           Container(
