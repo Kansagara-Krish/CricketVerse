@@ -28,7 +28,7 @@ class AppLogo extends StatelessWidget {
       ),
       child: ClipOval(
         child: Image.asset(
-          'assets/images/logo.png',
+          'assets/images/logo.jpg',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
             decoration: const BoxDecoration(

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/logo.png" alt="CricketVerse AI Logo" width="200" height="200" />
+  <img src="assets/images/logo.jpg" alt="CricketVerse AI Logo" width="200" height="200" />
 </p>
 
 # 🏏 CricketVerse AI

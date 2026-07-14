@@ -97,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/images/logo.png',
+                      'assets/images/logo.jpg',
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         // Fallback if logo is missing
