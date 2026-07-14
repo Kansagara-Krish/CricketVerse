@@ -1,0 +1,714 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/storage_service.dart';
+import '../models/models.dart';
+import 'user/match_summary_download_screen.dart';
+
+class MatchDetailsScreen extends StatefulWidget {
+  final String matchId;
+  const MatchDetailsScreen({Key? key, required this.matchId}) : super(key: key);
+
+  @override
+  State<MatchDetailsScreen> createState() => _MatchDetailsScreenState();
+}
+
+class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _chatController = TextEditingController();
+  final List<Map<String, String>> _chatMessages = [
+    {'sender': 'ai', 'text': 'Hello! I am your AI Match Assistant. Ask me anything about the live match!'}
+  ];
+  bool _isPlayingVoice = false;
+  int _playingVoiceIndex = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  void _sendChatMessage(String userQuery, CricketMatch match, StorageService storage) {
+    if (userQuery.trim().isEmpty) return;
+    setState(() {
+      _chatMessages.add({'sender': 'user', 'text': userQuery});
+    });
+    _chatController.clear();
+
+    // Determine mock reply
+    String reply = "I'm analyzing the match data...";
+    final query = userQuery.toLowerCase();
+    
+    final runs = match.isFirstInnings ? match.runsA : match.runsB;
+    final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
+    final overs = match.isFirstInnings ? match.oversA : match.oversB;
+    final winProb = storage.calculateWinProbability(match);
+
+    if (query.contains('who is winning') || query.contains('win probability')) {
+      reply = "According to our CricketVerse AI engine, Team A (${match.teamA.shortName}) has a ${winProb.toStringAsFixed(0)}% probability of winning the match, while ${match.teamB.shortName} stands at ${(100 - winProb).toStringAsFixed(0)}%.";
+    } else if (query.contains('score') || query.contains('current score')) {
+      reply = "The current score is ${match.battingTeamId == match.teamA.id ? match.teamA.shortName : match.teamB.shortName} $runs/$wickets in $overs overs.";
+    } else if (query.contains('last ball') || query.contains('last over')) {
+      if (match.balls.isNotEmpty) {
+        reply = "The last event was: '${match.balls.last.commentary}' by bowler ${match.balls.last.bowlerName} to batsman ${match.balls.last.batsmanName}.";
+      } else {
+        reply = "No balls have been bowled yet in this match.";
+      }
+    } else if (query.contains('batter') || query.contains('batsman') || query.contains('kohli')) {
+      reply = "Virat Kohli is currently batting on 78* runs off 45 balls, displaying incredible control under pressure.";
+    } else if (query.contains('summary') || query.contains('highlights')) {
+      reply = "Match Highlights: IND had a strong start in the powerplay. V. Kohli anchored the innings scoring 78, while Suryakumar Yadav accelerated. Current run rate is at ${(runs / (overs > 0 ? overs : 1)).toStringAsFixed(1)}.";
+    } else {
+      reply = "That's an interesting question! AI engine notes: The batsman's control rating is 92% and the pitch momentum favors batsman in the current block.";
+    }
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        setState(() {
+          _chatMessages.add({'sender': 'ai', 'text': reply});
+        });
+      }
+    });
+  }
+
+  void _playVoiceCommentary(int index, String text) {
+    setState(() {
+      _isPlayingVoice = true;
+      _playingVoiceIndex = index;
+    });
+
+    // Simulate speech audio waves animation
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _isPlayingVoice = false;
+          _playingVoiceIndex = -1;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final storage = Provider.of<StorageService>(context);
+    final match = storage.matches.firstWhere((m) => m.id == widget.matchId, orElse: () => storage.matches[0]);
+
+    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
+    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+
+    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
+    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
+    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+
+    final runs = match.isFirstInnings ? match.runsA : match.runsB;
+    final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
+    final overs = match.isFirstInnings ? match.oversA : match.oversB;
+    final crr = overs > 0 ? (runs / overs) : 0.0;
+    
+    final winProb = storage.calculateWinProbability(match);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0F172A),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Live Match Details',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MatchSummaryDownloadScreen(
+                    matchDetails: {'title': '${match.teamA.shortName} vs ${match.teamB.shortName}'},
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Live Score Header matches Screenshot 2026-07-09 152247.png
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                          const SizedBox(width: 4),
+                          Text('LIVE', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      match.matchType == 'T20' ? 'T20 World Cup - Final' : 'ODI Series',
+                      style: GoogleFonts.outfit(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Teams and Run rate details
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          battingTeam.shortName,
+                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$runs/$wickets',
+                          style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                        ),
+                        Text(
+                          '($overs overs)',
+                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          bowlingTeam.shortName,
+                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white70),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'CRR: ${crr.toStringAsFixed(1)}',
+                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        if (!match.isFirstInnings)
+                          Text(
+                            'Target: ${match.target}',
+                            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                          ),
+                      ],
+                    )
+                  ],
+                ),
+
+                // Target statement
+                if (match.status == 'Live') ...[
+                  const SizedBox(height: 12),
+                  const Divider(color: Colors.white10),
+                  Text(
+                    match.isFirstInnings
+                        ? 'First Innings in progress. Team A setting target.'
+                        : 'Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls.',
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFFFBBF24), fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Tab Bar
+          TabBar(
+            controller: _tabController,
+            indicatorColor: const Color(0xFF0284C7),
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white54,
+            labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+            tabs: const [
+              Tab(text: 'Live Details'),
+              Tab(text: 'AI Commentary'),
+              Tab(text: 'Analytics'),
+              Tab(text: 'AI Chat'),
+            ],
+          ),
+
+          // Tab Body
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // 1. Live Details
+                _buildLiveDetailsView(match, storage, striker, nonStriker, bowler, winProb),
+                // 2. AI Commentary Feed
+                _buildCommentaryFeed(match),
+                // 3. Analytics (Wagon Wheel & Manhattan charts!)
+                _buildAnalyticsView(match),
+                // 4. AI Chat Assistant
+                _buildChatView(match, storage),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Live details tab matching Screenshot 2026-07-09 152247.png ---
+  Widget _buildLiveDetailsView(CricketMatch match, StorageService storage, Player striker, Player nonStriker, Player bowler, double winProb) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Win probability card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.psychology, color: Color(0xFFFBBF24), size: 18),
+                    const SizedBox(width: 8),
+                    Text('AI Win Probability', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 16,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: winProb.round(),
+                          child: Container(color: const Color(0xFF0284C7), child: Center(child: Text('${match.teamA.shortName} ${winProb.toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
+                        ),
+                        Expanded(
+                          flex: (100 - winProb).round(),
+                          child: Container(color: const Color(0xFFEF4444), child: Center(child: Text('${match.teamB.shortName} ${(100 - winProb).toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // RECENT timeline
+          Text('RECENT', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: match.balls.length > 6 ? 6 : match.balls.length,
+              itemBuilder: (context, index) {
+                // Get from back
+                final ball = match.balls[match.balls.length - 1 - index];
+                
+                Color bg = Colors.white.withOpacity(0.08);
+                Color textCol = Colors.white70;
+                String display = ball.run.toString();
+
+                if (ball.isWicket) {
+                  bg = Colors.redAccent;
+                  textCol = Colors.white;
+                  display = 'W';
+                } else if (ball.run == 6) {
+                  bg = const Color(0xFF1E3A8A);
+                  textCol = Colors.white;
+                } else if (ball.run == 4) {
+                  bg = const Color(0xFF78350F);
+                  textCol = const Color(0xFFFBBF24);
+                } else if (ball.extraType == 'Wide') {
+                  display = 'WD';
+                } else if (ball.extraType == 'No Ball') {
+                  display = 'NB';
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: bg,
+                  ),
+                  child: Center(child: Text(display, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textCol))),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // BATTERS Section
+          Text('BATTERS', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.02),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _buildBatterRow('${striker.name}*', '${striker.runsScored}', '${striker.ballsFaced}', isStriker: true),
+                const Divider(color: Colors.white10),
+                _buildBatterRow('${nonStriker.name}', '${nonStriker.runsScored}', '${nonStriker.ballsFaced}'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // BOWLER Section
+          Text('BOWLER', style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.02),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(bowler.name, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+                Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBatterRow(String name, String runs, String balls, {bool isStriker = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            if (isStriker) const Icon(Icons.star, color: Color(0xFFFBBF24), size: 14),
+            const SizedBox(width: 4),
+            Text(name, style: GoogleFonts.outfit(color: isStriker ? Colors.white : Colors.white70, fontWeight: isStriker ? FontWeight.bold : FontWeight.normal)),
+          ],
+        ),
+        Text('$runs ($balls)', style: GoogleFonts.outfit(color: Colors.white70, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  // --- 2. AI Commentary Feed ---
+  Widget _buildCommentaryFeed(CricketMatch match) {
+    if (match.balls.isEmpty) {
+      return const Center(child: Text('Waiting for match scoring events to start...', style: TextStyle(color: Colors.white54)));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: match.balls.length,
+      itemBuilder: (context, index) {
+        // Reverse order so latest is on top
+        final ball = match.balls[match.balls.length - 1 - index];
+        final isVoicePlaying = _isPlayingVoice && _playingVoiceIndex == index;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.06)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
+                    style: GoogleFonts.outfit(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      if (isVoicePlaying)
+                        const Icon(Icons.graphic_eq, color: Color(0xFF0284C7), size: 16),
+                      IconButton(
+                        icon: Icon(
+                          isVoicePlaying ? Icons.volume_up : Icons.volume_mute_outlined,
+                          color: isVoicePlaying ? const Color(0xFF0284C7) : Colors.white70,
+                          size: 18,
+                        ),
+                        onPressed: () => _playVoiceCommentary(index, ball.commentary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                ball.commentary,
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, height: 1.4),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- 3. Analytics custom-painted charts ---
+  Widget _buildAnalyticsView(CricketMatch match) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Wagon Wheel (AI Spatial Analysis)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70)),
+          const SizedBox(height: 10),
+          
+          // Wagon Wheel canvas
+          Center(
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.02),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 2),
+              ),
+              child: CustomPaint(
+                painter: WagonWheelPainter(match.balls),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          Text('Manhattan Chart (Runs Per Over)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70)),
+          const SizedBox(height: 16),
+          
+          // Manhattan custom chart
+          Container(
+            height: 150,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CustomPaint(
+              painter: ManhattanPainter(match.balls),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  // --- 4. AI Chat Assistant ---
+  Widget _buildChatView(CricketMatch match, StorageService storage) {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _chatMessages.length,
+            itemBuilder: (context, index) {
+              final msg = _chatMessages[index];
+              final isAi = msg['sender'] == 'ai';
+              return Align(
+                alignment: isAi ? Alignment.centerLeft : Alignment.centerRight,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isAi ? Colors.white.withOpacity(0.05) : const Color(0xFF0F4C81),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: isAi ? const Radius.circular(0) : const Radius.circular(16),
+                      bottomRight: isAi ? const Radius.circular(16) : const Radius.circular(0),
+                    ),
+                    border: Border.all(color: isAi ? Colors.white10 : Colors.transparent),
+                  ),
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                  child: Text(
+                    msg['text'] ?? '',
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, height: 1.4),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        
+        // Input bar
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: const Color(0xFF1E293B),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Ask: Who is winning? What happened in last over?',
+                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (val) => _sendChatMessage(val, match, storage),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, color: Color(0xFF0284C7)),
+                onPressed: () => _sendChatMessage(_chatController.text, match, storage),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Custom painter for Wagon Wheel
+class WagonWheelPainter extends CustomPainter {
+  final List<BallRecord> balls;
+  WagonWheelPainter(this.balls);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final fieldPaint = Paint()
+      ..color = Colors.white10
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    
+    // Draw boundary line
+    canvas.drawCircle(center, size.width / 2 - 10, fieldPaint);
+    
+    // Draw cricket pitch mock
+    final pitchPaint = Paint()..color = Colors.yellow.withOpacity(0.08);
+    canvas.drawRect(Rect.fromCenter(center: center, width: 12, height: 40), pitchPaint);
+
+    final random = Random(42); // Seed to keep shots constant
+    
+    // Draw shots lines from pitch center
+    for (var ball in balls) {
+      if (ball.run > 0 && ball.extraType == 'None') {
+        double angle = random.nextDouble() * 2 * pi;
+        double shotLength = (size.width / 2 - 14) * (ball.run == 6 ? 1.0 : (ball.run == 4 ? 0.8 : 0.5));
+        
+        final shotPaint = Paint()
+          ..color = ball.run == 6 ? const Color(0xFF60A5FA) : (ball.run == 4 ? const Color(0xFFFBBF24) : Colors.white30)
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
+          
+        final dest = Offset(
+          center.dx + shotLength * cos(angle),
+          center.dy + shotLength * sin(angle),
+        );
+        canvas.drawLine(center, dest, shotPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Custom painter for Manhattan bar chart
+class ManhattanPainter extends CustomPainter {
+  final List<BallRecord> balls;
+  ManhattanPainter(this.balls);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Generate over totals
+    // Group balls by 6-ball blocks (overs)
+    final List<int> runsPerOver = [];
+    int currentOverSum = 0;
+    int ballCount = 0;
+
+    for (var ball in balls) {
+      if (ball.extraType != 'Wide' && ball.extraType != 'No Ball') {
+        currentOverSum += ball.run + ball.extraRun;
+        ballCount++;
+        if (ballCount == 6) {
+          runsPerOver.add(currentOverSum);
+          currentOverSum = 0;
+          ballCount = 0;
+        }
+      } else {
+        currentOverSum += ball.run + ball.extraRun;
+      }
+    }
+    // Add current incomplete over if any
+    if (ballCount > 0) {
+      runsPerOver.add(currentOverSum);
+    }
+
+    if (runsPerOver.isEmpty) {
+      // Mock data to display something clean
+      runsPerOver.addAll([8, 12, 4, 15, 6, 22, 10, 14]);
+    }
+
+    final int maxVal = runsPerOver.fold(10, (max, v) => v > max ? v : max);
+
+    final double widthPerBar = size.width / (runsPerOver.length * 1.5);
+    final double spacing = widthPerBar / 2;
+
+    for (int i = 0; i < runsPerOver.length; i++) {
+      final runs = runsPerOver[i];
+      final double barHeight = (runs / maxVal) * size.height;
+      
+      final barPaint = Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF0284C7), Color(0xFF0F4C81)],
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+        ).createShader(Rect.fromLTWH(i * (widthPerBar + spacing), size.height - barHeight, widthPerBar, barHeight))
+        ..style = PaintingStyle.fill;
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(i * (widthPerBar + spacing), size.height - barHeight, widthPerBar, barHeight),
+          const Radius.circular(4),
+        ),
+        barPaint,
+      );
+
+      // Draw text values above bars
+      final textPainter = TextPainter(
+        text: TextSpan(text: '$runs', style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(i * (widthPerBar + spacing) + (widthPerBar / 2) - (textPainter.width / 2), size.height - barHeight - 12));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}

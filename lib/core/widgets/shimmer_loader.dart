@@ -1,0 +1,62 @@
+// lib/core/widgets/shimmer_loader.dart
+// Shimmer placeholder for list loading states
+
+import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
+
+class ShimmerLoader extends StatelessWidget {
+  final int itemCount;
+  final double itemHeight;
+
+  const ShimmerLoader({Key? key, this.itemCount = 5, this.itemHeight = 80}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      itemCount: itemCount,
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: const Color(0xFF1E293B),
+        highlightColor: const Color(0xFF334155),
+        child: Container(
+          height: itemHeight,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ShimmerCard extends StatelessWidget {
+  final double height;
+  final double? width;
+  final double borderRadius;
+
+  const ShimmerCard({
+    Key? key,
+    this.height = 80,
+    this.width,
+    this.borderRadius = 16,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF1E293B),
+      highlightColor: const Color(0xFF334155),
+      child: Container(
+        height: height,
+        width: width,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+    );
+  }
+}
