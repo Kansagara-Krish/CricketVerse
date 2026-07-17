@@ -69,15 +69,15 @@ class _EditBallScreenState extends State<EditBallScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: const Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Official Timeline Editor',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
         ),
       ),
       body: Padding(
@@ -89,9 +89,9 @@ class _EditBallScreenState extends State<EditBallScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withOpacity(0.03),
+                color: AppTheme.textPrimary.withOpacity(0.03),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
+                border: Border.all(color: AppTheme.textPrimary.withOpacity(0.06)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -101,11 +101,11 @@ class _EditBallScreenState extends State<EditBallScreen> {
                     children: [
                       Text(
                         _isPaused ? 'Match Paused' : 'Match Active',
-                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         _isPaused ? 'Status broadcasts halted' : 'Broadcasting real-time data...',
-                        style: GoogleFonts.outfit(color: const Color(0x8A0F172A), fontSize: 11),
+                        style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11),
                       ),
                     ],
                   ),
@@ -121,7 +121,7 @@ class _EditBallScreenState extends State<EditBallScreen> {
                     icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
                     label: Text(_isPaused ? 'Resume' : 'Pause'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isPaused ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      backgroundColor: _isPaused ? AppTheme.primaryGreen : AppTheme.accentRed,
                       foregroundColor: Colors.white,
                     ),
                   )
@@ -138,7 +138,7 @@ class _EditBallScreenState extends State<EditBallScreen> {
 
             Expanded(
               child: match.balls.isEmpty
-                  ? Center(child: Text('No balls bowled in this innings yet.', style: GoogleFonts.outfit(color: const Color(0x610F172A))))
+                  ? Center(child: Text('No balls bowled in this innings yet.', style: GoogleFonts.outfit(color: AppTheme.textMuted)))
                   : ListView.builder(
                       itemCount: match.balls.length,
                       itemBuilder: (context, index) {
@@ -149,14 +149,14 @@ class _EditBallScreenState extends State<EditBallScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A).withOpacity(0.02),
+                            color: AppTheme.textPrimary.withOpacity(0.02),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.04)),
+                            border: Border.all(color: AppTheme.textPrimary.withOpacity(0.04)),
                           ),
                           child: Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: ball.isWicket ? Colors.redAccent : const Color(0xFF0284C7),
+                                backgroundColor: ball.isWicket ? Colors.redAccent : AppTheme.primaryBlue,
                                 radius: 18,
                                 child: Text(
                                   ball.isWicket ? 'W' : '${ball.run}',
@@ -170,11 +170,11 @@ class _EditBallScreenState extends State<EditBallScreen> {
                                   children: [
                                     Text(
                                       'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
-                                      style: GoogleFonts.outfit(color: const Color(0xDE0F172A), fontSize: 12),
+                                      style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 12),
                                     ),
                                     Text(
                                       ball.commentary,
-                                      style: GoogleFonts.outfit(color: const Color(0x610F172A), fontSize: 11),
+                                      style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 11),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

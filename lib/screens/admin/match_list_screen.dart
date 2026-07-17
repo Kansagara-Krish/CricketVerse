@@ -27,6 +27,12 @@ class _MatchListScreenState extends State<MatchListScreen> with SingleTickerProv
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
     final live = storage.matches.where((m) => m.status == 'Live').toList();
@@ -36,19 +42,22 @@ class _MatchListScreenState extends State<MatchListScreen> with SingleTickerProv
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        title: const Text('Matches'),
-        backgroundColor: AppTheme.bgDeep,
+        title: Text('Matches', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.accentGold,
-          labelColor: const Color(0xFF0F172A),
-          unselectedLabelColor: const Color(0xFF64748B),
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 13),
+          indicatorColor: AppTheme.primaryBlue,
+          labelColor: AppTheme.primaryBlue,
+          unselectedLabelColor: AppTheme.textSecondary,
+          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5),
+          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 12),
+          indicatorSize: TabBarIndicatorSize.tab,
           tabs: [
-            Tab(text: 'Live (${live.length})'),
-            Tab(text: 'Upcoming (${upcoming.length})'),
-            Tab(text: 'Completed (${completed.length})'),
+            Tab(text: 'LIVE (${live.length})'),
+            Tab(text: 'UPCOMING (${upcoming.length})'),
+            Tab(text: 'COMPLETED (${completed.length})'),
           ],
         ),
         actions: [
@@ -98,8 +107,8 @@ class _MatchListView extends StatelessWidget {
     }
     return RefreshIndicator(
       color: AppTheme.primaryBlue,
-      backgroundColor: AppTheme.bgMedium,
-      onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
+      backgroundColor: Colors.white,
+      onRefresh: () async => await Future.delayed(const Duration(milliseconds: 800)),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: matches.length,
@@ -122,50 +131,41 @@ class _MatchTile extends StatelessWidget {
       onTap: () => Navigator.pushNamed(context, AppRoutes.matchDetail, arguments: match),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A).withOpacity(0.04),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isLive ? AppTheme.primaryGreen.withOpacity(0.4) : Colors.black.withOpacity(0.07),
-          ),
-          boxShadow: isLive
-              ? [BoxShadow(color: AppTheme.primaryGreen.withOpacity(0.1), blurRadius: 12)]
-              : [],
-        ),
+        decoration: AppTheme.glassCard,
         child: Column(
           children: [
             // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isLive ? AppTheme.primaryGreen.withOpacity(0.08) : Colors.transparent,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                color: isLive ? AppTheme.primaryGreen.withOpacity(0.05) : Colors.transparent,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
+                      color: statusColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: statusColor.withOpacity(0.4)),
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
                     ),
                     child: Text(
                       isLive ? '● LIVE' : match.status.toUpperCase(),
-                      style: GoogleFonts.outfit(fontSize: 10, color: statusColor, fontWeight: FontWeight.w800),
+                      style: GoogleFonts.outfit(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w800),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(match.matchType,
-                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                      style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                   const Spacer(),
-                  const Icon(Icons.location_on_outlined, size: 12, color: const Color(0x610F172A)),
+                  const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       match.venue.split(',').first,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A)),
+                      style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
                     ),
                   ),
                 ],
@@ -184,16 +184,18 @@ class _MatchTile extends StatelessWidget {
                       children: [
                         Text(match.teamA.shortName,
                             style: GoogleFonts.outfit(
-                                fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                                fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                         Text(match.teamA.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
-                        if (match.runsA > 0) ...[
-                          const SizedBox(height: 4),
+                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        if (match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0) ...[
+                          const SizedBox(height: 6),
                           Text('${match.runsA}/${match.wicketsA}',
                               style: GoogleFonts.outfit(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xDE0F172A))),
+                                  fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           Text('(${match.oversA} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                         ],
                       ],
                     ),
@@ -203,13 +205,13 @@ class _MatchTile extends StatelessWidget {
                     children: [
                       Text('VS',
                           style: GoogleFonts.outfit(
-                              fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0x1F0F172A))),
+                              fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0x2D0F172A))),
                       if (match.target > 0 && !match.isFirstInnings)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentGold.withOpacity(0.15),
+                            color: AppTheme.accentGold.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text('T: ${match.target}',
@@ -224,16 +226,18 @@ class _MatchTile extends StatelessWidget {
                       children: [
                         Text(match.teamB.shortName,
                             style: GoogleFonts.outfit(
-                                fontSize: 24, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+                                fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                         Text(match.teamB.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
-                        if (match.runsB > 0) ...[
-                          const SizedBox(height: 4),
+                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        if (match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0) ...[
+                          const SizedBox(height: 6),
                           Text('${match.runsB}/${match.wicketsB}',
                               style: GoogleFonts.outfit(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xDE0F172A))),
+                                  fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           Text('(${match.oversB} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                         ],
                       ],
                     ),
@@ -248,7 +252,7 @@ class _MatchTile extends StatelessWidget {
               child: Row(
                 children: [
                   Text('${match.date} • ${match.time}',
-                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                      style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textMuted)),
                   const Spacer(),
                   if (isLive)
                     _ActionChip(
@@ -288,9 +292,9 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Row(
           children: [

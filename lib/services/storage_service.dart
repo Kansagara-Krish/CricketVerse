@@ -36,16 +36,22 @@ class StorageService with ChangeNotifier {
     if (usersJson != null) {
       final Map<String, dynamic> decoded = jsonDecode(usersJson);
       _users = decoded.map((key, value) => MapEntry(key, value.toString()));
-    } else {
-      // Default User
-      _users['user@gmail.com'] = 'user123';
-      _users['alex@gmail.com'] = 'alex123';
-      _saveUsers();
     }
+    
+    // Always ensure default users exist for quick login buttons to succeed
+    if (!_users.containsKey('user@gmail.com')) {
+      _users['user@gmail.com'] = 'user123';
+    }
+    if (!_users.containsKey('alex@gmail.com')) {
+      _users['alex@gmail.com'] = 'alex123';
+    }
+    _saveUsers();
+
+    final isUvpceLoaded = _prefs?.getBool('data_version_uvpce_2026') ?? false;
 
     // 2. Load Teams
     final teamsJson = _prefs?.getString('teams');
-    if (teamsJson != null) {
+    if (teamsJson != null && isUvpceLoaded) {
       final List decoded = jsonDecode(teamsJson);
       _teams = decoded.map((item) => Team.fromJson(item)).toList();
     } else {
@@ -54,11 +60,12 @@ class StorageService with ChangeNotifier {
 
     // 3. Load Matches
     final matchesJson = _prefs?.getString('matches');
-    if (matchesJson != null) {
+    if (matchesJson != null && isUvpceLoaded) {
       final List decoded = jsonDecode(matchesJson);
       _matches = decoded.map((item) => CricketMatch.fromJson(item)).toList();
     } else {
       _loadDefaultMatches();
+      _prefs?.setBool('data_version_uvpce_2026', true);
     }
 
     notifyListeners();
@@ -76,39 +83,52 @@ class StorageService with ChangeNotifier {
     _prefs?.setString('matches', jsonEncode(_matches.map((m) => m.toJson()).toList()));
   }
 
-  // Preload default teams and players matching the screenshots
+  // Preload UVPCE College cricket teams and player names
   void _loadDefaultTeams() {
-    final teamIndiaPlayers = [
-      Player(id: 'v_kohli', name: 'V. Kohli', role: 'Batter', nationality: 'IND', runsScored: 2450, ballsFaced: 1800, wicketsTaken: 4, matchesPlayed: 115),
-      Player(id: 's_yadav', name: 'S. Yadav', role: 'Batter', nationality: 'IND', runsScored: 1850, ballsFaced: 1100, wicketsTaken: 0, matchesPlayed: 60),
-      Player(id: 'r_sharma', name: 'R. Sharma', role: 'Batter', nationality: 'IND', runsScored: 3100, ballsFaced: 2200, wicketsTaken: 2, matchesPlayed: 148),
-      Player(id: 'h_pandya', name: 'H. Pandya', role: 'All-rounder', nationality: 'IND', runsScored: 1200, ballsFaced: 900, wicketsTaken: 73, matchesPlayed: 85),
-      Player(id: 'j_bumrah', name: 'J. Bumrah', role: 'Bowler', nationality: 'IND', runsScored: 80, ballsFaced: 120, wicketsTaken: 89, matchesPlayed: 62),
-      Player(id: 'kl_rahul', name: 'KL Rahul', role: 'Batter', nationality: 'IND', runsScored: 1750, ballsFaced: 1350, wicketsTaken: 0, matchesPlayed: 72),
-      Player(id: 'r_pant', name: 'R. Pant', role: 'Batter', nationality: 'IND', runsScored: 980, ballsFaced: 750, wicketsTaken: 0, matchesPlayed: 55),
-      Player(id: 'r_jadeja', name: 'R. Jadeja', role: 'All-rounder', nationality: 'IND', runsScored: 450, ballsFaced: 380, wicketsTaken: 53, matchesPlayed: 68),
-      Player(id: 'k_yadav', name: 'K. Yadav', role: 'Bowler', nationality: 'IND', runsScored: 45, ballsFaced: 90, wicketsTaken: 52, matchesPlayed: 34),
-      Player(id: 'm_siraj', name: 'M. Siraj', role: 'Bowler', nationality: 'IND', runsScored: 12, ballsFaced: 30, wicketsTaken: 38, matchesPlayed: 29),
-      Player(id: 'a_singh', name: 'A. Singh', role: 'Bowler', nationality: 'IND', runsScored: 5, ballsFaced: 15, wicketsTaken: 28, matchesPlayed: 24),
+    final firstNames = [
+      'Aarav', 'Vihaan', 'Arjun', 'Kabir', 'Ishaan', 'Rohan', 'Aditya', 'Kunal',
+      'Reyansh', 'Vivaan', 'Advik', 'Sai', 'Atharva', 'Shaurya', 'Rudra', 'Aaryan',
+      'Veer', 'Ayaan', 'Kiaan', 'Krishna', 'Dev', 'Aryan', 'Madhav', 'Ryan',
+      'Dhruv', 'Kian', 'Yuvan'
     ];
+    final lastNames = ['Patel', 'Shah', 'Mehta', 'Sharma', 'Joshi', 'Gani', 'Amin', 'Chaudhari', 'Vaghela', 'Trivedi', 'Dave'];
 
-    final teamAusPlayers = [
-      Player(id: 'p_cummins', name: 'P. Cummins', role: 'Bowler', nationality: 'AUS', runsScored: 450, ballsFaced: 350, wicketsTaken: 65, matchesPlayed: 52),
-      Player(id: 'm_starc', name: 'M. Starc', role: 'Bowler', nationality: 'AUS', runsScored: 120, ballsFaced: 100, wicketsTaken: 74, matchesPlayed: 58),
-      Player(id: 't_head', name: 'T. Head', role: 'Batter', nationality: 'AUS', runsScored: 1100, ballsFaced: 850, wicketsTaken: 5, matchesPlayed: 38),
-      Player(id: 'm_marsh', name: 'M. Marsh', role: 'All-rounder', nationality: 'AUS', runsScored: 1450, ballsFaced: 1120, wicketsTaken: 22, matchesPlayed: 54),
-      Player(id: 'g_maxwell', name: 'G. Maxwell', role: 'All-rounder', nationality: 'AUS', runsScored: 2250, ballsFaced: 1500, wicketsTaken: 40, matchesPlayed: 98),
-      Player(id: 'd_warner', name: 'D. Warner', role: 'Batter', nationality: 'AUS', runsScored: 2890, ballsFaced: 2000, wicketsTaken: 0, matchesPlayed: 102),
-      Player(id: 's_smith', name: 'S. Smith', role: 'Batter', nationality: 'AUS', runsScored: 1050, ballsFaced: 890, wicketsTaken: 0, matchesPlayed: 65),
-      Player(id: 'm_labus', name: 'M. Labuschagne', role: 'Batter', nationality: 'AUS', runsScored: 350, ballsFaced: 320, wicketsTaken: 0, matchesPlayed: 20),
-      Player(id: 'a_zampa', name: 'A. Zampa', role: 'Bowler', nationality: 'AUS', runsScored: 48, ballsFaced: 95, wicketsTaken: 92, matchesPlayed: 80),
-      Player(id: 'j_hazle', name: 'J. Hazlewood', role: 'Bowler', nationality: 'AUS', runsScored: 20, ballsFaced: 50, wicketsTaken: 61, matchesPlayed: 45),
-      Player(id: 'm_wade', name: 'M. Wade', role: 'Batter', nationality: 'AUS', runsScored: 980, ballsFaced: 720, wicketsTaken: 0, matchesPlayed: 75),
-    ];
+    List<Player> generatePlayersForTeam(String teamShort, int startIndex) {
+      final roles = ['Batter', 'Batter', 'Batter', 'Batter', 'All-rounder', 'All-rounder', 'All-rounder', 'Bowler', 'Bowler', 'Bowler', 'Bowler'];
+      final List<Player> teamPlayers = [];
+      for (int i = 0; i < 11; i++) {
+        final fName = firstNames[(startIndex + i) % firstNames.length];
+        final lName = lastNames[(startIndex * 3 + i) % lastNames.length];
+        final fullName = '$fName $lName';
+        final id = '${teamShort.toLowerCase()}_${fName.toLowerCase()}_$i';
+        
+        final runs = (200 + (startIndex * 35 + i * 55) % 1800);
+        final wickets = (i >= 7) ? (10 + (startIndex * 4 + i * 5) % 50) : (0 + (startIndex + i) % 4);
+        final matches = 15 + (runs ~/ 120);
+
+        teamPlayers.add(Player(
+          id: id,
+          name: fullName,
+          role: roles[i],
+          nationality: 'IND',
+          runsScored: runs,
+          ballsFaced: (runs * 1.3).round(),
+          wicketsTaken: wickets,
+          matchesPlayed: matches,
+        ));
+      }
+      return teamPlayers;
+    }
 
     _teams = [
-      Team(id: 'india', name: 'Team India', shortName: 'IND', logoColorHex: '0xFF0F4C81', players: teamIndiaPlayers),
-      Team(id: 'australia', name: 'Team Australia', shortName: 'AUS', logoColorHex: '0xFFFFBF00', players: teamAusPlayers),
+      Team(id: 'uvpce_a', name: 'UVPCE A', shortName: 'UVP-A', logoColorHex: '0xFF0284C7', players: generatePlayersForTeam('UVP-A', 0)),
+      Team(id: 'uvpce_b', name: 'UVPCE B', shortName: 'UVP-B', logoColorHex: '0xFF10B981', players: generatePlayersForTeam('UVP-B', 5)),
+      Team(id: 'uvpce_c', name: 'UVPCE C', shortName: 'UVP-C', logoColorHex: '0xFF8B5CF6', players: generatePlayersForTeam('UVP-C', 10)),
+      Team(id: 'uvpce_titans', name: 'UVPCE Titans', shortName: 'UVP-TT', logoColorHex: '0xFFF59E0B', players: generatePlayersForTeam('UVP-TT', 15)),
+      Team(id: 'uvpce_warriors', name: 'UVPCE Warriors', shortName: 'UVP-WR', logoColorHex: '0xFFEF4444', players: generatePlayersForTeam('UVP-WR', 20)),
+      Team(id: 'uvpce_challengers', name: 'UVPCE Challengers', shortName: 'UVP-CH', logoColorHex: '0xFFEC4899', players: generatePlayersForTeam('UVP-CH', 25)),
+      Team(id: 'uvpce_strikers', name: 'UVPCE Strikers', shortName: 'UVP-ST', logoColorHex: '0xFF06B6D4', players: generatePlayersForTeam('UVP-ST', 3)),
+      Team(id: 'uvpce_legends', name: 'UVPCE Legends', shortName: 'UVP-LG', logoColorHex: '0xFF14B8A6', players: generatePlayersForTeam('UVP-LG', 8)),
     ];
     _saveTeams();
   }
@@ -116,65 +136,87 @@ class StorageService with ChangeNotifier {
   void _loadDefaultMatches() {
     if (_teams.isEmpty) _loadDefaultTeams();
 
-    final matchIndia = _teams.firstWhere((t) => t.id == 'india');
-    final matchAus = _teams.firstWhere((t) => t.id == 'australia');
+    final teamTitans = _teams.firstWhere((t) => t.id == 'uvpce_titans');
+    final teamWarriors = _teams.firstWhere((t) => t.id == 'uvpce_warriors');
+    final teamA = _teams.firstWhere((t) => t.id == 'uvpce_a');
+    final teamB = _teams.firstWhere((t) => t.id == 'uvpce_b');
 
-    // Live Match: IND vs AUS - T20 World Cup Final
+    // Live Match: Titans vs Warriors
     final liveMatch = CricketMatch(
       id: 'live_world_cup_final',
-      teamA: matchIndia,
-      teamB: matchAus,
+      teamA: teamTitans,
+      teamB: teamWarriors,
       matchType: 'T20',
-      venue: 'Wankhede Stadium',
-      date: '09-07-2026',
+      venue: 'Narendra Modi Stadium',
+      date: '17-07-2026',
       time: '19:30',
       status: 'Live',
-      tossWinner: 'Team India',
+      tossWinner: teamTitans.name,
       tossDecision: 'Bat',
-      battingTeamId: 'india',
-      playingXI_A: matchIndia.players,
-      playingXI_B: matchAus.players,
-      runsA: 184,
+      battingTeamId: 'uvpce_titans',
+      playingXI_A: teamTitans.players,
+      playingXI_B: teamWarriors.players,
+      runsA: 145,
       wicketsA: 4,
-      oversA: 18.2,
+      oversA: 15.4,
       runsB: 0,
       wicketsB: 0,
       oversB: 0.0,
-      target: 215,
+      target: 185,
       scorerUsername: 'scorer1',
       scorerPassword: '123',
-      currentStrikerId: 'v_kohli',
-      currentNonStrikerId: 's_yadav',
-      currentBowlerId: 'm_starc',
+      currentStrikerId: teamTitans.players[0].id,
+      currentNonStrikerId: teamTitans.players[1].id,
+      currentBowlerId: teamWarriors.players[teamWarriors.players.length - 1].id,
       isFirstInnings: true,
       balls: [
-        BallRecord(run: 1, extraRun: 0, extraType: 'None', isWicket: false, wicketType: 'None', batsmanName: 'V. Kohli', bowlerName: 'M. Starc', commentary: 'Starc fires it full on the stumps, Kohli pushes it to cover for a quick single.', timestamp: DateTime.now()),
-        BallRecord(run: 0, extraRun: 0, extraType: 'None', isWicket: false, wicketType: 'None', batsmanName: 'S. Yadav', bowlerName: 'M. Starc', commentary: 'Good length delivery outside off, Suryakumar plays a solid defensive block.', timestamp: DateTime.now()),
+        BallRecord(
+          run: 4,
+          extraRun: 0,
+          extraType: 'None',
+          isWicket: false,
+          wicketType: 'None',
+          batsmanName: teamTitans.players[0].name,
+          bowlerName: teamWarriors.players[teamWarriors.players.length - 1].name,
+          commentary: 'CRACKING BOUNDARY! Smashed down the ground past mid-on for four!',
+          timestamp: DateTime.now(),
+        ),
+        BallRecord(
+          run: 1,
+          extraRun: 0,
+          extraType: 'None',
+          isWicket: false,
+          wicketType: 'None',
+          batsmanName: teamTitans.players[0].name,
+          bowlerName: teamWarriors.players[teamWarriors.players.length - 1].name,
+          commentary: 'Pushed to deep cover for a single to keep strike.',
+          timestamp: DateTime.now(),
+        ),
       ],
     );
 
-    // Completed Match: IND vs AUS - Bilateral Series
+    // Completed Match: UVPCE A vs UVPCE B
     final completedMatch = CricketMatch(
       id: 'completed_bilateral_1',
-      teamA: matchIndia,
-      teamB: matchAus,
+      teamA: teamA,
+      teamB: teamB,
       matchType: 'T20',
-      venue: 'Melbourne Cricket Ground',
-      date: '02-07-2026',
+      venue: 'Wankhede Stadium',
+      date: '15-07-2026',
       time: '14:30',
       status: 'Completed',
-      tossWinner: 'Team Australia',
+      tossWinner: teamB.name,
       tossDecision: 'Bowl',
-      battingTeamId: 'india',
-      playingXI_A: matchIndia.players,
-      playingXI_B: matchAus.players,
-      runsA: 172,
+      battingTeamId: 'uvpce_a',
+      playingXI_A: teamA.players,
+      playingXI_B: teamB.players,
+      runsA: 168,
       wicketsA: 6,
       oversA: 20.0,
-      runsB: 175,
-      wicketsB: 3,
-      oversB: 19.1,
-      target: 173,
+      runsB: 169,
+      wicketsB: 5,
+      oversB: 19.3,
+      target: 169,
       scorerUsername: 'scorer2',
       scorerPassword: '456',
       balls: [],
@@ -196,10 +238,13 @@ class StorageService with ChangeNotifier {
     }
 
     // 2. Scorer login
-    final matchScoring = _matches.firstWhere(
-      (m) => m.scorerUsername == usernameOrEmail && m.scorerPassword == password,
-      orElse: () => null as dynamic,
-    );
+    CricketMatch? matchScoring;
+    for (final m in _matches) {
+      if (m.scorerUsername == usernameOrEmail && m.scorerPassword == password) {
+        matchScoring = m;
+        break;
+      }
+    }
     if (matchScoring != null) {
       _currentUserEmail = usernameOrEmail;
       _currentRole = 'Scorer';
@@ -433,6 +478,22 @@ class StorageService with ChangeNotifier {
     if (_activeScorerMatchId == null) return;
     final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
     match.currentBowlerId = newBowlerId;
+    _saveMatches();
+    notifyListeners();
+  }
+
+  void setStriker(String strikerId) {
+    if (_activeScorerMatchId == null) return;
+    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+    match.currentStrikerId = strikerId;
+    _saveMatches();
+    notifyListeners();
+  }
+
+  void setNonStriker(String nonStrikerId) {
+    if (_activeScorerMatchId == null) return;
+    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+    match.currentNonStrikerId = nonStrikerId;
     _saveMatches();
     notifyListeners();
   }

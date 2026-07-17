@@ -60,8 +60,8 @@ class _PredictionScreenState extends State<PredictionScreen>
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Match Prediction', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('Match Prediction', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
@@ -84,10 +84,10 @@ class _PredictionScreenState extends State<PredictionScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.auto_awesome, color: const Color(0xFF0F172A), size: 16),
+                  const Icon(Icons.auto_awesome, color: AppTheme.textPrimary, size: 16),
                   const SizedBox(width: 8),
                   Text('AI-Powered Prediction Engine',
-                      style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+                      style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -173,7 +173,7 @@ class _PredictionScreenState extends State<PredictionScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(e.value,
-                                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), fontWeight: FontWeight.w600)),
+                                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             AnimatedBuilder(
                               animation: _barAnim,
@@ -203,7 +203,7 @@ class _PredictionScreenState extends State<PredictionScreen>
             Text(
               '⚠️ Predictions are AI-generated estimates based on match data and historical patterns. Not guaranteed.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x3D0F172A), height: 1.5),
+              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, height: 1.5),
             ),
             const SizedBox(height: 40),
           ],
@@ -269,7 +269,7 @@ class _GaugeLabel extends StatelessWidget {
     return Column(
       children: [
         Text(pct, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w900, color: color)),
-        Text(shortName, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xDE0F172A))),
+        Text(shortName, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
       ],
     );
   }
@@ -284,7 +284,7 @@ class _SectionLabel extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Text(label,
-          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.4)),
+          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4)),
     );
   }
 }
@@ -306,7 +306,7 @@ class _ProbBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(full, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+              Text(full, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
               const SizedBox(height: 6),
               AnimatedBuilder(
                 animation: anim,
@@ -315,7 +315,7 @@ class _ProbBar extends StatelessWidget {
                     Container(
                         height: 10,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withOpacity(0.06),
+                          color: AppTheme.textPrimary.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(5),
                         )),
                     FractionallySizedBox(
@@ -353,8 +353,8 @@ class _ContextRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
-          Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600))),
+          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+          Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
         ],
       ),
     );

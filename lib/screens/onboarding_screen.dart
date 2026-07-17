@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_theme.dart';
 import 'auth_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -18,24 +19,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: "Follow Every Match Live",
       description: "Get real-time scores, deep AI insights, and immersive ball-by-ball commentary right from the stadium.",
       imagePath: "assets/images/onboarding_stadium.png",
-      gradientStart: Color(0xFF0F4C81),
-      gradientEnd: Color(0xFF1E3A8A),
+      gradientStart: const Color(0xFF0F4C81),
+      gradientEnd: const Color(0xFF1E3A8A),
       stepText: "STEP 1 OF 3",
     ),
     OnboardingData(
       title: "AI Voice Commentary",
       description: "Experience personalized match insights delivered via intelligent voice synthesis during live action.",
       imagePath: "assets/images/onboarding_commentary.png",
-      gradientStart: Color(0xFF0284C7),
-      gradientEnd: Color(0xFF0D9488),
+      gradientStart: AppTheme.primaryBlue,
+      gradientEnd: const Color(0xFF0D9488),
       stepText: "STEP 2 OF 3",
     ),
     OnboardingData(
       title: "Real-Time Predictions",
       description: "Harness AI-driven match probabilities, live scorecards, and intelligent insights to stay ahead of every play.",
       imagePath: "assets/images/onboarding_prediction.png",
-      gradientStart: Color(0xFF0284C7),
-      gradientEnd: Color(0xFF10B981),
+      gradientStart: AppTheme.primaryBlue,
+      gradientEnd: AppTheme.primaryGreen,
       stepText: "STEP 3 OF 3",
     ),
   ];
@@ -64,7 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final currentSlide = _slides[_currentPage];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.bgDark,
       body: Stack(
         children: [
           // Background Gradient decoration (Subtle light mode circles)
@@ -118,7 +119,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         child: Text(
                           'Skip',
                           style: GoogleFonts.outfit(
-                            color: const Color(0xFF0284C7),
+                            color: AppTheme.primaryBlue,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -150,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               width: size.width * 0.85,
                               height: size.width * 0.85,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(32),
                                 border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
                                 boxShadow: [
@@ -184,7 +185,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   margin: const EdgeInsets.all(20),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
@@ -210,7 +211,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(3),
                               color: _currentPage == index
-                                  ? const Color(0xFF0284C7)
+                                  ? AppTheme.primaryBlue
                                   : Colors.black.withValues(alpha: 0.1),
                             ),
                           ),
@@ -224,7 +225,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0F172A),
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -235,7 +236,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 14,
                           height: 1.5,
-                          color: const Color(0xFF475569),
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       
@@ -247,11 +248,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           children: [
                             Container(width: 3, height: 16, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
                             const SizedBox(width: 3),
-                            Container(width: 3, height: 26, decoration: BoxDecoration(color: const Color(0xFF0284C7), borderRadius: BorderRadius.circular(2))),
+                            Container(width: 3, height: 26, decoration: BoxDecoration(color: AppTheme.primaryBlue, borderRadius: BorderRadius.circular(2))),
                             const SizedBox(width: 3),
                             Container(width: 3, height: 12, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
                             const SizedBox(width: 3),
-                            Container(width: 3, height: 22, decoration: BoxDecoration(color: const Color(0xFF0284C7), borderRadius: BorderRadius.circular(2))),
+                            Container(width: 3, height: 22, decoration: BoxDecoration(color: AppTheme.primaryBlue, borderRadius: BorderRadius.circular(2))),
                             const SizedBox(width: 3),
                             Container(width: 3, height: 8, decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(2))),
                           ],
@@ -268,7 +269,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF94A3B8),
+                              color: AppTheme.textMuted,
                               letterSpacing: 1.0,
                             ),
                           ),
@@ -278,7 +279,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ? ElevatedButton(
                                   onPressed: _navigateToAuth,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0284C7),
+                                    backgroundColor: AppTheme.primaryBlue,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                     shape: RoundedRectangleBorder(
@@ -305,7 +306,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     shape: BoxShape.circle,
                                     color: _currentPage == 1
                                         ? const Color(0xFFFBBF24) // Yellow button for Step 2
-                                        : const Color(0xFF0284C7), // Blue button for Step 1
+                                        : AppTheme.primaryBlue, // Blue button for Step 1
                                   ),
                                   child: IconButton(
                                     icon: Icon(

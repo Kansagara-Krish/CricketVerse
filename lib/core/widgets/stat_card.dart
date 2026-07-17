@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../theme/app_theme.dart';
+
 class StatCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -29,12 +31,12 @@ class StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.bgMedium,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: const Color(0xFF243354)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(12),
+              color: Colors.black.withValues(alpha: 0.25),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -62,7 +64,7 @@ class StatCard extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
+                    color: AppTheme.textPrimary,
                     height: 1.1,
                   ),
                 ),
@@ -71,7 +73,7 @@ class StatCard extends StatelessWidget {
                   title,
                   style: GoogleFonts.outfit(
                     fontSize: 12,
-                    color: const Color(0xFF475569),
+                    color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -79,7 +81,7 @@ class StatCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
-                    style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xFF94A3B8)),
+                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted),
                   ),
                 ],
               ],

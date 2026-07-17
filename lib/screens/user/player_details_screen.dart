@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/models.dart';
-import '../core/theme/app_theme.dart';
+import '../../models/models.dart';
+import '../../core/theme/app_theme.dart';
 
 class PlayerDetailsScreen extends StatelessWidget {
   final Player player;
@@ -15,15 +15,15 @@ class PlayerDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: AppTheme.bgDark,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: const Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Player Profile',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -37,25 +37,25 @@ class PlayerDetailsScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 46,
-                    backgroundColor: const Color(0xFF0284C7).withOpacity(0.2),
+                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.2),
                     child: CircleAvatar(
                       radius: 40,
-                      backgroundColor: const Color(0xFF0284C7),
+                      backgroundColor: AppTheme.primaryBlue,
                       child: Text(
                         player.name.substring(0, 1),
-                        style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     player.name,
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${player.role} • ${player.nationality}',
-                    style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A)),
+                    style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary),
                   ),
                 ],
               ),
@@ -71,9 +71,9 @@ class PlayerDetailsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withOpacity(0.03),
+                color: AppTheme.textPrimary.withOpacity(0.03),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
+                border: Border.all(color: AppTheme.textPrimary.withOpacity(0.06)),
               ),
               child: Column(
                 children: [
@@ -128,8 +128,8 @@ class PlayerDetailsScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
-          Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+          Text(label, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary)),
+          Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -151,12 +151,12 @@ class PlayerPerformancePainter extends CustomPainter {
     final double widthBetweenPoints = size.width / (values.length - 1);
 
     final linePaint = Paint()
-      ..color = const Color(0xFF0284C7)
+      ..color = AppTheme.primaryBlue
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
     final dotPaint = Paint()
-      ..color = const Color(0xFF10B981)
+      ..color = AppTheme.primaryGreen
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -183,7 +183,7 @@ class PlayerPerformancePainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: isBowler ? '${values[i].toInt()}W' : '${values[i].toInt()}',
-          style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 9, fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 9, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       )..layout();

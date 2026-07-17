@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class MatchSummaryDownloadScreen extends StatelessWidget {
   final Map<String, dynamic> matchDetails;
@@ -8,15 +11,31 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = matchDetails['title'] ?? 'Match Summary';
+    final teamAName = matchDetails['teamAName'] ?? 'Team A';
+    final teamBName = matchDetails['teamBName'] ?? 'Team B';
+    final scoreA = matchDetails['scoreA'] ?? '0/0';
+    final scoreB = matchDetails['scoreB'] ?? '0/0';
+    final oversA = matchDetails['oversA'] ?? '0.0 Overs';
+    final oversB = matchDetails['oversB'] ?? '0.0 Overs';
+    final resultText = matchDetails['result'] ?? 'No result available';
+    final List<String> teamAPlayers = List<String>.from(matchDetails['teamAPlayers'] ?? []);
+    final List<String> teamBPlayers = List<String>.from(matchDetails['teamBPlayers'] ?? []);
+
     return Scaffold(
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        title: const Text('Match Summary & Download'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text('Match Summary', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download),
+            icon: const Icon(Icons.download, color: AppTheme.primaryBlue),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Downloading detailed PDF report...')),
+              CustomNotification.show(
+                context,
+                'Downloading detailed PDF report for $title...',
+                type: NotificationType.info,
               );
             },
             tooltip: 'Download Report',
@@ -28,62 +47,73 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildMatchResultCard(context),
+            _buildMatchResultCard(context, title, resultText),
             const SizedBox(height: 16),
-            _buildTopPerformersCard(context),
+            _buildTopPerformersCard(context, teamAPlayers, teamBPlayers),
             const SizedBox(height: 16),
-            _buildInningsSummaryCard(context, "India Innings", "245/8", "20.0 Overs"),
+            _buildInningsSummaryCard(context, "$teamAName Innings", scoreA, oversA, teamAPlayers),
             const SizedBox(height: 16),
-            _buildInningsSummaryCard(context, "Australia Innings", "230/9", "20.0 Overs"),
-             const SizedBox(height: 16),
-             _buildRunRateGraphCard(context),
-             const SizedBox(height: 24),
-             ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Downloading detailed PDF report...')),
-                  );
-                },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Download Full Match Report'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-             )
+            _buildInningsSummaryCard(context, "$teamBName Innings", scoreB, oversB, teamBPlayers),
+            const SizedBox(height: 16),
+            _buildRunRateGraphCard(context),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                CustomNotification.show(
+                  context,
+                  'Downloading detailed PDF report for $title...',
+                  type: NotificationType.info,
+                );
+              },
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Download Full Match Report'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMatchResultCard(BuildContext context) {
+  Widget _buildMatchResultCard(BuildContext context, String title, String resultText) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-             Text(
+            Text(
               "Match Result",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: AppTheme.textMuted,
+                letterSpacing: 1.0,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              "${matchDetails['title']} won by 15 runs", // Mock result
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
+              resultText,
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-             Text(
-              "Player of the Match: Virat Kohli",
-              style: Theme.of(context).textTheme.titleSmall,
+            Text(
+              title,
+              style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -91,10 +121,15 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopPerformersCard(BuildContext context) {
+  Widget _buildTopPerformersCard(BuildContext context, List<String> teamAPlayers, List<String> teamBPlayers) {
+    final p1 = teamAPlayers.isNotEmpty ? teamAPlayers[0] : 'Aarav Patel';
+    final p2 = teamBPlayers.isNotEmpty ? teamBPlayers[0] : 'Advik Shah';
+    final p3 = teamAPlayers.length > 1 ? teamAPlayers[1] : 'Ishaan Mehta';
+
     return Card(
+      color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -102,12 +137,12 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
           children: [
             Text(
               "Top Performers",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
-            const Divider(),
-            _buildPerformerRow("Virat Kohli", "Batting", "82* (53)"),
-            _buildPerformerRow("Jasprit Bumrah", "Bowling", "3/24 (4.0)"),
-            _buildPerformerRow("Glenn Maxwell", "Batting", "65 (32)"),
+            const Divider(height: 20),
+            _buildPerformerRow(p1, "Batting", "62* (38)"),
+            _buildPerformerRow(p2, "Bowling", "3/18 (4.0)"),
+            _buildPerformerRow(p3, "Batting", "45 (27)"),
           ],
         ),
       ),
@@ -124,46 +159,54 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(role, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                Text(name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary)),
+                Text(role, style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11)),
               ],
             ),
           ),
-          Text(stats, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(stats, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppTheme.textPrimary)),
         ],
       ),
     );
   }
 
-  Widget _buildInningsSummaryCard(BuildContext context, String teamName, String score, String overs) {
-     return Card(
+  Widget _buildInningsSummaryCard(BuildContext context, String title, String score, String overs, List<String> players) {
+    final p1 = players.isNotEmpty ? players[0] : 'Batsman A';
+    final p2 = players.length > 1 ? players[1] : 'Batsman B';
+    final p3 = players.length > 2 ? players[2] : 'Bowler X';
+
+    return Card(
+      color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-               children: [
-                 Text(
-                    teamName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    "$score ($overs)",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-               ],
-             ),
-             const Divider(),
-             const Text("Top Batsmen", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Player A"), const Text("45 (30)")]),
-             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Player B"), const Text("30 (20)")]),
-             const SizedBox(height: 8),
-             const Text("Top Bowlers", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Player X"), const Text("2/20")]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                ),
+                Text(
+                  "$score ($overs)",
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            Text("Top Batsmen", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p1, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("45 (30)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
+            const SizedBox(height: 4),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p2, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("30 (20)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
+            const SizedBox(height: 12),
+            Text("Top Bowlers", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p3, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("2/20 (4.0)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
           ],
         ),
       ),
@@ -172,8 +215,9 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
 
   Widget _buildRunRateGraphCard(BuildContext context) {
     return Card(
+      color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -181,7 +225,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
           children: [
             Text(
               "Run Rate Comparison",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -198,7 +242,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                         showTitles: true,
                         reservedSize: 22,
                         interval: 5,
-                        getTitlesWidget: (value, meta) => Text(value.toInt().toString(), style: const TextStyle(fontSize: 10)),
+                        getTitlesWidget: (value, meta) => Text(value.toInt().toString(), style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textSecondary)),
                       ),
                     ),
                   ),
@@ -210,14 +254,14 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                         FlSpot(5, 30),
                         FlSpot(10, 75),
                         FlSpot(15, 120),
-                        FlSpot(20, 200), // Target/Score
+                        FlSpot(20, 200),
                       ],
                       isCurved: true,
-                      color: Colors.blue,
+                      color: AppTheme.primaryBlue,
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(show: true, color: Colors.blue.withOpacity(0.1)),
+                      belowBarData: BarAreaData(show: true, color: AppTheme.primaryBlue.withOpacity(0.08)),
                     ),
                     LineChartBarData(
                       spots: const [
@@ -225,14 +269,14 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                         FlSpot(5, 45),
                         FlSpot(10, 80),
                         FlSpot(15, 130),
-                        FlSpot(20, 185), // Score
+                        FlSpot(20, 185),
                       ],
                       isCurved: true,
-                      color: Colors.red,
+                      color: AppTheme.accentRed,
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(show: true, color: Colors.red.withOpacity(0.1)),
+                      belowBarData: BarAreaData(show: true, color: AppTheme.accentRed.withOpacity(0.08)),
                     ),
                   ],
                 ),

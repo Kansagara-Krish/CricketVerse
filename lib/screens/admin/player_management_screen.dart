@@ -39,7 +39,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         title: const Text('Player Management'),
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: AppTheme.bgDark,
         actions: [
           IconButton(
             icon: const Icon(Icons.group_add_rounded),
@@ -53,12 +53,12 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
-              style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+              style: GoogleFonts.outfit(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Search players by name or nationality...',
-                prefixIcon: const Icon(Icons.search, color: const Color(0x610F172A)),
+                prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
                 suffixIcon: _search.isNotEmpty
-                    ? IconButton(icon: const Icon(Icons.clear, color: const Color(0x610F172A)),
+                    ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.textMuted),
                         onPressed: () => setState(() => _search = ''))
                     : null,
               ),
@@ -106,7 +106,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
             child: Row(
               children: [
                 Text('${allPlayers.length} players',
-                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x610F172A))),
+                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),
           ),
@@ -151,7 +151,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                   children: [
                                     Text(pw.player.name,
                                         style: GoogleFonts.outfit(
-                                            fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                                            fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
@@ -167,10 +167,10 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(pw.teamShort,
-                                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                                         const SizedBox(width: 4),
                                         Text('• ${pw.player.nationality}',
-                                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                                       ],
                                     ),
                                   ],
@@ -183,11 +183,11 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                                       style: GoogleFonts.outfit(
                                           fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primaryBlue)),
                                   Text('runs',
-                                      style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                                      style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                                 ],
                               ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right, color: const Color(0x3D0F172A), size: 18),
+                              const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
                             ],
                           ),
                         ),

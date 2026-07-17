@@ -9,6 +9,7 @@ import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class LiveScoringScreen extends StatefulWidget {
   final CricketMatch match;
@@ -72,9 +73,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgMedium,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Wicket Type', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text('Wicket Type', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
         content: Wrap(
           spacing: 8, runSpacing: 8,
           children: ['Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Hit Wicket'].map((type) =>
@@ -85,8 +86,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                 storage.updateScore(runs: 0, extraType: 'None', extraRuns: 0, isWicket: true, wicketType: type);
                 _addBall('W');
                 HapticFeedback.heavyImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('🔴 WICKET — $type!'), backgroundColor: AppTheme.accentRed),
+                CustomNotification.show(
+                  context,
+                  'Wicket recorded: $type!',
+                  type: NotificationType.error,
                 );
               },
               child: Container(
@@ -112,8 +115,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     final storage = Provider.of<StorageService>(context, listen: false);
     storage.endOver();
     setState(() => _currentOverBalls.clear());
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Over ended. Strike rotated. New bowler assigned.')),
+    CustomNotification.show(
+      context,
+      'Over ended. Strike rotated.',
+      type: NotificationType.success,
     );
   }
 
@@ -121,19 +126,21 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgMedium,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('End First Innings?', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+        title: Text('End First Innings?', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
         content: Text('This will start the second innings. Are you sure?',
-            style: GoogleFonts.outfit(color: const Color(0xDE0F172A))),
+            style: GoogleFonts.outfit(color: AppTheme.textPrimary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               Provider.of<StorageService>(context, listen: false).endInningsOrMatch();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🏏 Second Innings Started!'), backgroundColor: AppTheme.primaryBlue),
+              CustomNotification.show(
+                context,
+                'Second Innings Started!',
+                type: NotificationType.info,
               );
             },
             child: const Text('Start 2nd Innings'),
@@ -147,11 +154,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bgMedium,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Finish Match?', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+        title: Text('Finish Match?', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
         content: Text('This will mark the match as Completed.',
-            style: GoogleFonts.outfit(color: const Color(0xDE0F172A))),
+            style: GoogleFonts.outfit(color: AppTheme.textPrimary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
@@ -160,8 +167,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
               Navigator.pop(ctx);
               Provider.of<StorageService>(context, listen: false).endMatchForce();
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🏆 Match Completed!'), backgroundColor: AppTheme.accentGold),
+              CustomNotification.show(
+                context,
+                'Match Completed successfully!',
+                type: NotificationType.success,
               );
             },
             child: const Text('Finish Match'),
@@ -192,8 +201,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Live Scoring', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('Live Scoring', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.aiCommentary, arguments: m),
@@ -225,11 +234,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: AppTheme.primaryGreen, borderRadius: BorderRadius.circular(6)),
-                        child: Text('● LIVE', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                        child: Text('● LIVE', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
                       ),
                       const SizedBox(width: 8),
                       Text('${m.matchType} • ${m.isFirstInnings ? "1st" : "2nd"} Innings',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x8A0F172A))),
+                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -239,14 +248,14 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                     child: Text(
                       '$currentRuns/$currentWickets',
                       style: GoogleFonts.outfit(
-                          fontSize: 52, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A), height: 1.0),
+                          fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0),
                     ),
                   ),
                   Text('($currentOvers overs)',
-                      style: GoogleFonts.outfit(fontSize: 14, color: const Color(0x990F172A))),
+                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70)),
                   if (m.target > 0 && !m.isFirstInnings)
                     Text('Target: ${m.target} • Need: ${m.target - currentRuns} off ${(20 - currentOvers).toStringAsFixed(1)} ov',
-                        style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentGold)),
+                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.white)),
                   const SizedBox(height: 12),
                   // Current Over Balls
                   Row(
@@ -280,8 +289,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                         width: 32, height: 32,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF0F172A).withOpacity(0.05),
-                          border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.1)),
+                          color: AppTheme.textPrimary.withOpacity(0.05),
+                          border: Border.all(color: AppTheme.textPrimary.withOpacity(0.1)),
                         ),
                       )),
                     ],
@@ -361,9 +370,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
                           child: _RunButton(label: 'No Ball', color: AppTheme.accentOrange, onTap: () => _recordExtra('No Ball'), small: true))),
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
-                          child: _RunButton(label: 'Bye', color: const Color(0x610F172A), onTap: () => _recordExtra('Bye'), small: true))),
+                          child: _RunButton(label: 'Bye', color: AppTheme.textMuted, onTap: () => _recordExtra('Bye'), small: true))),
                       Expanded(child: Padding(padding: const EdgeInsets.all(4),
-                          child: _RunButton(label: 'Leg Bye', color: const Color(0x610F172A), onTap: () => _recordExtra('Leg Bye'), small: true))),
+                          child: _RunButton(label: 'Leg Bye', color: AppTheme.textMuted, onTap: () => _recordExtra('Leg Bye'), small: true))),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -399,8 +408,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                           icon: const Icon(Icons.undo_rounded, size: 18),
                           label: const Text('Undo'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF475569),
-                            side: const BorderSide(color: const Color(0x3D0F172A)),
+                            foregroundColor: AppTheme.textSecondary,
+                            side: const BorderSide(color: AppTheme.textMuted),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
@@ -463,14 +472,14 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('LAST BALL', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A), letterSpacing: 1.5, fontWeight: FontWeight.w700)),
+                    Text('LAST BALL', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted, letterSpacing: 1.5, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: AppTheme.glassCardSmall,
                       child: Text(
                         m.balls.last.commentary,
-                        style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), height: 1.4),
+                        style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, height: 1.4),
                       ),
                     ),
                   ],
@@ -552,7 +561,7 @@ class _PlayerChip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                Text(name, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
                 Text(stats, style: GoogleFonts.outfit(fontSize: 11, color: color)),
               ],
             ),

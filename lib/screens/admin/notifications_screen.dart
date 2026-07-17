@@ -1,10 +1,11 @@
 // lib/screens/admin/notifications_screen.dart
-// Dummy notification list with mark-all-read
+// Notification list with mark-all-read
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -33,8 +34,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
       _unreadCount = 0;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ All notifications marked as read')),
+    CustomNotification.show(
+      context,
+      'All notifications marked as read',
+      type: NotificationType.success,
     );
   }
 
@@ -54,6 +57,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
       _notifications.removeAt(index);
     });
+    CustomNotification.show(
+      context,
+      'Notification deleted',
+      type: NotificationType.info,
+    );
   }
 
   Color _typeColor(String type) {
@@ -67,22 +75,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'result': return AppTheme.primaryGreen;
       case 'team': return AppTheme.accentGold;
       case 'tournament': return AppTheme.accentPurple;
-      default: return Colors.white38;
+      default: return AppTheme.primaryBlue;
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
-      case 'match': return Icons.sports_cricket;
-      case 'wicket': return Icons.offline_bolt;
-      case 'prediction': return Icons.auto_awesome;
-      case 'milestone': return Icons.star;
-      case 'schedule': return Icons.calendar_today;
-      case 'alert': return Icons.warning_amber;
-      case 'result': return Icons.emoji_events;
-      case 'team': return Icons.groups;
-      case 'tournament': return Icons.emoji_events;
-      default: return Icons.notifications;
+      case 'match': return Icons.sports_cricket_rounded;
+      case 'wicket': return Icons.offline_bolt_rounded;
+      case 'prediction': return Icons.auto_awesome_rounded;
+      case 'milestone': return Icons.star_rounded;
+      case 'schedule': return Icons.calendar_today_rounded;
+      case 'alert': return Icons.warning_amber_rounded;
+      case 'result': return Icons.emoji_events_rounded;
+      case 'team': return Icons.groups_rounded;
+      case 'tournament': return Icons.emoji_events_rounded;
+      default: return Icons.notifications_rounded;
     }
   }
 
@@ -91,29 +99,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: Row(
           children: [
-            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             if (_unreadCount > 0) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentRed,
+                  color: AppTheme.accentRed.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.accentRed.withOpacity(0.3)),
                 ),
                 child: Text('$_unreadCount new',
-                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.accentRed, fontWeight: FontWeight.bold)),
               ),
             ],
           ],
         ),
         actions: [
           TextButton(
-            onPressed: _markAllRead,
+            onPressed: _unreadCount > 0 ? _markAllRead : null,
             child: Text('Mark All Read',
-                style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontSize: 12)),
+                style: GoogleFonts.outfit(
+                  color: _unreadCount > 0 ? AppTheme.primaryBlue : AppTheme.textMuted,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                )),
           ),
         ],
       ),
@@ -122,15 +136,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.notifications_off_outlined, color: const Color(0x3D0F172A), size: 60),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.notifications_off_outlined, color: AppTheme.primaryBlue, size: 44),
+                  ),
                   const SizedBox(height: 16),
-                  Text('No Notifications', style: GoogleFonts.outfit(fontSize: 18, color: const Color(0x8A0F172A), fontWeight: FontWeight.bold)),
-                  Text('You\'re all caught up!', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x610F172A))),
+                  Text('No Notifications', style: GoogleFonts.outfit(fontSize: 16, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('You\'re all caught up!', style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textMuted)),
                 ],
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: _notifications.length,
               itemBuilder: (_, i) {
                 final n = _notifications[i];
@@ -139,7 +161,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 final icon = _typeIcon(n['type'] as String);
 
                 return Dismissible(
-                  key: Key('notif_$i${n['title']}'),
+                  key: Key('notif_${n['title']}_$i'),
                   direction: DismissDirection.endToStart,
                   onDismissed: (_) => _deleteNotification(i),
                   background: Container(
@@ -147,38 +169,42 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     padding: const EdgeInsets.only(right: 20),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentRed.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppTheme.accentRed.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.delete_rounded, color: AppTheme.accentRed),
+                    child: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed),
                   ),
                   child: GestureDetector(
                     onTap: () => _markRead(i),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 250),
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: isRead
-                            ? Colors.white.withOpacity(0.03)
-                            : color.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isRead
-                              ? Colors.white.withOpacity(0.06)
-                              : color.withOpacity(0.25),
+                          color: isRead ? const Color(0xFFE2E8F0) : color.withOpacity(0.3),
+                          width: isRead ? 1 : 1.5,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.15),
+                              color: color.withOpacity(0.08),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(icon, color: color, size: 20),
+                            child: Icon(icon, color: color, size: 18),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -191,15 +217,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       child: Text(
                                         n['title'] as String,
                                         style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                                          color: isRead ? Colors.white70 : Colors.white,
+                                          fontSize: 13.5,
+                                          fontWeight: isRead ? FontWeight.w600 : FontWeight.w800,
+                                          color: isRead ? AppTheme.textSecondary : AppTheme.textPrimary,
                                         ),
                                       ),
                                     ),
                                     if (!isRead)
                                       Container(
-                                        width: 8, height: 8,
+                                        width: 7, height: 7,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: color,
@@ -211,15 +237,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 Text(
                                   n['body'] as String,
                                   style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    color: const Color(0x610F172A),
-                                    height: 1.4,
+                                    fontSize: 12.5,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.35,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   n['time'] as String,
-                                  style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x3D0F172A)),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    color: AppTheme.textMuted,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),

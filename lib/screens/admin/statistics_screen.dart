@@ -39,13 +39,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Statistics', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('Statistics', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         bottom: TabBar(
           controller: _tabCtrl,
           indicatorColor: AppTheme.accentGold,
-          labelColor: const Color(0xFF0F172A),
-          unselectedLabelColor: const Color(0xFF64748B),
+          labelColor: AppTheme.textPrimary,
+          unselectedLabelColor: AppTheme.textSecondary,
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12),
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 12),
           tabs: const [
@@ -100,7 +100,7 @@ class _OverviewTab extends StatelessWidget {
 
           Text('MATCH STATUS DISTRIBUTION',
               style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                  color: const Color(0x610F172A), letterSpacing: 1.3)),
+                  color: AppTheme.textMuted, letterSpacing: 1.3)),
           const SizedBox(height: 16),
 
           // Bar Chart
@@ -123,7 +123,7 @@ class _OverviewTab extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(labels[v.toInt()],
-                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                         );
                       },
                       reservedSize: 30,
@@ -135,7 +135,7 @@ class _OverviewTab extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (v) => FlLine(
-                    color: const Color(0xFF0F172A).withOpacity(0.05),
+                    color: AppTheme.textPrimary.withOpacity(0.05),
                     strokeWidth: 1,
                   ),
                 ),
@@ -157,7 +157,7 @@ class _OverviewTab extends StatelessWidget {
           const SizedBox(height: 24),
           Text('TOP PERFORMERS',
               style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
-                  color: const Color(0x610F172A), letterSpacing: 1.3)),
+                  color: AppTheme.textMuted, letterSpacing: 1.3)),
           const SizedBox(height: 12),
 
           // Top batter quick view
@@ -188,11 +188,11 @@ class _OverviewTab extends StatelessWidget {
                 children: [
                   const Icon(Icons.sports_cricket, color: AppTheme.primaryBlue),
                   const SizedBox(height: 6),
-                  Text('Top Batter', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                  Text('Top Batter', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   const SizedBox(height: 4),
                   Text(topBatter.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+                      style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
                   Text('${topBatter.runsScored} runs',
                       style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primaryBlue)),
                 ],
@@ -211,11 +211,11 @@ class _OverviewTab extends StatelessWidget {
                 children: [
                   const Icon(Icons.sports_baseball, color: AppTheme.accentRed),
                   const SizedBox(height: 6),
-                  Text('Top Bowler', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                  Text('Top Bowler', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   const SizedBox(height: 4),
                   Text(topBowler.name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+                      style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
                   Text('${topBowler.wicketsTaken} wkts',
                       style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentRed)),
                 ],
@@ -268,8 +268,8 @@ class _BatterTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.name, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
-                      Text('${p.role} • ${p.nationality}', style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                      Text(p.name, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                      Text('${p.role} • ${p.nationality}', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                     ],
                   ),
                 ),
@@ -278,7 +278,7 @@ class _BatterTab extends StatelessWidget {
                   children: [
                     Text('${p.runsScored}',
                         style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryBlue)),
-                    Text('runs', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                    Text('runs', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   ],
                 ),
                 const SizedBox(width: 16),
@@ -287,7 +287,7 @@ class _BatterTab extends StatelessWidget {
                   children: [
                     Text(avg.toStringAsFixed(1),
                         style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0x990F172A))),
-                    Text('avg', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                    Text('avg', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   ],
                 ),
               ],
@@ -339,8 +339,8 @@ class _BowlerTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.name, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
-                      Text('${p.role} • ${p.nationality}', style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                      Text(p.name, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                      Text('${p.role} • ${p.nationality}', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                     ],
                   ),
                 ),
@@ -349,7 +349,7 @@ class _BowlerTab extends StatelessWidget {
                   children: [
                     Text('${p.wicketsTaken}',
                         style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.accentRed)),
-                    Text('wkts', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                    Text('wkts', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   ],
                 ),
                 const SizedBox(width: 16),
@@ -358,7 +358,7 @@ class _BowlerTab extends StatelessWidget {
                   children: [
                     Text(eco.toStringAsFixed(2),
                         style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0x990F172A))),
-                    Text('eco', style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                    Text('eco', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
                   ],
                 ),
               ],
@@ -389,7 +389,7 @@ class _MiniCard extends StatelessWidget {
           children: [
             Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
             Text(label, textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+                style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
           ],
         ),
       ),

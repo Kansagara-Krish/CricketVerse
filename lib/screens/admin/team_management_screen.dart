@@ -37,7 +37,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.bgMedium,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -57,25 +57,25 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
               ),
               const SizedBox(height: 20),
               Text('Add New Team', style: GoogleFonts.outfit(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                  fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
               const SizedBox(height: 20),
               TextField(
                 controller: nameCtrl,
-                style: GoogleFonts.outfit(color: const Color(0xFF0F172A)),
+                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Team Name',
-                  prefixIcon: const Icon(Icons.groups, color: const Color(0x610F172A)),
+                  prefixIcon: const Icon(Icons.groups, color: AppTheme.textMuted),
                 ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: shortCtrl,
                 maxLength: 4,
-                style: GoogleFonts.outfit(color: const Color(0xFF0F172A), letterSpacing: 2),
+                style: GoogleFonts.outfit(color: AppTheme.textPrimary, letterSpacing: 2),
                 decoration: InputDecoration(
                   labelText: 'Short Code (e.g. IND)',
-                  prefixIcon: const Icon(Icons.label, color: const Color(0x610F172A)),
-                  counterStyle: GoogleFonts.outfit(color: const Color(0x610F172A)),
+                  prefixIcon: const Icon(Icons.label, color: AppTheme.textMuted),
+                  counterStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
                 ),
               ),
               const SizedBox(height: 8),
@@ -150,56 +150,24 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: AppTheme.bgDark,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: const Color(0xFF0284C7),
-            radius: 18,
-            child: Text(
-              'UP',
-              style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'CricketVerse AI',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+          'Team Management',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF0F172A)),
+            icon: const Icon(Icons.search, color: AppTheme.textPrimary),
             onPressed: () {},
           ),
         ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: 1, // Teams active
-          onTap: (index) {
-            if (index == 0) {
-              Navigator.pop(context);
-            }
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF854D0E),
-          unselectedItemColor: const Color(0xFF64748B),
-          selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
-          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: 'Teams'),
-            BottomNavigationBarItem(icon: Icon(Icons.sports_cricket_outlined), activeIcon: Icon(Icons.sports_cricket), label: 'Matches'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-          ],
-        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,12 +180,12 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
               children: [
                 Text(
                   'Team & Player Management',
-                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Manage your franchise roster, add new talent, and organize squads.',
-                  style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
+                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -232,12 +200,12 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Color(0xFF0F172A), width: 2)),
+                      border: Border(bottom: BorderSide(color: AppTheme.textPrimary, width: 2)),
                     ),
                     child: Center(
                       child: Text(
                         'Teams',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), fontSize: 14),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 14),
                       ),
                     ),
                   ),
@@ -248,12 +216,12 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+                        border: Border(bottom: BorderSide(color: AppTheme.bgSurface, width: 1)),
                       ),
                       child: Center(
                         child: Text(
                           'Players',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF64748B), fontSize: 14),
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: AppTheme.textSecondary, fontSize: 14),
                         ),
                       ),
                     ),
@@ -272,21 +240,21 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppTheme.bgDeep,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppTheme.bgSurface),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
+                      const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
-                          style: const TextStyle(color: Color(0xFF0F172A)),
+                          style: const TextStyle(color: AppTheme.textPrimary),
                           onChanged: (v) => setState(() => _searchQuery = v),
                           decoration: InputDecoration(
                             hintText: 'Search teams...',
-                            hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
+                            hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 13),
                             border: InputBorder.none,
                             filled: false,
                           ),
@@ -338,12 +306,12 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.bgSurface),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             )
@@ -366,13 +334,13 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 15, 
                                       fontWeight: FontWeight.bold, 
-                                      color: const Color(0xFF0F172A),
+                                      color: AppTheme.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${team.players.length} Players • 8 Support Staff',
-                                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF64748B)),
+                                    style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary),
                                   ),
                                   const SizedBox(height: 8),
                                   Container(
@@ -394,13 +362,13 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: Color(0xFF0284C7), size: 20),
+                              icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: 20),
                               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Edit ${team.name} — open detail to edit')),
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
+                              icon: const Icon(Icons.delete_outline, color: AppTheme.accentRed, size: 20),
                               onPressed: () async {
                                 final confirmed = await ConfirmDialog.show(
                                   context,
@@ -409,7 +377,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                 );
                                 if (confirmed == true) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('🗑️ ${team.name} deleted'), backgroundColor: const Color(0xFFEF4444)),
+                                    SnackBar(content: Text('🗑️ ${team.name} deleted'), backgroundColor: AppTheme.accentRed),
                                   );
                                 }
                               },

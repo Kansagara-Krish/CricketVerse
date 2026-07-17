@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class AiSettingsScreen extends StatefulWidget {
   const AiSettingsScreen({Key? key}) : super(key: key);
@@ -27,13 +28,15 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('AI Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('AI Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           TextButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ AI Settings saved!'), backgroundColor: AppTheme.primaryGreen),
+              CustomNotification.show(
+                context,
+                'AI Settings saved successfully!',
+                type: NotificationType.success,
               );
             },
             child: Text('Save', style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
@@ -54,24 +57,24 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.auto_awesome_rounded, color: const Color(0xFF0F172A), size: 36),
+                  const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 36),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CricketVerse AI Engine', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                        Text('Configure AI features for your app', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xDE0F172A))),
+                        Text('CricketVerse AI Engine', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text('Configure AI features for your app', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white)),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text('v1.0', style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF0F172A))),
+                    child: Text('v1.0', style: GoogleFonts.outfit(fontSize: 11, color: Colors.white)),
                   ),
                 ],
               ),
@@ -94,7 +97,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Commentary Frequency', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A))),
+                      Text('Commentary Frequency', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary)),
                       Text('${_commentaryFrequency.toInt()}s', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -154,7 +157,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 children: [
                   const Icon(Icons.analytics_outlined, color: AppTheme.accentPurple, size: 16),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(item[0], style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A)))),
+                  Expanded(child: Text(item[0], style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary))),
                   Text(item[1], style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentPurple, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -165,14 +168,17 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ AI Settings saved successfully!'), backgroundColor: AppTheme.primaryGreen),
+                  CustomNotification.show(
+                    context,
+                    'AI Settings saved successfully!',
+                    type: NotificationType.success,
                   );
                 },
                 icon: const Icon(Icons.save_rounded),
                 label: const Text('Save AI Settings'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentPurple,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
@@ -194,7 +200,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(label,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.4));
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4));
   }
 }
 
@@ -224,8 +230,8 @@ class _SwitchTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
               ],
             ),
           ),
@@ -249,14 +255,14 @@ class _DropdownTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withOpacity(0.04),
+        color: AppTheme.textPrimary.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.08)),
+        border: Border.all(color: AppTheme.textPrimary.withOpacity(0.08)),
       ),
       child: DropdownButtonFormField<String>(
         value: current,
         dropdownColor: AppTheme.bgMedium,
-        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13),
+        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,

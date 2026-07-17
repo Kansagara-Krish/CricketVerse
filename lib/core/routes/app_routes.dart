@@ -1,11 +1,21 @@
 // lib/core/routes/app_routes.dart
-// CricketVerse AI — Named Routes with Custom Slide Transitions
+// CricketVerse AI — Named Routes (Role-Separated, Custom Transitions)
 
 import 'package:flutter/material.dart';
+import '../../models/models.dart';
+
+// ── Shared (pre-auth) ───────────────────────────────────────────────────────
 import '../../screens/splash_screen.dart';
 import '../../screens/onboarding_screen.dart';
 import '../../screens/auth_screen.dart';
-import '../../screens/admin_dashboard.dart';
+
+// ── Admin ───────────────────────────────────────────────────────────────────
+import '../../screens/admin/admin_dashboard.dart';
+import '../../screens/admin/admin_profile_screen.dart';
+import '../../screens/admin/ai_commentary_screen.dart';
+import '../../screens/admin/ai_settings_screen.dart';
+import '../../screens/admin/create_tournament_screen.dart';
+import '../../screens/admin/tournament_management_screen.dart';
 import '../../screens/admin/team_management_screen.dart';
 import '../../screens/admin/team_detail_screen.dart';
 import '../../screens/admin/player_management_screen.dart';
@@ -14,23 +24,36 @@ import '../../screens/admin/schedule_match_screen.dart';
 import '../../screens/admin/match_list_screen.dart';
 import '../../screens/admin/match_detail_screen.dart';
 import '../../screens/admin/live_scoring_screen.dart';
-import '../../screens/admin/ai_commentary_screen.dart';
 import '../../screens/admin/prediction_screen.dart';
 import '../../screens/admin/statistics_screen.dart';
 import '../../screens/admin/notifications_screen.dart';
-import '../../screens/admin/admin_profile_screen.dart';
-import '../../screens/admin/create_tournament_screen.dart';
-import '../../screens/admin/tournament_management_screen.dart';
 import '../../screens/admin/about_screen.dart';
 import '../../screens/admin/help_screen.dart';
-import '../../screens/admin/ai_settings_screen.dart';
+
+// ── Scorer ──────────────────────────────────────────────────────────────────
+import '../../screens/scorer/scorer_dashboard.dart';
+import '../../screens/scorer/edit_ball_screen.dart';
+
+// ── User / Fan ───────────────────────────────────────────────────────────────
+import '../../screens/user/user_dashboard.dart';
+import '../../screens/user/match_details_screen.dart';
+import '../../screens/user/team_details_screen.dart';
+import '../../screens/user/player_details_screen.dart';
+import '../../screens/user/match_summary_download_screen.dart';
 
 class AppRoutes {
-  // ─── Route Names ─────────────────────────────────────────────────────────────
-  static const String splash             = '/';
-  static const String onboarding         = '/onboarding';
-  static const String auth               = '/auth';
+  // ─── Shared Route Names ───────────────────────────────────────────────────
+  static const String splash       = '/';
+  static const String onboarding   = '/onboarding';
+  static const String auth         = '/auth';
+
+  // ─── Admin Route Names ────────────────────────────────────────────────────
   static const String adminDashboard     = '/admin';
+  static const String adminProfile       = '/admin/profile';
+  static const String aiCommentary       = '/admin/commentary';
+  static const String aiSettings         = '/admin/ai-settings';
+  static const String createTournament   = '/admin/tournaments/create';
+  static const String tournamentList     = '/admin/tournaments';
   static const String teamManagement     = '/admin/teams';
   static const String teamDetail         = '/admin/teams/detail';
   static const String playerManagement   = '/admin/players';
@@ -39,28 +62,48 @@ class AppRoutes {
   static const String matchList          = '/admin/matches';
   static const String matchDetail        = '/admin/matches/detail';
   static const String liveScoring        = '/admin/matches/live-scoring';
-  static const String aiCommentary       = '/admin/commentary';
   static const String prediction         = '/admin/prediction';
   static const String statistics         = '/admin/statistics';
   static const String notifications      = '/admin/notifications';
-  static const String adminProfile       = '/admin/profile';
-  static const String createTournament   = '/admin/tournaments/create';
-  static const String tournamentList     = '/admin/tournaments';
   static const String about              = '/admin/about';
   static const String help               = '/admin/help';
-  static const String aiSettings         = '/admin/ai-settings';
 
-  // ─── Route Generator ─────────────────────────────────────────────────────────
+  // ─── Scorer Route Names ───────────────────────────────────────────────────
+  static const String scorerDashboard  = '/scorer';
+  static const String editBall         = '/scorer/edit-ball';
+
+  // ─── User / Fan Route Names ───────────────────────────────────────────────
+  static const String userDashboard        = '/user';
+  static const String userMatchDetails     = '/user/match-details';
+  static const String userTeamDetails      = '/user/team-details';
+  static const String userPlayerDetails    = '/user/player-details';
+  static const String matchSummaryDownload = '/user/match-summary';
+
+  // ─── Route Generator ──────────────────────────────────────────────────────
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+
+      // Shared
       case splash:
         return _slideRoute(const SplashScreen());
       case onboarding:
         return _slideRoute(const OnboardingScreen());
       case auth:
         return _fadeRoute(const AuthScreen());
+
+      // Admin
       case adminDashboard:
         return _fadeRoute(const AdminDashboard());
+      case adminProfile:
+        return _slideRoute(const AdminProfileScreen());
+      case aiCommentary:
+        return _slideRoute(AiCommentaryScreen(match: settings.arguments as dynamic));
+      case aiSettings:
+        return _slideRoute(const AiSettingsScreen());
+      case createTournament:
+        return _slideRoute(const CreateTournamentScreen());
+      case tournamentList:
+        return _slideRoute(const TournamentManagementScreen());
       case teamManagement:
         return _slideRoute(const TeamManagementScreen());
       case teamDetail:
@@ -77,32 +120,43 @@ class AppRoutes {
         return _slideRoute(MatchDetailScreen(match: settings.arguments as dynamic));
       case liveScoring:
         return _slideRoute(LiveScoringScreen(match: settings.arguments as dynamic));
-      case aiCommentary:
-        return _slideRoute(AiCommentaryScreen(match: settings.arguments as dynamic));
       case prediction:
         return _slideRoute(PredictionScreen(match: settings.arguments as dynamic));
       case statistics:
         return _slideRoute(const StatisticsScreen());
       case notifications:
         return _slideRoute(const NotificationsScreen());
-      case adminProfile:
-        return _slideRoute(const AdminProfileScreen());
-      case createTournament:
-        return _slideRoute(const CreateTournamentScreen());
-      case tournamentList:
-        return _slideRoute(const TournamentManagementScreen());
       case about:
         return _slideRoute(const AboutScreen());
       case help:
         return _slideRoute(const HelpScreen());
-      case aiSettings:
-        return _slideRoute(const AiSettingsScreen());
+
+      // Scorer
+      case scorerDashboard:
+        return _fadeRoute(const ScorerDashboard());
+      case editBall:
+        return _slideRoute(const EditBallScreen());
+
+      // User / Fan
+      case userDashboard:
+        return _fadeRoute(const UserDashboard());
+      case userMatchDetails:
+        return _slideRoute(MatchDetailsScreen(matchId: settings.arguments as String));
+      case userTeamDetails:
+        return _slideRoute(TeamDetailsScreen(team: settings.arguments as Team));
+      case userPlayerDetails:
+        return _slideRoute(PlayerDetailsScreen(player: settings.arguments as Player));
+      case matchSummaryDownload:
+        return _slideRoute(MatchSummaryDownloadScreen(
+          matchDetails: settings.arguments as Map<String, dynamic>,
+        ));
+
       default:
-        return _slideRoute(const AuthScreen());
+        return _fadeRoute(const AuthScreen());
     }
   }
 
-  // ─── Transition Builders ─────────────────────────────────────────────────────
+  // ─── Transition Builders ──────────────────────────────────────────────────
   static PageRouteBuilder _slideRoute(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,

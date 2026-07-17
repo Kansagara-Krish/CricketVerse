@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_theme.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -10,10 +11,29 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _logoController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
+    );
+
+    _logoController.forward();
+
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
@@ -23,111 +43,120 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   @override
+  void dispose() {
+    _logoController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8FAFC),
-              Color(0xFFF1F5F9),
-            ],
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Stadium Background Image
+          Image.asset(
+            'assets/images/onboarding_stadium.png',
+            fit: BoxFit.cover,
           ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Top capsule loading text
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 40,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black.withAlpha(25)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.sync,
-                      size: 14,
-                      color: Color(0xFF10B981),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'LOADING HIGH-FIDELITY STATS...',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF475569),
-                        letterSpacing: 1.2,
+          // Dark overlay
+          Container(
+            color: Colors.black.withOpacity(0.7),
+          ),
+          
+          // Content
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 3),
+              // Animated Logo
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/logo.jpg'),
+                        fit: BoxFit.cover,
                       ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Title
+              Text(
+                'CricketVerse AI',
+                style: GoogleFonts.outfit(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.4),
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
                     ),
                   ],
                 ),
               ),
-            ),
-            
-            // Central Logo and Tagline
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Top logo overlay/gradient line
-                Container(
-                  width: 80,
-                  height: 80,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  child: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF0284C7), Color(0xFF10B981)],
-                    ).createShader(bounds),
-                    child: const Icon(
-                      Icons.online_prediction_outlined,
-                      size: 80,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
+              const SizedBox(height: 8),
+              
+              // Tagline
+              Text(
+                'INTELLIGENCE MEETS ACTION',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withOpacity(0.7),
+                  letterSpacing: 3.5,
                 ),
-                const SizedBox(height: 24),
-                
-                // Title
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF0284C7)],
-                  ).createShader(bounds),
-                  child: Text(
-                    'CricketVerse AI',
-                    style: GoogleFonts.outfit(
-                      fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                      letterSpacing: 1.0,
-                    ),
-                  ),
+              ),
+              
+              const Spacer(flex: 2),
+              
+              // Loading animation
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                const SizedBox(height: 8),
-                
-                // Tagline
-                Text(
-                  'INTELLIGENCE MEETS ACTION',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF64748B),
-                    letterSpacing: 3.5,
-                  ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Loading Stats Text
+              Text(
+                'LOADING HIGH-FIDELITY STATS...',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.5),
+                  letterSpacing: 1.2,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
+

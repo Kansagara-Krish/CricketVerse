@@ -50,6 +50,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "csslib",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/csslib-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
       "name": "cupertino_icons",
       "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/cupertino_icons-1.0.9",
       "packageUri": "lib/",
@@ -120,6 +126,12 @@
       "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/hooks-2.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.10"
+    },
+    {
+      "name": "html",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/html-0.15.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
     },
     {
       "name": "http",
@@ -390,6 +402,36 @@
       "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/vector_math-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.1"
+    },
+    {
+      "name": "video_player",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/video_player-2.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
+      "name": "video_player_android",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/video_player_android-2.11.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
+      "name": "video_player_avfoundation",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/video_player_avfoundation-2.11.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "video_player_platform_interface",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/video_player_platform_interface-6.9.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "video_player_web",
+      "rootUri": "file:///home/pratham/.pub-cache/hosted/pub.dev/video_player_web-2.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
     },
     {
       "name": "vm_service",

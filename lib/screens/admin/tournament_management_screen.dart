@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class TournamentManagementScreen extends StatelessWidget {
   const TournamentManagementScreen({Key? key}) : super(key: key);
@@ -22,8 +23,8 @@ class TournamentManagementScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Tournament List', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('Tournament List', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
@@ -35,8 +36,8 @@ class TournamentManagementScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.createTournament),
         backgroundColor: AppTheme.accentPurple,
-        icon: const Icon(Icons.add, color: const Color(0xFF0F172A)),
-        label: Text('New Tournament', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text('New Tournament', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -68,7 +69,7 @@ class TournamentManagementScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(t['name']!,
-                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                             const SizedBox(height: 3),
                             Row(
                               children: [
@@ -84,7 +85,7 @@ class TournamentManagementScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(t['format']!,
-                                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                                    style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                               ],
                             ),
                           ],
@@ -111,14 +112,16 @@ class TournamentManagementScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Viewing ${t['name']}')),
+                          onPressed: () => CustomNotification.show(
+                            context,
+                            'Viewing details for ${t['name']}',
+                            type: NotificationType.info,
                           ),
                           icon: const Icon(Icons.visibility_outlined, size: 16),
                           label: const Text('View'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF475569),
-                            side: const BorderSide(color: const Color(0x3D0F172A)),
+                            foregroundColor: AppTheme.textSecondary,
+                            side: const BorderSide(color: AppTheme.textMuted),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
@@ -126,8 +129,10 @@ class TournamentManagementScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Editing ${t['name']}')),
+                          onPressed: () => CustomNotification.show(
+                            context,
+                            'Editing mode for ${t['name']} is ready',
+                            type: NotificationType.info,
                           ),
                           icon: const Icon(Icons.edit_rounded, size: 16),
                           label: const Text('Edit'),
@@ -161,9 +166,9 @@ class _TournStat extends StatelessWidget {
     return Expanded(
       child: Row(
         children: [
-          Icon(icon, size: 13, color: const Color(0x610F172A)),
+          Icon(icon, size: 13, color: AppTheme.textMuted),
           const SizedBox(width: 4),
-          Flexible(child: Text(label, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A)), overflow: TextOverflow.ellipsis)),
+          Flexible(child: Text(label, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted), overflow: TextOverflow.ellipsis)),
         ],
       ),
     );

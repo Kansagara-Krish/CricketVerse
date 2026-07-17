@@ -1,10 +1,11 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/storage_service.dart';
-import '../models/models.dart';
+import '../../services/storage_service.dart';
+import '../../models/models.dart';
+import '../../core/routes/app_routes.dart';
 import 'match_details_screen.dart';
-import 'auth_screen.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({Key? key}) : super(key: key);
@@ -33,13 +34,13 @@ class _UserDashboardState extends State<UserDashboard> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.bgDark,
       body: SafeArea(
         child: views[_currentIndex],
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+          border: Border(top: BorderSide(color: AppTheme.bgSurface, width: 1)),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -51,7 +52,7 @@ class _UserDashboardState extends State<UserDashboard> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF854D0E), // Gold-brown selection matching screenshot
-          unselectedItemColor: const Color(0xFF64748B),
+          unselectedItemColor: AppTheme.textSecondary,
           selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
           unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11),
           items: const [
@@ -89,18 +90,18 @@ class _UserDashboardState extends State<UserDashboard> {
                     children: [
                       Text(
                         'Welcome back',
-                        style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11),
+                        style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11),
                       ),
                       Text(
                         'Hello, Alex',
-                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Color(0xFF0F172A)),
+                icon: const Icon(Icons.search, color: AppTheme.textPrimary),
                 onPressed: () {},
               ),
             ],
@@ -111,26 +112,26 @@ class _UserDashboardState extends State<UserDashboard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppTheme.bgDeep,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppTheme.bgSurface),
             ),
             child: Row(
               children: [
-                const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
+                const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
-                    style: const TextStyle(color: Color(0xFF0F172A)),
+                    style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Search teams, players, matches...',
-                      hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 14),
+                      hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 14),
                       border: InputBorder.none,
                       filled: false,
                     ),
                   ),
                 ),
-                const Icon(Icons.mic, color: Color(0xFF64748B), size: 20),
+                const Icon(Icons.mic, color: AppTheme.textSecondary, size: 20),
               ],
             ),
           ),
@@ -146,7 +147,7 @@ class _UserDashboardState extends State<UserDashboard> {
                   label: Text(
                     filter,
                     style: GoogleFonts.outfit(
-                      color: isSelected ? Colors.white : const Color(0xFF475569),
+                      color: isSelected ? Colors.white : AppTheme.textSecondary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -157,10 +158,10 @@ class _UserDashboardState extends State<UserDashboard> {
                     });
                   },
                   selectedColor: const Color(0xFF094CB2),
-                  backgroundColor: const Color(0xFFF1F5F9),
+                  backgroundColor: AppTheme.bgDeep,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0)),
+                    side: BorderSide(color: isSelected ? Colors.transparent : AppTheme.bgSurface),
                   ),
                 ),
               );
@@ -174,14 +175,14 @@ class _UserDashboardState extends State<UserDashboard> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppTheme.bgDeep,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppTheme.bgSurface),
                   ),
                   child: Center(
                     child: Text(
                       'No $_selectedFilter matches found.',
-                      style: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
+                      style: GoogleFonts.outfit(color: AppTheme.textMuted),
                     ),
                   ),
                 )
@@ -202,15 +203,15 @@ class _UserDashboardState extends State<UserDashboard> {
             children: [
               Text(
                 'Trending Players',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               ),
               GestureDetector(
                 onTap: () {},
                 child: Row(
                   children: [
-                    Text('View all', style: GoogleFonts.outfit(color: const Color(0xFF0284C7), fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('View all', style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward, color: Color(0xFF0284C7), size: 14),
+                    const Icon(Icons.arrow_forward, color: AppTheme.primaryBlue, size: 14),
                   ],
                 ),
               )
@@ -222,9 +223,9 @@ class _UserDashboardState extends State<UserDashboard> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildPlayerTrendCard('V. Kohli', 'Batter • IND', 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop', Icons.sports_cricket, const Color(0xFFF59E0B)),
-                _buildPlayerTrendCard('P. Cummins', 'Bowler • AUS', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=120&auto=format&fit=crop', Icons.circle, const Color(0xFF10B981)),
-                _buildPlayerTrendCard('R. Khan', 'All-rounder • AFG', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&auto=format&fit=crop', Icons.trending_up, const Color(0xFF0284C7)),
+                _buildPlayerTrendCard('Aarav Patel', 'Batter • UVP-TT', 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop', Icons.sports_cricket, AppTheme.accentGold),
+                _buildPlayerTrendCard('Advik Shah', 'Bowler • UVP-WR', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=120&auto=format&fit=crop', Icons.circle, AppTheme.primaryGreen),
+                _buildPlayerTrendCard('Ishaan Mehta', 'All-rounder • UVP-LG', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&auto=format&fit=crop', Icons.trending_up, AppTheme.primaryBlue),
               ],
             ),
           ),
@@ -233,15 +234,15 @@ class _UserDashboardState extends State<UserDashboard> {
           // Latest Updates Section
           Text(
             'Latest Updates',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
@@ -259,6 +260,12 @@ class _UserDashboardState extends State<UserDashboard> {
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 80,
+                      height: 80,
+                      color: AppTheme.bgSurface,
+                      child: const Icon(Icons.sports_cricket, color: AppTheme.primaryBlue),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -268,12 +275,12 @@ class _UserDashboardState extends State<UserDashboard> {
                     children: [
                       Text(
                         'ANALYSIS',
-                        style: GoogleFonts.outfit(color: const Color(0xFF0284C7), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'How AI predicted the live win probability swing during final over.',
-                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -295,9 +302,10 @@ class _UserDashboardState extends State<UserDashboard> {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(builder: (context) => MatchDetailsScreen(matchId: match.id)),
+          AppRoutes.userMatchDetails,
+          arguments: match.id,
         );
       },
       child: Container(
@@ -313,7 +321,7 @@ class _UserDashboardState extends State<UserDashboard> {
           border: Border.all(color: const Color(0xFFBAE6FD)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0284C7).withValues(alpha: 0.05),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )
@@ -333,20 +341,20 @@ class _UserDashboardState extends State<UserDashboard> {
                   decoration: BoxDecoration(
                     color: match.status == 'Live'
                         ? const Color(0xFFFEE2E2)
-                        : const Color(0xFFF1F5F9),
+                        : AppTheme.bgDeep,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 3,
-                        backgroundColor: match.status == 'Live' ? Colors.redAccent : const Color(0xFF64748B),
+                        backgroundColor: match.status == 'Live' ? Colors.redAccent : AppTheme.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         match.status.toUpperCase(),
                         style: GoogleFonts.outfit(
-                          color: match.status == 'Live' ? Colors.redAccent : const Color(0xFF475569),
+                          color: match.status == 'Live' ? Colors.redAccent : AppTheme.textSecondary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -358,22 +366,28 @@ class _UserDashboardState extends State<UserDashboard> {
             ),
             const SizedBox(height: 16),
 
-            // Live score team representation
+             // Live score team representation
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   children: [
-                    CircleAvatar(backgroundColor: Color(teamAIntColor), child: Text(match.teamA.shortName, style: const TextStyle(color: const Color(0xFF0F172A)))),
+                    CircleAvatar(
+                      backgroundColor: Color(teamAIntColor), 
+                      child: Text(
+                        match.teamA.shortName, 
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(match.teamA.shortName, style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                    Text(match.teamA.shortName, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                     if (match.status != 'Upcoming') ...[
                       const SizedBox(height: 4),
                       Text('${match.runsA}/${match.wicketsA}', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontSize: 13, fontWeight: FontWeight.w600)),
-                      Text('(${match.oversA} ov)', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11)),
+                      Text('(${match.oversA} ov)', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11)),
                     ] else ...[
                       const SizedBox(height: 4),
-                      Text('Yet to play', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11)),
+                      Text('Yet to play', style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 11)),
                     ],
                   ],
                 ),
@@ -385,31 +399,37 @@ class _UserDashboardState extends State<UserDashboard> {
                         margin: const EdgeInsets.only(top: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
+                          color: AppTheme.textPrimary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           'CRR ${(match.oversA > 0 ? (match.runsA / match.oversA) : 0.0).toStringAsFixed(1)}',
-                          style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(color: AppTheme.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ),
                   ],
                 ),
                 Column(
                   children: [
-                    CircleAvatar(backgroundColor: Color(teamBIntColor), child: Text(match.teamB.shortName, style: const TextStyle(color: const Color(0xFF0F172A)))),
+                    CircleAvatar(
+                      backgroundColor: Color(teamBIntColor), 
+                      child: Text(
+                        match.teamB.shortName, 
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(match.teamB.shortName, style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                    Text(match.teamB.shortName, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                     if (match.status == 'Live') ...[
                       const SizedBox(height: 4),
-                      Text('Yet to bat', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 13)),
+                      Text('Yet to bat', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 13)),
                     ] else if (match.status == 'Completed') ...[
                       const SizedBox(height: 4),
                       Text('${match.runsB}/${match.wicketsB}', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontSize: 13, fontWeight: FontWeight.w600)),
-                      Text('(${match.oversB} ov)', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11)),
+                      Text('(${match.oversB} ov)', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11)),
                     ] else ...[
                       const SizedBox(height: 4),
-                      Text('Yet to play', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11)),
+                      Text('Yet to play', style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 11)),
                     ],
                   ],
                 ),
@@ -423,16 +443,16 @@ class _UserDashboardState extends State<UserDashboard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Kohli 65*(42)',
+                  '${match.teamA.players.isNotEmpty ? match.teamA.players[0].name.split(" ").first : "Aarav"} 42*(28)',
                   style: GoogleFonts.outfit(color: const Color(0xFF0369A1), fontSize: 12, fontWeight: FontWeight.w500),
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.bolt, color: Color(0xFF0284C7), size: 14),
+                    const Icon(Icons.bolt, color: AppTheme.primaryBlue, size: 14),
                     const SizedBox(width: 2),
                     Text(
                       'AI Predicts: ${match.teamA.shortName} ${winProb.toStringAsFixed(0)}%',
-                      style: GoogleFonts.outfit(color: const Color(0xFF0284C7), fontSize: 12, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -452,9 +472,20 @@ class _UserDashboardState extends State<UserDashboard> {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                backgroundImage: NetworkImage(imgUrl),
-                radius: 32,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Image.network(
+                  imgUrl,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 64,
+                    height: 64,
+                    color: AppTheme.bgSurface,
+                    child: const Icon(Icons.person, color: AppTheme.primaryBlue),
+                  ),
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -462,7 +493,7 @@ class _UserDashboardState extends State<UserDashboard> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
+                    color: AppTheme.textPrimary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -479,14 +510,14 @@ class _UserDashboardState extends State<UserDashboard> {
           const SizedBox(height: 8),
           Text(
             name, 
-            style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
+            style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             role, 
-            style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 10), 
+            style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 10), 
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -505,7 +536,7 @@ class _UserDashboardState extends State<UserDashboard> {
         children: [
           Text(
             'Tournaments & Matches', 
-            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -516,15 +547,15 @@ class _UserDashboardState extends State<UserDashboard> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
+                    color: AppTheme.textPrimary,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppTheme.bgSurface),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: const CircleAvatar(backgroundColor: Color(0xFFF1F5F9), child: Icon(Icons.sports_cricket, color: Color(0xFF0284C7))),
-                    title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
-                    subtitle: Text('${match.venue} • ${match.date} ${match.time}', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12)),
+                    leading: const CircleAvatar(backgroundColor: AppTheme.bgDeep, child: Icon(Icons.sports_cricket, color: AppTheme.primaryBlue)),
+                    title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                    subtitle: Text('${match.venue} • ${match.date} ${match.time}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12)),
                     trailing: Text(
                       match.status, 
                       style: GoogleFonts.outfit(
@@ -550,7 +581,7 @@ class _UserDashboardState extends State<UserDashboard> {
       return Center(
         child: Text(
           'No active Live matches for AI analytics.',
-          style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 14),
+          style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 14),
         ),
       );
     }
@@ -570,25 +601,25 @@ class _UserDashboardState extends State<UserDashboard> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      backgroundColor: const Color(0xFF0284C7),
+                      backgroundColor: AppTheme.primaryBlue,
                       radius: 20,
-                      child: Text(match.teamA.shortName, style: const TextStyle(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                      child: Text(match.teamA.shortName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: const BoxDecoration(
-                          color: Color(0xFFE2E8F0),
+                          color: AppTheme.bgSurface,
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
-                        child: const Text('VS', style: TextStyle(fontSize: 10, color: Color(0xFF475569), fontWeight: FontWeight.bold)),
+                        child: const Text('VS', style: TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     CircleAvatar(
                       backgroundColor: const Color(0xFFFFBF00),
                       radius: 20,
-                      child: Text(match.teamB.shortName, style: const TextStyle(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                      child: Text(match.teamB.shortName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -596,15 +627,15 @@ class _UserDashboardState extends State<UserDashboard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(match.teamA.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                    Text(match.teamA.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(width: 20),
-                    Text(match.teamB.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                    Text(match.teamB.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Finals • Wankhede Stadium',
-                  style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 12),
+                  style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -616,12 +647,12 @@ class _UserDashboardState extends State<UserDashboard> {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 15,
                   offset: const Offset(0, 4),
                 )
@@ -631,7 +662,7 @@ class _UserDashboardState extends State<UserDashboard> {
               children: [
                 Text(
                   'Win Probability',
-                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                 ),
                 const SizedBox(height: 24),
                 
@@ -644,8 +675,8 @@ class _UserDashboardState extends State<UserDashboard> {
                       child: CircularProgressIndicator(
                         value: winProb / 100.0,
                         strokeWidth: 12,
-                        backgroundColor: const Color(0xFFE2E8F0),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+                        backgroundColor: AppTheme.bgSurface,
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
                       ),
                     ),
                     Column(
@@ -653,11 +684,11 @@ class _UserDashboardState extends State<UserDashboard> {
                       children: [
                         Text(
                           '${winProb.toStringAsFixed(0)}%', 
-                          style: GoogleFonts.outfit(fontSize: 38, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                          style: GoogleFonts.outfit(fontSize: 38, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
                         ),
                         Text(
                           'AI CONFIDENCE', 
-                          style: GoogleFonts.outfit(fontSize: 9, color: const Color(0xFF10B981), fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                          style: GoogleFonts.outfit(fontSize: 9, color: AppTheme.primaryGreen, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
                       ],
                     ),
@@ -670,15 +701,15 @@ class _UserDashboardState extends State<UserDashboard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${winProb.toStringAsFixed(0)}%', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7))),
-                        Text(match.teamA.shortName, style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text('${winProb.toStringAsFixed(0)}%', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                        Text(match.teamA.shortName, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary)),
                       ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('${(100 - winProb).toStringAsFixed(0)}%', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF475569))),
-                        Text(match.teamB.shortName, style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B))),
+                        Text('${(100 - winProb).toStringAsFixed(0)}%', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+                        Text(match.teamB.shortName, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary)),
                       ],
                     ),
                   ],
@@ -693,12 +724,12 @@ class _UserDashboardState extends State<UserDashboard> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: Colors.black.withOpacity(0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -713,7 +744,7 @@ class _UserDashboardState extends State<UserDashboard> {
                     const SizedBox(width: 8),
                     Text(
                       'Projected Score',
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                     ),
                   ],
                 ),
@@ -722,13 +753,13 @@ class _UserDashboardState extends State<UserDashboard> {
                   children: [
                     SizedBox(
                       width: 40,
-                      child: Text(match.teamA.shortName, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF475569))),
+                      child: Text(match.teamA.shortName, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
                     ),
                     Expanded(
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
+                          color: AppTheme.bgSurface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Align(
@@ -737,7 +768,7 @@ class _UserDashboardState extends State<UserDashboard> {
                             width: 100,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0284C7),
+                              color: AppTheme.primaryBlue,
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -746,8 +777,8 @@ class _UserDashboardState extends State<UserDashboard> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '315-330',
-                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                      '175-190',
+                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
                     ),
                   ],
                 ),
@@ -756,13 +787,13 @@ class _UserDashboardState extends State<UserDashboard> {
                   children: [
                     SizedBox(
                       width: 40,
-                      child: Text(match.teamB.shortName, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF475569))),
+                      child: Text(match.teamB.shortName, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
                     ),
                     Expanded(
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
+                          color: AppTheme.bgSurface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Align(
@@ -771,7 +802,7 @@ class _UserDashboardState extends State<UserDashboard> {
                             width: 80,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textSecondary,
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -780,8 +811,8 @@ class _UserDashboardState extends State<UserDashboard> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '280-295',
-                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF475569)),
+                      '160-175',
+                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -795,12 +826,12 @@ class _UserDashboardState extends State<UserDashboard> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: Colors.black.withOpacity(0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -811,11 +842,11 @@ class _UserDashboardState extends State<UserDashboard> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.show_chart, color: Color(0xFF0284C7), size: 20),
+                    const Icon(Icons.show_chart, color: AppTheme.primaryBlue, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Momentum',
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                     ),
                   ],
                 ),
@@ -840,7 +871,7 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildLiveRedirectView(StorageService storage) {
     final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
     if (liveMatches.isEmpty) {
-      return const Center(child: Text('No active Live match right now.', style: TextStyle(color: const Color(0xDE0F172A))));
+      return const Center(child: Text('No active Live match right now.', style: TextStyle(color: AppTheme.textPrimary)));
     }
     return MatchDetailsScreen(matchId: liveMatches.first.id);
   }
@@ -859,11 +890,11 @@ class _UserDashboardState extends State<UserDashboard> {
           const SizedBox(height: 16),
           Text(
             'Alex',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
           ),
           Text(
             storage.currentUserEmail ?? 'guest@cricketverse.ai',
-            style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
+            style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 40),
           
@@ -879,16 +910,16 @@ class _UserDashboardState extends State<UserDashboard> {
             child: ElevatedButton.icon(
               onPressed: () {
                 storage.logout();
-                Navigator.pushReplacement(
+                Navigator.pushReplacementNamed(
                   context,
-                  MaterialPageRoute(builder: (context) => const AuthScreen()),
+                  AppRoutes.auth,
                 );
               },
-              icon: const Icon(Icons.logout, color: Color(0xFFEF4444)),
+              icon: const Icon(Icons.logout, color: AppTheme.accentRed),
               label: Text('Sign Out', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFEE2E2),
-                foregroundColor: const Color(0xFFEF4444),
+                foregroundColor: AppTheme.accentRed,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
@@ -905,27 +936,27 @@ class _UserDashboardState extends State<UserDashboard> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.bgSurface),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.01),
-            blurRadius: 4,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF0284C7)),
+          Icon(icon, color: AppTheme.primaryBlue),
           const SizedBox(width: 16),
           Text(
             title,
-            style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+            style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
           ),
           const Spacer(),
-          const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF94A3B8)),
+          const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textMuted),
         ],
       ),
     );
@@ -936,7 +967,7 @@ class MomentumLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF0284C7)
+      ..color = AppTheme.primaryBlue
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -944,8 +975,8 @@ class MomentumLinePainter extends CustomPainter {
     final fillPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          const Color(0xFF0284C7).withValues(alpha: 0.15),
-          const Color(0xFF0284C7).withValues(alpha: 0.0),
+          AppTheme.primaryBlue.withValues(alpha: 0.15),
+          AppTheme.primaryBlue.withValues(alpha: 0.0),
         ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,

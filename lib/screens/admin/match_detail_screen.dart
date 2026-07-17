@@ -24,7 +24,7 @@ class MatchDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
-            backgroundColor: AppTheme.bgDeep,
+            backgroundColor: AppTheme.bgDark,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
@@ -59,7 +59,7 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Text(match.matchType,
-                                style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x610F172A))),
+                                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -82,7 +82,7 @@ class MatchDetailScreen extends StatelessWidget {
                                 Text('VS',
                                     style: GoogleFonts.outfit(
                                         fontSize: 18, fontWeight: FontWeight.w900,
-                                        color: const Color(0x3D0F172A))),
+                                        color: AppTheme.textMuted)),
                                 if (match.target > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
@@ -106,12 +106,12 @@ class MatchDetailScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           '📍 ${match.venue}',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0x610F172A)),
+                          style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
                           textAlign: TextAlign.center,
                         ),
                         Text(
                           '${match.date} at ${match.time}',
-                          style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x3D0F172A)),
+                          style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
                     ),
@@ -167,8 +167,8 @@ class MatchDetailScreen extends StatelessWidget {
                             icon: const Icon(Icons.record_voice_over_rounded, size: 18),
                             label: const Text('View Commentary'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF475569),
-                              side: const BorderSide(color: const Color(0x3D0F172A)),
+                              foregroundColor: AppTheme.textSecondary,
+                              side: const BorderSide(color: AppTheme.textMuted),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -181,8 +181,8 @@ class MatchDetailScreen extends StatelessWidget {
                             icon: const Icon(Icons.bar_chart_rounded, size: 18),
                             label: const Text('Statistics'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF475569),
-                              side: const BorderSide(color: const Color(0x3D0F172A)),
+                              foregroundColor: AppTheme.textSecondary,
+                              side: const BorderSide(color: AppTheme.textMuted),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -253,7 +253,7 @@ class MatchDetailScreen extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(b.commentary,
-                                  style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xDE0F172A), height: 1.4)),
+                                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, height: 1.4)),
                             ),
                           ],
                         ),
@@ -305,15 +305,15 @@ class _TeamScore extends StatelessWidget {
             child: Text('BATTING', style: GoogleFonts.outfit(fontSize: 8, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
           ),
         Text(shortName,
-            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A))),
+            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
         Text(fullName,
-            style: GoogleFonts.outfit(fontSize: 10, color: const Color(0x610F172A))),
+            style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
         if (runs > 0 || overs > 0) ...[
           const SizedBox(height: 6),
           Text('$runs/$wickets',
-              style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+              style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
           Text('($overs overs)',
-              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x8A0F172A))),
+              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary)),
         ],
       ],
     );
@@ -327,7 +327,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(label,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.4));
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4));
   }
 }
 
@@ -344,10 +344,10 @@ class _InfoRow extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.primaryBlue),
           const SizedBox(width: 10),
-          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x8A0F172A))),
+          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
           Expanded(
             child: Text(value.isNotEmpty ? value : 'N/A',
-                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A), fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis),
           ),
         ],
@@ -374,7 +374,7 @@ class _PlayerRow extends StatelessWidget {
                 style: GoogleFonts.outfit(color: roleColor, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(player.name, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xDE0F172A)))),
+          Expanded(child: Text(player.name, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary))),
           Text(player.role, style: GoogleFonts.outfit(fontSize: 11, color: roleColor)),
         ],
       ),

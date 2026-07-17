@@ -21,8 +21,8 @@ class _HelpScreenState extends State<HelpScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgDeep,
-        title: Text('Help & FAQ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+        backgroundColor: AppTheme.bgDark,
+        title: Text('Help & FAQ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -34,19 +34,19 @@ class _HelpScreenState extends State<HelpScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1D4ED8), Color(0xFF0284C7)],
+                  colors: [Color(0xFF1D4ED8), AppTheme.primaryBlue],
                 ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.help_rounded, color: const Color(0xFF0F172A), size: 32),
+                  const Icon(Icons.help_rounded, color: AppTheme.textPrimary, size: 32),
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Help Center', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                      Text('Find answers to common questions', style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xDE0F172A))),
+                      Text('Help Center', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                      Text('Find answers to common questions', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary)),
                     ],
                   ),
                 ],
@@ -55,7 +55,7 @@ class _HelpScreenState extends State<HelpScreen> {
             const SizedBox(height: 24),
 
             Text('FREQUENTLY ASKED QUESTIONS',
-                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.3)),
+                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 14),
 
             // FAQ Accordion
@@ -125,7 +125,7 @@ class _HelpScreenState extends State<HelpScreen> {
             const SizedBox(height: 28),
 
             Text('CONTACT SUPPORT',
-                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0x610F172A), letterSpacing: 1.3)),
+                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 14),
 
             _SupportOption(Icons.email_outlined, 'Email Support', 'support@cricketverse.ai', AppTheme.primaryBlue, () {
@@ -179,8 +179,8 @@ class _SupportOption extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
-                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: const Color(0x610F172A))),
+                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ),
