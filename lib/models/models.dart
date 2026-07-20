@@ -94,6 +94,9 @@ class BallRecord {
   final String bowlerName;
   final String commentary;
   final DateTime timestamp;
+  final String? strikerId;
+  final String? nonStrikerId;
+  final String? bowlerId;
 
   BallRecord({
     required this.run,
@@ -105,6 +108,9 @@ class BallRecord {
     required this.bowlerName,
     required this.commentary,
     required this.timestamp,
+    this.strikerId,
+    this.nonStrikerId,
+    this.bowlerId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -117,6 +123,9 @@ class BallRecord {
         'bowlerName': bowlerName,
         'commentary': commentary,
         'timestamp': timestamp.toIso8601String(),
+        'strikerId': strikerId,
+        'nonStrikerId': nonStrikerId,
+        'bowlerId': bowlerId,
       };
 
   factory BallRecord.fromJson(Map<String, dynamic> json) => BallRecord(
@@ -129,6 +138,9 @@ class BallRecord {
         bowlerName: json['bowlerName'] ?? '',
         commentary: json['commentary'] ?? '',
         timestamp: DateTime.parse(json['timestamp']),
+        strikerId: json['strikerId'],
+        nonStrikerId: json['nonStrikerId'],
+        bowlerId: json['bowlerId'],
       );
 }
 

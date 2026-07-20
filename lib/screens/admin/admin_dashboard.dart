@@ -6,6 +6,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/logout_dialog.dart';
+import '../../core/widgets/team_logo.dart';
+import '../../core/widgets/card_entrance_animation.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({Key? key}) : super(key: key);
@@ -128,22 +131,6 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.matchList);
                       }),
-                      _buildMenuItem(Icons.live_tv_rounded, 'Live Scoring', () {
-                        _toggleDrawer();
-                        final liveMatch = storage.matches.firstWhere(
-                          (m) => m.status == 'Live',
-                          orElse: () => storage.matches[0],
-                        );
-                        if (liveMatch.status == 'Live') {
-                          Navigator.pushNamed(context, AppRoutes.liveScoring, arguments: liveMatch);
-                        } else {
-                          CustomNotification.show(
-                            context,
-                            'No live matches running at the moment!',
-                            type: NotificationType.warning,
-                          );
-                        }
-                      }),
                       _buildMenuItem(Icons.bar_chart_rounded, 'Statistics', () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.statistics);
@@ -166,10 +153,13 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               ),
               
               // Logout
-              _buildMenuItem(Icons.logout_rounded, 'Logout', () {
+              _buildMenuItem(Icons.logout_rounded, 'Logout', () async {
                 _toggleDrawer();
-                storage.logout();
-                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (route) => false);
+                final confirm = await LogoutDialog.show(context);
+                if (confirm == true) {
+                  storage.logout();
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (route) => false);
+                }
               }, isLogout: true),
               const SizedBox(height: 20),
             ],
@@ -611,8 +601,15 @@ class _DashboardHomeView extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            ...storage.matches.take(3).map((m) => _MatchCard(match: m)).toList(),
+             const SizedBox(height: 4),
+            ...storage.matches.asMap().entries.take(3).map((entry) {
+              final index = entry.key;
+              final m = entry.value;
+              return CardEntranceAnimation(
+                index: index,
+                child: _MatchCard(match: m),
+              );
+            }).toList(),
             const SizedBox(height: 20),
           ],
         ),
@@ -698,41 +695,71 @@ class _MatchCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(match.teamA.shortName,
-                          style: GoogleFonts.outfit(
-                              fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                      Text(match.teamA.name,
-                          style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      if (match.runsA > 0)
-                        Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
-                            style: GoogleFonts.outfit(
-                                fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      TeamLogo(
+                        teamName: match.teamA.name,
+                        shortName: match.teamA.shortName,
+                        logoColorHex: match.teamA.logoColorHex,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(match.teamA.shortName,
+                                style: GoogleFonts.outfit(
+                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                            Text(match.teamA.name,
+                                style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            if (match.runsA > 0)
+                              Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                Text('VS',
-                    style: GoogleFonts.outfit(
-                        fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('VS',
+                      style: GoogleFonts.outfit(
+                          fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
+                ),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Text(match.teamB.shortName,
-                          style: GoogleFonts.outfit(
-                              fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                      Text(match.teamB.name,
-                          style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      if (match.runsB > 0)
-                        Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
-                            style: GoogleFonts.outfit(
-                                fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(match.teamB.shortName,
+                                style: GoogleFonts.outfit(
+                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                            Text(match.teamB.name,
+                                style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            if (match.runsB > 0)
+                              Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TeamLogo(
+                        teamName: match.teamB.name,
+                        shortName: match.teamB.shortName,
+                        logoColorHex: match.teamB.logoColorHex,
+                        size: 32,
+                      ),
                     ],
                   ),
                 ),

@@ -112,10 +112,10 @@ class TournamentManagementScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => CustomNotification.show(
+                          onPressed: () => Navigator.pushNamed(
                             context,
-                            'Viewing details for ${t['name']}',
-                            type: NotificationType.info,
+                            AppRoutes.tournamentDetail,
+                            arguments: t,
                           ),
                           icon: const Icon(Icons.visibility_outlined, size: 16),
                           label: const Text('View'),
@@ -129,10 +129,10 @@ class TournamentManagementScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => CustomNotification.show(
+                          onPressed: () => Navigator.pushNamed(
                             context,
-                            'Editing mode for ${t['name']} is ready',
-                            type: NotificationType.info,
+                            AppRoutes.createTournament,
+                            arguments: t,
                           ),
                           icon: const Icon(Icons.edit_rounded, size: 16),
                           label: const Text('Edit'),

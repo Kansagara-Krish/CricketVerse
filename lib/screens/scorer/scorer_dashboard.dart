@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,9 @@ import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/logout_dialog.dart';
+import '../../core/widgets/team_logo.dart';
+import '../../core/widgets/card_entrance_animation.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({Key? key}) : super(key: key);
@@ -51,9 +55,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     });
   }
 
-  void _logout() {
-    Provider.of<StorageService>(context, listen: false).logout();
-    Navigator.pushReplacementNamed(context, AppRoutes.auth);
+  void _logout() async {
+    final confirm = await LogoutDialog.show(context);
+    if (confirm == true) {
+      Provider.of<StorageService>(context, listen: false).logout();
+      Navigator.pushReplacementNamed(context, AppRoutes.auth);
+    }
   }
 
   Widget _buildMenuDrawer(BuildContext context, CricketMatch? match) {
@@ -231,19 +238,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     final matchId = storage.activeScorerMatchId;
     
     if (matchId == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.bgDark,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('No Match Assigned', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _logout, child: const Text('Logout')),
-            ],
-          ),
-        ),
-      );
+      return _buildAssignedMatchesListView(storage);
     }
 
     final match = storage.matches.firstWhere((m) => m.id == matchId);
@@ -290,12 +285,10 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 backgroundColor: Colors.white,
                 elevation: 0,
                 leading: IconButton(
-                  icon: AnimatedIcon(
-                    icon: AnimatedIcons.menu_close,
-                    progress: _drawerAnimationController,
-                    color: AppTheme.textPrimary,
-                  ),
-                  onPressed: _toggleDrawer,
+                  icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                  onPressed: () {
+                    storage.setActiveScorerMatchId(null);
+                  },
                 ),
                 title: Text(
                   _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
@@ -306,13 +299,19 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                   ),
                 ),
                 actions: [
-                  if (_currentViewIndex == 0 && match.status == 'Live')
+                  if (_currentViewIndex == 0 && match.status == 'Live') ...[
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
+                      tooltip: 'Reset Score to 0/0',
+                      onPressed: () => _showResetConfirmation(context, storage, match.id),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.edit_note, color: AppTheme.accentGold),
                       onPressed: () {
                         Navigator.pushNamed(context, AppRoutes.editBall);
                       },
                     ),
+                  ],
                   IconButton(
                     icon: const Icon(Icons.logout, color: AppTheme.accentRed),
                     onPressed: _logout,
@@ -328,6 +327,183 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           ),
         ],
       ),
+    );
+  }
+
+  // --- Assigned Matches Dashboard List View ---
+  Widget _buildAssignedMatchesListView(StorageService storage) {
+    final assignedMatches = storage.matches
+        .where((m) => m.scorerUsername == storage.currentUserEmail)
+        .toList();
+
+    return Scaffold(
+      backgroundColor: AppTheme.bgDark,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Official Scorer Portal',
+          style: GoogleFonts.outfit(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppTheme.accentRed),
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: assignedMatches.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.sports_cricket_rounded, size: 48, color: AppTheme.textMuted),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Matches Assigned to You',
+                    style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Contact administrator to get scoring matches.',
+                    style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: assignedMatches.length,
+              itemBuilder: (context, i) {
+                final match = assignedMatches[i];
+                final statusColor = AppTheme.statusColor(match.status);
+                
+                return CardEntranceAnimation(
+                  index: i,
+                  child: GestureDetector(
+                    onTap: () {
+                      storage.setActiveScorerMatchId(match.id);
+                      CustomNotification.show(
+                        context,
+                        'Opened scoring for ${match.teamA.shortName} vs ${match.teamB.shortName}',
+                        type: NotificationType.info,
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(16),
+                      decoration: AppTheme.glassCard,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                                ),
+                                child: Text(
+                                  match.status == 'Live' ? '● LIVE' : match.status.toUpperCase(),
+                                  style: GoogleFonts.outfit(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              Text(
+                                '${match.matchType} • ${match.date}',
+                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    TeamLogo(
+                                      teamName: match.teamA.name,
+                                      shortName: match.teamA.shortName,
+                                      logoColorHex: match.teamA.logoColorHex,
+                                      size: 32,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(match.teamA.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                          if (match.status != 'Upcoming')
+                                            Text('${match.runsA}/${match.wicketsA} (${match.oversA})', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text('VS', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Text(match.teamB.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                          if (match.status != 'Upcoming')
+                                            Text('${match.runsB}/${match.wicketsB} (${match.oversB})', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    TeamLogo(
+                                      teamName: match.teamB.name,
+                                      shortName: match.teamB.shortName,
+                                      logoColorHex: match.teamB.logoColorHex,
+                                      size: 32,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  match.venue,
+                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Tap to open Scoring Portal',
+                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, size: 14, color: AppTheme.primaryBlue),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 
@@ -533,9 +709,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               // Large Score Display
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
                 children: [
+                  TeamLogo.fromTeam(battingTeam, size: 36),
+                  const SizedBox(width: 10),
                   Text(
                     '${battingTeam.shortName} ',
                     style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
@@ -566,32 +742,59 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: AppTheme.glassCard,
-                  child: Column(
+                  child: Row(
                     children: [
-                      _buildInteractiveRow(
-                        context,
-                        'Striker',
-                        striker.name,
-                        '🏏',
-                        () => _showPlayerSelectionSheet(context, true, battingTeam.players, storage),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildInteractiveRow(
+                              context,
+                              'Striker',
+                              striker.name,
+                              '🏏',
+                              () => _showPlayerSelectionSheet(context, true, battingTeam.players, storage),
+                              stats: '(${striker.runsScored} off ${striker.ballsFaced})',
+                            ),
+                            const Divider(height: 16),
+                            _buildInteractiveRow(
+                              context,
+                              'Non-Striker',
+                              nonStriker.name,
+                              '🏃',
+                              () => _showPlayerSelectionSheet(context, false, battingTeam.players, storage),
+                              stats: '(${nonStriker.runsScored} off ${nonStriker.ballsFaced})',
+                            ),
+                          ],
+                        ),
                       ),
-                      const Divider(height: 16),
-                      _buildInteractiveRow(
-                        context,
-                        'Non-Striker',
-                        nonStriker.name,
-                        '🏃',
-                        () => _showPlayerSelectionSheet(context, false, battingTeam.players, storage),
-                      ),
-                      const Divider(height: 16),
-                      _buildInteractiveRow(
-                        context,
-                        'Active Bowler',
-                        bowler.name,
-                        '⚡',
-                        () => _showBowlerSelectionSheet(context, bowlingTeam.players, storage),
+                      Container(
+                        margin: const EdgeInsets.only(left: 12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.swap_vert_rounded, color: AppTheme.primaryBlue),
+                          onPressed: () {
+                            storage.swapStrikers();
+                            CustomNotification.show(context, 'Positions swapped', type: NotificationType.info);
+                          },
+                        ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: AppTheme.glassCard,
+                  child: _buildInteractiveRow(
+                    context,
+                    'Active Bowler',
+                    bowler.name,
+                    '⚡',
+                    () => _showBowlerSelectionSheet(context, bowlingTeam.players, storage),
+                    stats: '(${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded})',
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -628,7 +831,14 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                   children: [
                     Expanded(child: _buildExtraBtn('Leg Bye (+1)', Icons.directions_walk_rounded, () => _scoreBall(storage, 0, 'Leg Bye', 1, false))),
                     const SizedBox(width: 8),
+                    Expanded(child: _buildExtraBtn('Custom Extra...', Icons.add_moderator_rounded, () => _showCustomExtraDialog(storage))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
                     Expanded(
+                      flex: 2,
                       child: InkWell(
                         onTap: () => _showWicketDialog(storage),
                         child: Container(
@@ -644,8 +854,50 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               const Icon(Icons.outbox_rounded, color: AppTheme.accentRed, size: 16),
                               const SizedBox(width: 8),
                               Text(
-                                'Wicket',
+                                'Record Wicket',
                                 style: GoogleFonts.outfit(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 1,
+                      child: InkWell(
+                        onTap: match.balls.isEmpty
+                            ? null
+                            : () => _showUndoConfirmation(context, storage),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          decoration: BoxDecoration(
+                            color: match.balls.isEmpty
+                                ? Colors.black.withOpacity(0.02)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: match.balls.isEmpty
+                                  ? const Color(0xFFE2E8F0)
+                                  : AppTheme.textSecondary.withOpacity(0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.undo_rounded,
+                                color: match.balls.isEmpty ? AppTheme.textMuted : AppTheme.textPrimary,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Undo',
+                                style: GoogleFonts.outfit(
+                                  color: match.balls.isEmpty ? AppTheme.textMuted : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -749,8 +1001,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     String label,
     String name,
     String icon,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    String? stats,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -760,21 +1013,37 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           children: [
             Text(icon, style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: GoogleFonts.outfit(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 0.8),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  name,
-                  style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label.toUpperCase(),
+                    style: GoogleFonts.outfit(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Text(
+                        name,
+                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      ),
+                      if (stats != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          stats,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0284C7),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             const Icon(Icons.edit_outlined, size: 14, color: AppTheme.primaryBlue),
           ],
         ),
@@ -848,8 +1117,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       extraType: extraType,
       extraRuns: extraRuns,
       isWicket: isWicket,
-      wicketType: isWicket ? _selectedWicketType : 'None',
+      wicketType: isWicket ? 'Bowled' : 'None',
     );
+    _postBallCheck(storage);
   }
 
   void _showPlayerSelectionSheet(
@@ -960,52 +1230,751 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   }
 
   void _showWicketDialog(StorageService storage) {
-    showDialog(
+    if (storage.activeScorerMatchId == null) return;
+    final match = storage.matches.firstWhere((m) => m.id == storage.activeScorerMatchId);
+    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
+    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
+    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
+
+    String dismissedId = striker.id;
+    String wicketType = 'Bowled';
+
+    // Helper to calculate remaining batsmen who have not yet batted
+    List<Player> getRemainingBatsmen(CricketMatch match, Team battingTeam) {
+      final Set<String> battedPlayerNames = {};
+      for (var ball in match.balls) {
+        battedPlayerNames.add(ball.batsmanName);
+      }
+      return battingTeam.players.where((p) {
+        if (p.id == match.currentStrikerId || p.id == match.currentNonStrikerId) {
+          return false;
+        }
+        if (battedPlayerNames.contains(p.name)) {
+          return false;
+        }
+        return true;
+      }).toList();
+    }
+
+    final candidates = getRemainingBatsmen(match, battingTeam);
+
+    int currentStep = 1;
+    String selectedIncomingId = candidates.isNotEmpty ? candidates[0].id : '';
+    String selectedPosition = 'Striker';
+
+    showGeneralDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              title: Text('Record Wicket', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary)),
-              content: DropdownButtonFormField<String>(
-                dropdownColor: Colors.white,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13.5),
-                value: _selectedWicketType,
-                decoration: InputDecoration(
-                  fillColor: Colors.black.withOpacity(0.02),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'Bowled', child: Text('Bowled')),
-                  DropdownMenuItem(value: 'Caught', child: Text('Caught')),
-                  DropdownMenuItem(value: 'LBW', child: Text('LBW')),
-                  DropdownMenuItem(value: 'Run Out', child: Text('Run Out')),
-                ],
-                onChanged: (val) {
-                  setDialogState(() {
-                    _selectedWicketType = val ?? 'Bowled';
-                  });
+      barrierDismissible: true,
+      barrierLabel: 'WicketConfirmDialog',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: StatefulBuilder(
+                builder: (ctx, setDialogState) {
+                  // If striker dismissed is toggled, update position and default dismissal types accordingly
+                  if (dismissedId == nonStriker.id && currentStep == 1) {
+                    selectedPosition = 'Non-Striker';
+                    if (!['Run Out', 'Hit Wicket', 'Retired Out', 'Retired Hurt'].contains(wicketType)) {
+                      wicketType = 'Run Out';
+                    }
+                  } else if (dismissedId == striker.id && currentStep == 1) {
+                    selectedPosition = 'Striker';
+                  }
+
+                  final List<String> dropdownItems = dismissedId == striker.id
+                      ? ['Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Hit Wicket', 'Retired Out', 'Retired Hurt']
+                      : ['Run Out', 'Hit Wicket', 'Retired Out', 'Retired Hurt'];
+
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentRed.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            currentStep == 1 ? Icons.outbox_rounded : Icons.person_add_rounded,
+                            color: AppTheme.accentRed,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          currentStep == 1 ? 'Record Wicket' : 'Incoming Batsman',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                    content: SizedBox(
+                      width: 300,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: currentStep == 1
+                            ? Column(
+                                key: const ValueKey(1),
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'WHICH BATTER IS OUT?',
+                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () => setDialogState(() => dismissedId = striker.id),
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                                            decoration: BoxDecoration(
+                                              color: dismissedId == striker.id
+                                                  ? AppTheme.accentRed.withOpacity(0.08)
+                                                  : Colors.white,
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: dismissedId == striker.id ? AppTheme.accentRed : const Color(0xFFE2E8F0),
+                                                width: dismissedId == striker.id ? 2 : 1,
+                                              ),
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                const Icon(Icons.sports_cricket_rounded, color: AppTheme.accentRed, size: 20),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  'Striker',
+                                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  striker.name,
+                                                  textAlign: TextAlign.center,
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textPrimary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () => setDialogState(() => dismissedId = nonStriker.id),
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                                            decoration: BoxDecoration(
+                                              color: dismissedId == nonStriker.id
+                                                  ? AppTheme.accentRed.withOpacity(0.08)
+                                                  : Colors.white,
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: dismissedId == nonStriker.id ? AppTheme.accentRed : const Color(0xFFE2E8F0),
+                                                width: dismissedId == nonStriker.id ? 2 : 1,
+                                              ),
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                const Icon(Icons.directions_run_rounded, color: AppTheme.accentRed, size: 20),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  'Non-Striker',
+                                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  nonStriker.name,
+                                                  textAlign: TextAlign.center,
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textPrimary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'DISMISSAL TYPE',
+                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  DropdownButtonFormField<String>(
+                                    dropdownColor: Colors.white,
+                                    style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
+                                    value: wicketType,
+                                    decoration: InputDecoration(
+                                      fillColor: Colors.black.withOpacity(0.02),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    items: dropdownItems.map((val) {
+                                      return DropdownMenuItem(value: val, child: Text(val));
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setDialogState(() => wicketType = val);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                key: const ValueKey(2),
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'SELECT NEW BATSMAN',
+                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    height: 150,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: candidates.length,
+                                      itemBuilder: (ctx, idx) {
+                                        final player = candidates[idx];
+                                        final isSel = selectedIncomingId == player.id;
+                                        return ListTile(
+                                          dense: true,
+                                          selected: isSel,
+                                          selectedTileColor: AppTheme.primaryBlue.withOpacity(0.06),
+                                          title: Text(
+                                            player.name,
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isSel ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                          subtitle: Text(player.role, style: GoogleFonts.outfit(fontSize: 11)),
+                                          trailing: isSel ? const Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: 18) : null,
+                                          onTap: () {
+                                            setDialogState(() {
+                                              selectedIncomingId = player.id;
+                                            });
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'BATSMAN POSITION',
+                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ChoiceChip(
+                                          label: Text('Striker', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          selected: selectedPosition == 'Striker',
+                                          onSelected: (val) {
+                                            if (val) setDialogState(() => selectedPosition = 'Striker');
+                                          },
+                                          selectedColor: AppTheme.primaryBlue.withOpacity(0.12),
+                                          labelStyle: TextStyle(color: selectedPosition == 'Striker' ? AppTheme.primaryBlue : AppTheme.textSecondary),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: ChoiceChip(
+                                          label: Text('Non-Striker', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          selected: selectedPosition == 'Non-Striker',
+                                          onSelected: (val) {
+                                            if (val) setDialogState(() => selectedPosition = 'Non-Striker');
+                                          },
+                                          selectedColor: AppTheme.primaryBlue.withOpacity(0.12),
+                                          labelStyle: TextStyle(color: selectedPosition == 'Non-Striker' ? AppTheme.primaryBlue : AppTheme.textSecondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          if (currentStep == 2) {
+                            setDialogState(() => currentStep = 1);
+                          } else {
+                            Navigator.pop(ctx);
+                          }
+                        },
+                        child: Text(
+                          currentStep == 2 ? 'Back' : 'Cancel',
+                          style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (currentStep == 1) {
+                            if (candidates.isEmpty) {
+                              Navigator.pop(ctx);
+                              storage.updateScore(
+                                runs: 0,
+                                extraType: 'None',
+                                extraRuns: 0,
+                                isWicket: true,
+                                wicketType: wicketType,
+                                dismissedPlayerId: dismissedId,
+                              );
+                              CustomNotification.show(
+                                context,
+                                'Wicket recorded. Team is All Out!',
+                                type: NotificationType.error,
+                              );
+                              _postBallCheck(storage);
+                            } else {
+                              setDialogState(() => currentStep = 2);
+                            }
+                          } else {
+                            Navigator.pop(ctx);
+                            storage.updateScore(
+                              runs: 0,
+                              extraType: 'None',
+                              extraRuns: 0,
+                              isWicket: true,
+                              wicketType: wicketType,
+                              dismissedPlayerId: dismissedId,
+                              newBatsmanId: selectedIncomingId,
+                              newBatsmanPosition: selectedPosition,
+                            );
+                            final nextPlayerName = battingTeam.players.firstWhere((p) => p.id == selectedIncomingId).name;
+                            CustomNotification.show(
+                              context,
+                              'Wicket recorded. Incoming batsman: $nextPlayerName ($selectedPosition)',
+                              type: NotificationType.success,
+                            );
+                            _postBallCheck(storage);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentRed,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          (currentStep == 1 && candidates.isNotEmpty) ? 'Next' : 'Confirm',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  );
                 },
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _scoreBall(storage, 0, 'None', 0, true);
-                    CustomNotification.show(context, 'Wicket recorded: $_selectedWicketType', type: NotificationType.error);
-                  },
-                  child: const Text('Confirm'),
-                ),
-              ],
-            );
-          },
+            ),
+          ),
         );
       },
+    );
+  }
+
+  void _showCustomExtraDialog(StorageService storage) {
+    String extraType = 'Wide';
+    int runs = 1;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'ExtraRunsDialog',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: StatefulBuilder(
+                builder: (ctx, setDialogState) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add_moderator_rounded, color: AppTheme.primaryBlue, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Record Extra Runs',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EXTRA TYPE',
+                          style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          dropdownColor: Colors.white,
+                          style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
+                          value: extraType,
+                          decoration: InputDecoration(
+                            fillColor: Colors.black.withOpacity(0.02),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Wide', child: Text('Wide')),
+                            DropdownMenuItem(value: 'No Ball', child: Text('No Ball')),
+                            DropdownMenuItem(value: 'Leg Bye', child: Text('Leg Bye')),
+                            DropdownMenuItem(value: 'Bye', child: Text('Bye')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setDialogState(() => extraType = val);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'EXTRA RUNS',
+                          style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [1, 2, 3, 4, 5].map((r) {
+                            final isSel = runs == r;
+                            return GestureDetector(
+                              onTap: () => setDialogState(() => runs = r),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isSel ? AppTheme.primaryBlue : AppTheme.bgDeep,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '+$r',
+                                    style: GoogleFonts.outfit(
+                                      color: isSel ? Colors.white : AppTheme.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          storage.updateScore(
+                            runs: 0,
+                            extraType: extraType,
+                            extraRuns: runs,
+                            isWicket: false,
+                            wicketType: 'None',
+                          );
+                          CustomNotification.show(
+                            context,
+                            'Custom Extra recorded: $extraType +$runs',
+                            type: NotificationType.success,
+                          );
+                          _postBallCheck(storage);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                        ),
+                        child: Text('Confirm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _postBallCheck(StorageService storage) {
+    if (storage.activeScorerMatchId == null) return;
+    final match = storage.matches.firstWhere((m) => m.id == storage.activeScorerMatchId);
+    final overs = match.isFirstInnings ? match.oversA : match.oversB;
+
+    if (overs > 0 && (overs * 10).round() % 10 == 0) {
+      final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+      _showOverCompletedDialog(context, bowlingTeam.players, storage, (overs).round());
+    }
+  }
+
+  void _showOverCompletedDialog(
+    BuildContext context,
+    List<Player> players,
+    StorageService storage,
+    int overNumber,
+  ) {
+    String? selectedBowlerId;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'OverCompletedDialog',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: StatefulBuilder(
+                builder: (ctx, setDialogState) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryBlue, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Over $overNumber Completed',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                    content: SizedBox(
+                      width: 300,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CHOOSE BOWLER FOR NEXT OVER',
+                            style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: players.length,
+                              itemBuilder: (ctx, idx) {
+                                final player = players[idx];
+                                final isSel = selectedBowlerId == player.id;
+                                return ListTile(
+                                  dense: true,
+                                  selected: isSel,
+                                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.06),
+                                  leading: CircleAvatar(
+                                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                                    radius: 12,
+                                    child: Text(player.name.substring(0, 1), style: const TextStyle(fontSize: 10, color: AppTheme.primaryBlue)),
+                                  ),
+                                  title: Text(
+                                    player.name,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isSel ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '${player.role} • ${player.oversBowled.toStringAsFixed(1)} ov', 
+                                    style: GoogleFonts.outfit(fontSize: 11)
+                                  ),
+                                  trailing: isSel ? const Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: 18) : null,
+                                  onTap: () {
+                                    setDialogState(() {
+                                      selectedBowlerId = player.id;
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      ElevatedButton(
+                        onPressed: selectedBowlerId == null
+                            ? null
+                            : () {
+                                Navigator.pop(ctx);
+                                storage.switchBowler(selectedBowlerId!);
+                                final bowlerName = players.firstWhere((p) => p.id == selectedBowlerId).name;
+                                CustomNotification.show(
+                                  context,
+                                  'Over $overNumber finished. New bowler: $bowlerName',
+                                  type: NotificationType.success,
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        ),
+                        child: Text('Confirm Bowler', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showResetConfirmation(BuildContext context, StorageService storage, String matchId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Reset Match?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        content: Text('Are you sure you want to reset this match score to 0/0 and delete all balls?', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              storage.resetMatchToZero(matchId);
+              CustomNotification.show(context, 'Match score reset to 0/0', type: NotificationType.success);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: Text('Reset', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUndoConfirmation(BuildContext context, StorageService storage) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Undo Last Ball?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to delete the last scored ball and revert the stats?',
+          style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              storage.undoLastBall();
+              CustomNotification.show(context, 'Last ball reverted', type: NotificationType.info);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: Text(
+              'Yes, Undo',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

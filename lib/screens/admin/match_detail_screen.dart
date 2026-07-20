@@ -1,11 +1,9 @@
-// lib/screens/admin/match_detail_screen.dart
-// Full match detail: scoreboard, commentary, prediction links, and actions
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/team_logo.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final CricketMatch match;
@@ -76,6 +74,7 @@ class MatchDetailScreen extends StatelessWidget {
                               wickets: match.wicketsA,
                               overs: match.oversA,
                               isBatting: match.isFirstInnings && match.status == 'Live',
+                              logoColorHex: match.teamA.logoColorHex,
                             ),
                             Column(
                               children: [
@@ -99,6 +98,7 @@ class MatchDetailScreen extends StatelessWidget {
                               wickets: match.wicketsB,
                               overs: match.oversB,
                               isBatting: !match.isFirstInnings && match.status == 'Live',
+                              logoColorHex: match.teamB.logoColorHex,
                               alignRight: true,
                             ),
                           ],
@@ -133,13 +133,6 @@ class MatchDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        _ActionButton(
-                          Icons.scoreboard_rounded,
-                          'Live Scoring',
-                          AppTheme.primaryGreen,
-                          () => Navigator.pushNamed(context, AppRoutes.liveScoring, arguments: match),
-                        ),
-                        const SizedBox(width: 12),
                         _ActionButton(
                           Icons.record_voice_over_rounded,
                           'AI Commentary',
@@ -278,6 +271,7 @@ class _TeamScore extends StatelessWidget {
   final double overs;
   final bool isBatting;
   final bool alignRight;
+  final String logoColorHex;
 
   const _TeamScore({
     required this.shortName,
@@ -286,6 +280,7 @@ class _TeamScore extends StatelessWidget {
     required this.wickets,
     required this.overs,
     required this.isBatting,
+    required this.logoColorHex,
     this.alignRight = false,
   });
 
@@ -304,8 +299,15 @@ class _TeamScore extends StatelessWidget {
             ),
             child: Text('BATTING', style: GoogleFonts.outfit(fontSize: 8, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
           ),
+        TeamLogo(
+          teamName: fullName,
+          shortName: shortName,
+          logoColorHex: logoColorHex,
+          size: 40,
+        ),
+        const SizedBox(height: 8),
         Text(shortName,
-            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
         Text(fullName,
             style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
         if (runs > 0 || overs > 0) ...[

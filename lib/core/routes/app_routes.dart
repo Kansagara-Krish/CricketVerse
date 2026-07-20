@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../screens/splash_screen.dart';
 import '../../screens/onboarding_screen.dart';
 import '../../screens/auth_screen.dart';
+import '../../screens/shared/tournament_details_screen.dart';
 
 // ── Admin ───────────────────────────────────────────────────────────────────
 import '../../screens/admin/admin_dashboard.dart';
@@ -43,9 +44,10 @@ import '../../screens/user/match_summary_download_screen.dart';
 
 class AppRoutes {
   // ─── Shared Route Names ───────────────────────────────────────────────────
-  static const String splash       = '/';
-  static const String onboarding   = '/onboarding';
-  static const String auth         = '/auth';
+  static const String splash             = '/';
+  static const String onboarding         = '/onboarding';
+  static const String auth               = '/auth';
+  static const String tournamentDetail   = '/shared/tournament-details';
 
   // ─── Admin Route Names ────────────────────────────────────────────────────
   static const String adminDashboard     = '/admin';
@@ -90,6 +92,8 @@ class AppRoutes {
         return _slideRoute(const OnboardingScreen());
       case auth:
         return _fadeRoute(const AuthScreen());
+      case tournamentDetail:
+        return _slideRoute(TournamentDetailsScreen(tournament: settings.arguments as Map<String, dynamic>));
 
       // Admin
       case adminDashboard:

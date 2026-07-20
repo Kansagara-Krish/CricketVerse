@@ -9,6 +9,8 @@ import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/team_logo.dart';
+import '../../core/widgets/card_entrance_animation.dart';
 
 class MatchListScreen extends StatefulWidget {
   const MatchListScreen({Key? key}) : super(key: key);
@@ -112,7 +114,10 @@ class _MatchListView extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: matches.length,
-        itemBuilder: (_, i) => _MatchTile(match: matches[i]),
+        itemBuilder: (_, i) => CardEntranceAnimation(
+          index: i,
+          child: _MatchTile(match: matches[i]),
+        ),
       ),
     );
   }
@@ -179,24 +184,37 @@ class _MatchTile extends StatelessWidget {
                 children: [
                   // Team A
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(match.teamA.shortName,
-                            style: GoogleFonts.outfit(
-                                fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                        Text(match.teamA.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                        if (match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0) ...[
-                          const SizedBox(height: 6),
-                          Text('${match.runsA}/${match.wicketsA}',
-                              style: GoogleFonts.outfit(
-                                  fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                          Text('(${match.oversA} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
-                        ],
+                        TeamLogo(
+                          teamName: match.teamA.name,
+                          shortName: match.teamA.shortName,
+                          logoColorHex: match.teamA.logoColorHex,
+                          size: 32,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(match.teamA.shortName,
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                              Text(match.teamA.name,
+                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              if (match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0) ...[
+                                const SizedBox(height: 4),
+                                Text('${match.runsA}/${match.wicketsA}',
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                Text('(${match.oversA} ov)',
+                                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
+                              ],
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -221,24 +239,38 @@ class _MatchTile extends StatelessWidget {
                   ),
                   // Team B
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(match.teamB.shortName,
-                            style: GoogleFonts.outfit(
-                                fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                        Text(match.teamB.name,
-                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                        if (match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0) ...[
-                          const SizedBox(height: 6),
-                          Text('${match.runsB}/${match.wicketsB}',
-                              style: GoogleFonts.outfit(
-                                  fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                          Text('(${match.oversB} ov)',
-                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
-                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(match.teamB.shortName,
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                              Text(match.teamB.name,
+                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              if (match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0) ...[
+                                const SizedBox(height: 4),
+                                Text('${match.runsB}/${match.wicketsB}',
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                Text('(${match.oversB} ov)',
+                                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TeamLogo(
+                          teamName: match.teamB.name,
+                          shortName: match.teamB.shortName,
+                          logoColorHex: match.teamB.logoColorHex,
+                          size: 32,
+                        ),
                       ],
                     ),
                   ),
@@ -254,14 +286,6 @@ class _MatchTile extends StatelessWidget {
                   Text('${match.date} • ${match.time}',
                       style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textMuted)),
                   const Spacer(),
-                  if (isLive)
-                    _ActionChip(
-                      Icons.scoreboard_rounded,
-                      'Score',
-                      AppTheme.primaryGreen,
-                      () => Navigator.pushNamed(context, AppRoutes.liveScoring, arguments: match),
-                    ),
-                  const SizedBox(width: 8),
                   _ActionChip(
                     Icons.info_outline,
                     'Details',

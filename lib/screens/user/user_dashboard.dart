@@ -1,3 +1,4 @@
+import 'dart:ui';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,10 @@ import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
 import 'match_details_screen.dart';
+import '../../core/widgets/team_logo.dart';
+import '../../core/widgets/card_entrance_animation.dart';
+import '../../core/widgets/logout_dialog.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({Key? key}) : super(key: key);
@@ -17,6 +22,14 @@ class UserDashboard extends StatefulWidget {
 class _UserDashboardState extends State<UserDashboard> {
   int _currentIndex = 0; // Default to Home
   String _selectedFilter = 'Live'; // 'Live', 'Upcoming', 'Completed'
+  String _schedulesSubTab = 'Matches';
+
+  // Interactive Popup States
+  final Set<String> _favTeamIds = {'uvpce_titans'};
+  bool _notifMatchStart = true;
+  bool _notifWickets = true;
+  bool _notifCommentary = false;
+  String _themeMode = 'Light';
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +58,23 @@ class _UserDashboardState extends State<UserDashboard> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
+            if (index == 3) {
+              final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
+              if (liveMatches.isNotEmpty) {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.userMatchDetails,
+                  arguments: liveMatches.first.id,
+                );
+              } else {
+                CustomNotification.show(
+                  context,
+                  'No active Live match right now.',
+                  type: NotificationType.warning,
+                );
+              }
+              return;
+            }
             setState(() {
               _currentIndex = index;
             });
@@ -137,7 +167,7 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           const SizedBox(height: 20),
 
-          // Filters row (Chips styling matching light mode)
+          // Filters row
           Row(
             children: ['Live', 'Upcoming', 'Completed'].map((filter) {
               final isSelected = _selectedFilter == filter;
@@ -192,7 +222,10 @@ class _UserDashboardState extends State<UserDashboard> {
                   itemCount: matchesList.length,
                   itemBuilder: (context, index) {
                     final match = matchesList[index];
-                    return _buildMatchCard(match, storage);
+                    return CardEntranceAnimation(
+                      index: index,
+                      child: _buildMatchCard(match, storage),
+                    );
                   },
                 ),
           const SizedBox(height: 24),
@@ -223,9 +256,9 @@ class _UserDashboardState extends State<UserDashboard> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildPlayerTrendCard('Aarav Patel', 'Batter • UVP-TT', 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop', Icons.sports_cricket, AppTheme.accentGold),
-                _buildPlayerTrendCard('Advik Shah', 'Bowler • UVP-WR', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=120&auto=format&fit=crop', Icons.circle, AppTheme.primaryGreen),
-                _buildPlayerTrendCard('Ishaan Mehta', 'All-rounder • UVP-LG', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&auto=format&fit=crop', Icons.trending_up, AppTheme.primaryBlue),
+                CardEntranceAnimation(index: 0, child: _buildPlayerTrendCard('Aarav Patel', 'Batter • UVP-TT', 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop', Icons.sports_cricket, AppTheme.accentGold)),
+                CardEntranceAnimation(index: 1, child: _buildPlayerTrendCard('Advik Shah', 'Bowler • UVP-WR', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=120&auto=format&fit=crop', Icons.circle, AppTheme.primaryGreen)),
+                CardEntranceAnimation(index: 2, child: _buildPlayerTrendCard('Ishaan Mehta', 'All-rounder • UVP-LG', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&auto=format&fit=crop', Icons.trending_up, AppTheme.primaryBlue)),
               ],
             ),
           ),
@@ -245,7 +278,7 @@ class _UserDashboardState extends State<UserDashboard> {
               border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -296,8 +329,6 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Widget _buildMatchCard(CricketMatch match, StorageService storage) {
-    final teamAIntColor = int.tryParse(match.teamA.logoColorHex) ?? 0xFF0284C7;
-    final teamBIntColor = int.tryParse(match.teamB.logoColorHex) ?? 0xFFFFBF00;
     final winProb = storage.calculateWinProbability(match);
 
     return InkWell(
@@ -321,7 +352,7 @@ class _UserDashboardState extends State<UserDashboard> {
           border: Border.all(color: const Color(0xFFBAE6FD)),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+              color: AppTheme.primaryBlue.withOpacity(0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )
@@ -372,12 +403,11 @@ class _UserDashboardState extends State<UserDashboard> {
               children: [
                 Column(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Color(teamAIntColor), 
-                      child: Text(
-                        match.teamA.shortName, 
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
+                    TeamLogo(
+                      teamName: match.teamA.name,
+                      shortName: match.teamA.shortName,
+                      logoColorHex: match.teamA.logoColorHex,
+                      size: 40,
                     ),
                     const SizedBox(height: 8),
                     Text(match.teamA.shortName, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
@@ -411,12 +441,11 @@ class _UserDashboardState extends State<UserDashboard> {
                 ),
                 Column(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Color(teamBIntColor), 
-                      child: Text(
-                        match.teamB.shortName, 
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
+                    TeamLogo(
+                      teamName: match.teamB.name,
+                      shortName: match.teamB.shortName,
+                      logoColorHex: match.teamB.logoColorHex,
+                      size: 40,
                     ),
                     const SizedBox(height: 8),
                     Text(match.teamB.shortName, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
@@ -437,7 +466,7 @@ class _UserDashboardState extends State<UserDashboard> {
             ),
             const SizedBox(height: 16),
             
-            // Footer of card matching Screenshot 2026-07-09 152229.png
+            // Footer of card matching Screenshot
             const Divider(color: Color(0xFFBAE6FD)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -492,15 +521,9 @@ class _UserDashboardState extends State<UserDashboard> {
                 right: 0,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppTheme.textPrimary,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                      ),
-                    ],
                   ),
                   child: Icon(badgeIcon, size: 10, color: badgeColor),
                 ),
@@ -529,6 +552,21 @@ class _UserDashboardState extends State<UserDashboard> {
 
   // --- View 2: Schedules ---
   Widget _buildSchedulesView(StorageService storage) {
+    final subTabs = ['Tournaments', 'Matches', 'Teams', 'Players'];
+    
+    int itemCount = 0;
+    if (_schedulesSubTab == 'Matches') {
+      itemCount = storage.matches.length;
+    } else if (_schedulesSubTab == 'Tournaments') {
+      itemCount = 5;
+    } else if (_schedulesSubTab == 'Teams') {
+      itemCount = storage.teams.length;
+    } else if (_schedulesSubTab == 'Players') {
+      itemCount = storage.teams.fold<int>(0, (sum, team) => sum + team.players.length);
+    }
+
+    final allPlayersList = storage.teams.expand((t) => t.players.map((p) => _PlayerWithTeam(p, t))).toList();
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -538,34 +576,197 @@ class _UserDashboardState extends State<UserDashboard> {
             'Tournaments & Matches', 
             style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
           ),
-          const SizedBox(height: 16),
-          Expanded(
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 38,
             child: ListView.builder(
-              itemCount: storage.matches.length,
-              itemBuilder: (context, index) {
-                final match = storage.matches[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.textPrimary,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.bgSurface),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: const CircleAvatar(backgroundColor: AppTheme.bgDeep, child: Icon(Icons.sports_cricket, color: AppTheme.primaryBlue)),
-                    title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                    subtitle: Text('${match.venue} • ${match.date} ${match.time}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12)),
-                    trailing: Text(
-                      match.status, 
+              scrollDirection: Axis.horizontal,
+              itemCount: subTabs.length,
+              itemBuilder: (context, idx) {
+                final tab = subTabs[idx];
+                final isSelected = _schedulesSubTab == tab;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _schedulesSubTab = tab;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF854D0E) : Colors.black.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF854D0E) : Colors.black.withOpacity(0.08),
+                      ),
+                    ),
+                    child: Text(
+                      tab,
                       style: GoogleFonts.outfit(
-                        color: match.status == 'Live' ? Colors.redAccent : const Color(0xFF854D0E),
-                        fontWeight: FontWeight.bold,
                         fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
                       ),
                     ),
                   ),
                 );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: itemCount,
+              itemBuilder: (context, index) {
+                if (_schedulesSubTab == 'Matches') {
+                  final match = storage.matches[index];
+                  return CardEntranceAnimation(
+                    index: index,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.bgSurface),
+                      ),
+                      child: ListTile(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.userMatchDetails,
+                            arguments: match.id,
+                          );
+                        },
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TeamLogo(
+                              teamName: match.teamA.name,
+                              shortName: match.teamA.shortName,
+                              logoColorHex: match.teamA.logoColorHex,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 4),
+                            TeamLogo(
+                              teamName: match.teamB.name,
+                              shortName: match.teamB.shortName,
+                              logoColorHex: match.teamB.logoColorHex,
+                              size: 28,
+                            ),
+                          ],
+                        ),
+                        title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                        subtitle: Text('${match.venue} • ${match.date} ${match.time}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12)),
+                        trailing: Text(
+                          match.status, 
+                          style: GoogleFonts.outfit(
+                            color: match.status == 'Live' ? Colors.redAccent : const Color(0xFF854D0E),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                } else if (_schedulesSubTab == 'Tournaments') {
+                  final t = [
+                    {'name': 'T20 World Cup 2026', 'format': 'T20', 'teams': '16', 'status': 'Live', 'start': '01-07-2026', 'end': '30-07-2026', 'matches': '45'},
+                    {'name': 'IPL Season 19', 'format': 'T20', 'teams': '10', 'status': 'Upcoming', 'start': '01-09-2026', 'end': '30-11-2026', 'matches': '74'},
+                    {'name': 'CricketVerse Premier League', 'format': 'T20', 'teams': '8', 'status': 'Upcoming', 'start': '15-08-2026', 'end': '14-09-2026', 'matches': '28'},
+                    {'name': 'India-Australia Bilateral ODI', 'format': 'ODI', 'teams': '2', 'status': 'Completed', 'start': '01-06-2026', 'end': '20-06-2026', 'matches': '5'},
+                    {'name': 'Asia Cup 2026', 'format': 'ODI', 'teams': '6', 'status': 'Upcoming', 'start': '01-10-2026', 'end': '20-10-2026', 'matches': '13'},
+                  ][index];
+                  return CardEntranceAnimation(
+                    index: index,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.bgSurface),
+                      ),
+                      child: ListTile(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.tournamentDetail,
+                            arguments: t,
+                          );
+                        },
+                        leading: const Icon(Icons.emoji_events_rounded, color: AppTheme.accentPurple),
+                        title: Text(t['name']!, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5)),
+                        subtitle: Text('${t['teams']} Teams • ${t['matches']} Matches • ${t['format']}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11.5)),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.statusColor(t['status']!).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(t['status']!, style: GoogleFonts.outfit(color: AppTheme.statusColor(t['status']!), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
+                  );
+                } else if (_schedulesSubTab == 'Teams') {
+                  final team = storage.teams[index];
+                  return CardEntranceAnimation(
+                    index: index,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.bgSurface),
+                      ),
+                      child: ListTile(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.userTeamDetails,
+                            arguments: team,
+                          );
+                        },
+                        leading: TeamLogo(teamName: team.name, shortName: team.shortName, logoColorHex: team.logoColorHex, size: 28),
+                        title: Text(team.name, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5)),
+                        subtitle: Text('${team.players.length} Players • ${team.shortName}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11.5)),
+                        trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                      ),
+                    ),
+                  );
+                } else {
+                  final item = allPlayersList[index];
+                  final player = item.player;
+                  final team = item.team;
+                  return CardEntranceAnimation(
+                    index: index,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.bgSurface),
+                      ),
+                      child: ListTile(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.userPlayerDetails,
+                            arguments: player,
+                          );
+                        },
+                        leading: CircleAvatar(
+                          backgroundColor: Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7).withOpacity(0.15),
+                          child: Text(player.name.substring(0, 1), style: TextStyle(color: Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7), fontWeight: FontWeight.bold)),
+                        ),
+                        title: Text(player.name, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13.5)),
+                        subtitle: Text('${player.role} • ${team.shortName}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11.5)),
+                        trailing: Text('${player.runsScored} runs', style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                  );
+                }
               },
             ),
           ),
@@ -593,17 +794,18 @@ class _UserDashboardState extends State<UserDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Match Header matching Screenshot 2026-07-09 152201.png
+          // Match Header
           Center(
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: AppTheme.primaryBlue,
-                      radius: 20,
-                      child: Text(match.teamA.shortName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    TeamLogo(
+                      teamName: match.teamA.name,
+                      shortName: match.teamA.shortName,
+                      logoColorHex: match.teamA.logoColorHex,
+                      size: 40,
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -616,10 +818,11 @@ class _UserDashboardState extends State<UserDashboard> {
                         child: const Text('VS', style: TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFFFFBF00),
-                      radius: 20,
-                      child: Text(match.teamB.shortName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    TeamLogo(
+                      teamName: match.teamB.name,
+                      shortName: match.teamB.shortName,
+                      logoColorHex: match.teamB.logoColorHex,
+                      size: 40,
                     ),
                   ],
                 ),
@@ -642,7 +845,7 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           const SizedBox(height: 24),
           
-          // WIN PROBABILITY CIRCULAR CHARTS matching Screenshot 2026-07-09 152201.png
+          // WIN PROBABILITY CIRCULAR CHARTS
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -719,7 +922,7 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           const SizedBox(height: 20),
 
-          // PROJECTED SCORE CARD matching Screenshot 2026-07-09 152201.png
+          // PROJECTED SCORE CARD
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -821,7 +1024,7 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           const SizedBox(height: 20),
 
-          // MOMENTUM CARD matching Screenshot 2026-07-09 152201.png
+          // MOMENTUM CARD
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -898,9 +1101,9 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           const SizedBox(height: 40),
           
-          _buildProfileTile(Icons.favorite_border, 'Favorite Teams'),
-          _buildProfileTile(Icons.notifications_none, 'Notification Settings'),
-          _buildProfileTile(Icons.palette_outlined, 'Choose Theme (Dark Mode)'),
+          _buildProfileTile(Icons.favorite_border, 'Favorite Teams', () => _showFavoriteTeamsDialog(storage)),
+          _buildProfileTile(Icons.notifications_none, 'Notification Settings', () => _showNotificationSettingsDialog()),
+          _buildProfileTile(Icons.palette_outlined, 'Choose Theme ($_themeMode)', () => _showThemeChooserDialog()),
           
           const Spacer(),
           
@@ -908,12 +1111,15 @@ class _UserDashboardState extends State<UserDashboard> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
-              onPressed: () {
-                storage.logout();
-                Navigator.pushReplacementNamed(
-                  context,
-                  AppRoutes.auth,
-                );
+              onPressed: () async {
+                final confirm = await LogoutDialog.show(context);
+                if (confirm == true) {
+                  storage.logout();
+                  Navigator.pushReplacementNamed(
+                    context,
+                    AppRoutes.auth,
+                  );
+                }
               },
               icon: const Icon(Icons.logout, color: AppTheme.accentRed),
               label: Text('Sign Out', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
@@ -931,34 +1137,294 @@ class _UserDashboardState extends State<UserDashboard> {
     );
   }
 
-  Widget _buildProfileTile(IconData icon, String title) {
+  Widget _buildProfileTile(IconData icon, String title, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.bgSurface),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.bgSurface),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: AppTheme.primaryBlue),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                ),
+                const Spacer(),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textMuted),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppTheme.primaryBlue),
-          const SizedBox(width: 16),
-          Text(
-            title,
-            style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+    );
+  }
+
+  // --- Feature Dialogs ---
+
+  void _showFavoriteTeamsDialog(StorageService storage) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'FavoriteTeamsDialog',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: Align(
+                alignment: Alignment.center,
+                child: StatefulBuilder(
+                  builder: (ctx, setDialogState) {
+                    return AlertDialog(
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.favorite, color: AppTheme.accentRed, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Favorite Teams',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          ),
+                        ],
+                      ),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: storage.teams.length,
+                          itemBuilder: (context, i) {
+                            final team = storage.teams[i];
+                            final isFav = _favTeamIds.contains(team.id);
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: TeamLogo.fromTeam(team, size: 36),
+                              title: Text(team.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                              trailing: IconButton(
+                                icon: Icon(
+                                  isFav ? Icons.favorite : Icons.favorite_border,
+                                  color: isFav ? AppTheme.accentRed : AppTheme.textMuted,
+                                ),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    if (isFav) {
+                                      _favTeamIds.remove(team.id);
+                                    } else {
+                                      _favTeamIds.add(team.id);
+                                    }
+                                  });
+                                  setState(() {}); // Refresh user dashboard
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text('Close', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
-          const Spacer(),
-          const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textMuted),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  void _showNotificationSettingsDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'NotificationSettingsDialog',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: Align(
+                alignment: Alignment.center,
+                child: StatefulBuilder(
+                  builder: (ctx, setDialogState) {
+                    return AlertDialog(
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.notifications_active, color: AppTheme.primaryBlue, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Notification Settings',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          ),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SwitchListTile(
+                            title: Text('Match Alerts', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                            subtitle: Text('Get notified when matches start', style: GoogleFonts.outfit(fontSize: 11)),
+                            value: _notifMatchStart,
+                            activeColor: AppTheme.primaryBlue,
+                            onChanged: (val) {
+                              setDialogState(() => _notifMatchStart = val);
+                              setState(() {});
+                            },
+                          ),
+                          SwitchListTile(
+                            title: Text('Wicket Alerts', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                            subtitle: Text('Instantly receive live wicket updates', style: GoogleFonts.outfit(fontSize: 11)),
+                            value: _notifWickets,
+                            activeColor: AppTheme.primaryBlue,
+                            onChanged: (val) {
+                              setDialogState(() => _notifWickets = val);
+                              setState(() {});
+                            },
+                          ),
+                          SwitchListTile(
+                            title: Text('Audio Commentary', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                            subtitle: Text('Auto-read live commentary feeds', style: GoogleFonts.outfit(fontSize: 11)),
+                            value: _notifCommentary,
+                            activeColor: AppTheme.primaryBlue,
+                            onChanged: (val) {
+                              setDialogState(() => _notifCommentary = val);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text('Close', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showThemeChooserDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'ThemeChooserDialog',
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: Align(
+                alignment: Alignment.center,
+                child: StatefulBuilder(
+                  builder: (ctx, setDialogState) {
+                    return AlertDialog(
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.palette, color: AppTheme.accentPurple, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Choose Theme',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          ),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: ['Light', 'Dark', 'System Default'].map((theme) {
+                          return RadioListTile<String>(
+                            title: Text(theme, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                            value: theme,
+                            groupValue: _themeMode,
+                            activeColor: AppTheme.accentPurple,
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => _themeMode = val);
+                                setState(() {});
+                                CustomNotification.show(
+                                  context,
+                                  'Applied $theme successfully!',
+                                  type: NotificationType.success,
+                                );
+                                Navigator.pop(ctx);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text('Cancel', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -975,8 +1441,8 @@ class MomentumLinePainter extends CustomPainter {
     final fillPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          AppTheme.primaryBlue.withValues(alpha: 0.15),
-          AppTheme.primaryBlue.withValues(alpha: 0.0),
+          AppTheme.primaryBlue.withOpacity(0.15),
+          AppTheme.primaryBlue.withOpacity(0.0),
         ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
@@ -1007,4 +1473,10 @@ class MomentumLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PlayerWithTeam {
+  final Player player;
+  final Team team;
+  _PlayerWithTeam(this.player, this.team);
 }

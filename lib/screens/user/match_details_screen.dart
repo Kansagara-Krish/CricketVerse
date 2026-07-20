@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/team_logo.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
   final String matchId;
@@ -212,44 +213,86 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          battingTeam.shortName,
-                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              '$runs/$wickets',
-                              style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '($overs)',
-                              style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ],
+                    InkWell(
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.userTeamDetails,
+                          arguments: battingTeam,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: [
+                          TeamLogo(
+                            teamName: battingTeam.name,
+                            shortName: battingTeam.shortName,
+                            logoColorHex: battingTeam.logoColorHex,
+                            size: 36,
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                battingTeam.shortName,
+                                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    '$runs/$wickets',
+                                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '($overs)',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          bowlingTeam.shortName,
-                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'CRR: ${crr.toStringAsFixed(1)}',
-                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                        ),
-                      ],
+                    InkWell(
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.userTeamDetails,
+                          arguments: bowlingTeam,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                bowlingTeam.shortName,
+                                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'CRR: ${crr.toStringAsFixed(1)}',
+                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 10),
+                          TeamLogo(
+                            teamName: bowlingTeam.name,
+                            shortName: bowlingTeam.shortName,
+                            logoColorHex: bowlingTeam.logoColorHex,
+                            size: 36,
+                          ),
+                        ],
+                      ),
                     )
                   ],
                 ),
@@ -270,9 +313,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
           // Tab Bar (Styled for Light Theme)
           TabBar(
             controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             indicatorColor: AppTheme.primaryBlue,
             labelColor: AppTheme.textPrimary,
             unselectedLabelColor: AppTheme.textSecondary,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: const [
               Tab(text: 'Live Details'),
@@ -439,9 +485,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
             ),
             child: Column(
               children: [
-                _buildBatterRow('${striker.name}*', '${striker.runsScored}', '${striker.ballsFaced}', isStriker: true),
+                _buildBatterRow(context, striker, isStriker: true),
                 const Divider(color: AppTheme.bgSurface),
-                _buildBatterRow('${nonStriker.name}', '${nonStriker.runsScored}', '${nonStriker.ballsFaced}'),
+                _buildBatterRow(context, nonStriker),
               ],
             ),
           ),
@@ -463,12 +509,21 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
                 )
               ]
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(bowler.name, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
-              ],
+            child: InkWell(
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.userPlayerDetails,
+                  arguments: bowler,
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(bowler.name, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                  Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -514,33 +569,45 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     );
   }
 
-  Widget _buildBatterRow(String name, String runs, String balls, {bool isStriker = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
+  Widget _buildBatterRow(BuildContext context, Player player, {bool isStriker = false}) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          AppRoutes.userPlayerDetails,
+          arguments: player,
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (isStriker) 
-              Container(
-                margin: const EdgeInsets.only(right: 6),
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryBlue, // Blue striker dot matching screenshot
-                  shape: BoxShape.circle,
+            Row(
+              children: [
+                if (isStriker) 
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primaryBlue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                Text(
+                  '${player.name}${isStriker ? "*" : ""}', 
+                  style: GoogleFonts.outfit(
+                    color: AppTheme.textPrimary, 
+                    fontWeight: isStriker ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
-              ),
-            Text(
-              name, 
-              style: GoogleFonts.outfit(
-                color: AppTheme.textPrimary, 
-                fontWeight: isStriker ? FontWeight.bold : FontWeight.normal,
-              ),
+              ],
             ),
+            Text('${player.runsScored} (${player.ballsFaced})', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
           ],
         ),
-        Text('$runs ($balls)', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
-      ],
+      ),
     );
   }
 

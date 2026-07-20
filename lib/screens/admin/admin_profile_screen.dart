@@ -8,6 +8,7 @@ import '../../services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/logout_dialog.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({Key? key}) : super(key: key);
@@ -210,29 +211,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: Text('Logout', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                      content: Text('Are you sure you want to logout?',
-                          style: GoogleFonts.outfit(color: AppTheme.textPrimary)),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRed),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            Provider.of<StorageService>(context, listen: false).logout();
-                            Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (r) => false);
-                          },
-                          child: const Text('Logout'),
-                        ),
-                      ],
-                    ),
-                  );
+                onPressed: () async {
+                  final confirm = await LogoutDialog.show(context);
+                  if (confirm == true) {
+                    Provider.of<StorageService>(context, listen: false).logout();
+                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (r) => false);
+                  }
                 },
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Logout'),

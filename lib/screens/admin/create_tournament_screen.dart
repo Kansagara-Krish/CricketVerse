@@ -24,6 +24,24 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String _format = 'T20';
   String _knockoutType = 'Single Elimination';
   final List<String> _selectedTeams = [];
+  bool _isEdit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        setState(() {
+          _isEdit = true;
+          _nameCtrl.text = args['name'] ?? '';
+          _startCtrl.text = args['start'] ?? '';
+          _endCtrl.text = args['end'] ?? '';
+          _format = args['format'] ?? 'T20';
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -41,7 +59,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Text('Create Tournament', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text(_isEdit ? 'Edit Tournament' : 'Create Tournament', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.tournamentList),
@@ -73,7 +91,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('New Tournament', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(_isEdit ? 'Edit Tournament' : 'New Tournament', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                         Text('Set up your cricket competition', style: GoogleFonts.outfit(fontSize: 11, color: Colors.white70)),
                       ],
                     ),
@@ -268,27 +286,29 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               const SizedBox(height: 32),
 
               SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (!_formKey.currentState!.validate()) return;
-                    if (_selectedTeams.isEmpty) {
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (!_formKey.currentState!.validate()) return;
+                      if (_selectedTeams.isEmpty) {
+                        CustomNotification.show(
+                          context,
+                          'Please select at least one participating team!',
+                          type: NotificationType.warning,
+                        );
+                        return;
+                      }
                       CustomNotification.show(
                         context,
-                        'Please select at least one participating team!',
-                        type: NotificationType.warning,
+                        _isEdit
+                            ? 'Tournament "${_nameCtrl.text}" updated successfully!'
+                            : 'Tournament "${_nameCtrl.text}" created successfully!',
+                        type: NotificationType.success,
                       );
-                      return;
-                    }
-                    CustomNotification.show(
-                      context,
-                      'Tournament "${_nameCtrl.text}" created successfully!',
-                      type: NotificationType.success,
-                    );
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.emoji_events_rounded, size: 18),
-                  label: const Text('Create Tournament'),
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.emoji_events_rounded, size: 18),
+                    label: Text(_isEdit ? 'Save Changes' : 'Create Tournament'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accentPurple,
                     foregroundColor: Colors.white,

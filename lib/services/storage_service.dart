@@ -21,6 +21,13 @@ class StorageService with ChangeNotifier {
   String? get currentUserEmail => _currentUserEmail;
   String? get activeScorerMatchId => _activeScorerMatchId;
 
+  void addPlayer(String teamId, Player player) {
+    final team = _teams.firstWhere((t) => t.id == teamId);
+    team.players.add(player);
+    _saveTeams();
+    notifyListeners();
+  }
+
   StorageService() {
     _initStorage();
   }
@@ -47,7 +54,7 @@ class StorageService with ChangeNotifier {
     }
     _saveUsers();
 
-    final isUvpceLoaded = _prefs?.getBool('data_version_uvpce_2026') ?? false;
+    final isUvpceLoaded = _prefs?.getBool('data_version_uvpce_2026_v2') ?? false;
 
     // 2. Load Teams
     final teamsJson = _prefs?.getString('teams');
@@ -65,7 +72,7 @@ class StorageService with ChangeNotifier {
       _matches = decoded.map((item) => CricketMatch.fromJson(item)).toList();
     } else {
       _loadDefaultMatches();
-      _prefs?.setBool('data_version_uvpce_2026', true);
+      _prefs?.setBool('data_version_uvpce_2026_v2', true);
     }
 
     notifyListeners();
@@ -121,14 +128,14 @@ class StorageService with ChangeNotifier {
     }
 
     _teams = [
-      Team(id: 'uvpce_a', name: 'UVPCE A', shortName: 'UVP-A', logoColorHex: '0xFF0284C7', players: generatePlayersForTeam('UVP-A', 0)),
-      Team(id: 'uvpce_b', name: 'UVPCE B', shortName: 'UVP-B', logoColorHex: '0xFF10B981', players: generatePlayersForTeam('UVP-B', 5)),
-      Team(id: 'uvpce_c', name: 'UVPCE C', shortName: 'UVP-C', logoColorHex: '0xFF8B5CF6', players: generatePlayersForTeam('UVP-C', 10)),
-      Team(id: 'uvpce_titans', name: 'UVPCE Titans', shortName: 'UVP-TT', logoColorHex: '0xFFF59E0B', players: generatePlayersForTeam('UVP-TT', 15)),
-      Team(id: 'uvpce_warriors', name: 'UVPCE Warriors', shortName: 'UVP-WR', logoColorHex: '0xFFEF4444', players: generatePlayersForTeam('UVP-WR', 20)),
-      Team(id: 'uvpce_challengers', name: 'UVPCE Challengers', shortName: 'UVP-CH', logoColorHex: '0xFFEC4899', players: generatePlayersForTeam('UVP-CH', 25)),
-      Team(id: 'uvpce_strikers', name: 'UVPCE Strikers', shortName: 'UVP-ST', logoColorHex: '0xFF06B6D4', players: generatePlayersForTeam('UVP-ST', 3)),
-      Team(id: 'uvpce_legends', name: 'UVPCE Legends', shortName: 'UVP-LG', logoColorHex: '0xFF14B8A6', players: generatePlayersForTeam('UVP-LG', 8)),
+      Team(id: 'uvpce_a', name: 'UVPCE - A', shortName: 'UVPCE - A', logoColorHex: '0xFF0284C7', players: generatePlayersForTeam('UVPCE - A', 0)),
+      Team(id: 'uvpce_b', name: 'UVPCE - B', shortName: 'UVPCE - B', logoColorHex: '0xFF10B981', players: generatePlayersForTeam('UVPCE - B', 5)),
+      Team(id: 'uvpce_c', name: 'UVPCE - C', shortName: 'UVPCE - C', logoColorHex: '0xFF8B5CF6', players: generatePlayersForTeam('UVPCE - C', 10)),
+      Team(id: 'uvpce_titans', name: 'UVPCE - Titans', shortName: 'UVPCE - Titans', logoColorHex: '0xFFF59E0B', players: generatePlayersForTeam('UVPCE - Titans', 15)),
+      Team(id: 'uvpce_warriors', name: 'UVPCE - Warriors', shortName: 'UVPCE - Warriors', logoColorHex: '0xFFEF4444', players: generatePlayersForTeam('UVPCE - Warriors', 20)),
+      Team(id: 'uvpce_challengers', name: 'UVPCE - Challengers', shortName: 'UVPCE - Challengers', logoColorHex: '0xFFEC4899', players: generatePlayersForTeam('UVPCE - Challengers', 25)),
+      Team(id: 'uvpce_strikers', name: 'UVPCE - Strikers', shortName: 'UVPCE - Strikers', logoColorHex: '0xFF06B6D4', players: generatePlayersForTeam('UVPCE - Strikers', 3)),
+      Team(id: 'uvpce_legends', name: 'UVPCE - Legends', shortName: 'UVPCE - Legends', logoColorHex: '0xFF14B8A6', players: generatePlayersForTeam('UVPCE - Legends', 8)),
     ];
     _saveTeams();
   }
@@ -248,7 +255,7 @@ class StorageService with ChangeNotifier {
     if (matchScoring != null) {
       _currentUserEmail = usernameOrEmail;
       _currentRole = 'Scorer';
-      _activeScorerMatchId = matchScoring.id;
+      _activeScorerMatchId = null; // Open dashboard first
       notifyListeners();
       return true;
     }
@@ -381,21 +388,43 @@ class StorageService with ChangeNotifier {
     notifyListeners();
   }
 
+  void setActiveScorerMatchId(String? matchId) {
+    _activeScorerMatchId = matchId;
+    notifyListeners();
+  }
+
+  void swapStrikers() {
+    if (_activeScorerMatchId == null) return;
+    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+    final temp = match.currentStrikerId;
+    match.currentStrikerId = match.currentNonStrikerId;
+    match.currentNonStrikerId = temp;
+    _saveMatches();
+    notifyListeners();
+  }
+
   void updateScore({
     required int runs,
     required String extraType, // "Wide", "No Ball", "Leg Bye", "None"
     required int extraRuns,
     required bool isWicket,
     required String wicketType,
+    String? dismissedPlayerId,
+    String? newBatsmanId,
+    String? newBatsmanPosition, // "Striker" or "Non-Striker"
   }) {
     if (_activeScorerMatchId == null) return;
     final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+
+    // Save active player states before scoring updates occur
+    final String currentStrikerIdBefore = match.currentStrikerId;
+    final String currentNonStrikerIdBefore = match.currentNonStrikerId;
+    final String currentBowlerIdBefore = match.currentBowlerId;
 
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
     final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
     final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
 
     // Handle extra type balls
@@ -408,13 +437,13 @@ class StorageService with ChangeNotifier {
     int totalRunsThisBall = runs + extraRuns;
     if (match.isFirstInnings) {
       match.runsA += totalRunsThisBall;
-      if (isWicket) match.wicketsA += 1;
+      if (isWicket && wicketType != 'Retired Hurt') match.wicketsA += 1;
       
       // Update overs
       match.oversA = _incrementOvers(match.oversA, ballVal);
     } else {
       match.runsB += totalRunsThisBall;
-      if (isWicket) match.wicketsB += 1;
+      if (isWicket && wicketType != 'Retired Hurt') match.wicketsB += 1;
       
       match.oversB = _incrementOvers(match.oversB, ballVal);
     }
@@ -426,7 +455,7 @@ class StorageService with ChangeNotifier {
     }
     
     bowler.runsConceded += totalRunsThisBall;
-    if (isWicket && wicketType != 'Run Out') {
+    if (isWicket && wicketType != 'Run Out' && wicketType != 'Retired Out' && wicketType != 'Retired Hurt') {
       bowler.wicketsTaken += 1;
     }
     if (ballVal > 0) {
@@ -447,6 +476,9 @@ class StorageService with ChangeNotifier {
       bowlerName: bowler.name,
       commentary: commentary,
       timestamp: DateTime.now(),
+      strikerId: currentStrikerIdBefore,
+      nonStrikerId: currentNonStrikerIdBefore,
+      bowlerId: currentBowlerIdBefore,
     );
     match.balls.add(newBall);
 
@@ -457,13 +489,26 @@ class StorageService with ChangeNotifier {
       match.currentNonStrikerId = temp;
     }
 
-    // Handle wicket striker change
+    // Handle wicket striker/non-striker change
     if (isWicket) {
-      // Find next player who hasn't batted
-      // In this mock, just pick the next index
       final currentBattedCount = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-      if (currentBattedCount + 1 < battingTeam.players.length) {
-        match.currentStrikerId = battingTeam.players[currentBattedCount + 1].id;
+      final partnerId = (dismissedPlayerId == match.currentStrikerId) ? match.currentNonStrikerId : match.currentStrikerId;
+
+      if (newBatsmanId != null && newBatsmanPosition != null) {
+        if (newBatsmanPosition == 'Striker') {
+          match.currentStrikerId = newBatsmanId;
+          match.currentNonStrikerId = partnerId;
+        } else {
+          match.currentStrikerId = partnerId;
+          match.currentNonStrikerId = newBatsmanId;
+        }
+      } else if (currentBattedCount + 1 < battingTeam.players.length) {
+        final nextPlayer = battingTeam.players[currentBattedCount + 1];
+        if (dismissedPlayerId != null && dismissedPlayerId == match.currentNonStrikerId) {
+          match.currentNonStrikerId = nextPlayer.id;
+        } else {
+          match.currentStrikerId = nextPlayer.id;
+        }
       } else {
         // All out
         endInningsOrMatch();
@@ -658,5 +703,130 @@ class StorageService with ChangeNotifier {
       "Placed softly into the gap at cover by $batsman, allowing a quick single.",
     ];
     return runTpls[random.nextInt(runTpls.length)];
+  }
+
+  void resetMatchToZero(String matchId) {
+    final match = _matches.firstWhere((m) => m.id == matchId);
+    
+    match.runsA = 0;
+    match.wicketsA = 0;
+    match.oversA = 0.0;
+    match.runsB = 0;
+    match.wicketsB = 0;
+    match.oversB = 0.0;
+    match.target = 0;
+    match.balls = [];
+    match.isFirstInnings = true;
+
+    for (var p in match.teamA.players) {
+      p.runsScored = 0;
+      p.ballsFaced = 0;
+    }
+    for (var p in match.teamB.players) {
+      p.oversBowled = 0.0;
+      p.runsConceded = 0;
+      p.wicketsTaken = 0;
+    }
+
+    match.currentStrikerId = match.teamA.players[0].id;
+    match.currentNonStrikerId = match.teamA.players[1].id;
+    match.currentBowlerId = match.teamB.players[match.teamB.players.length - 1].id;
+
+    _saveMatches();
+    notifyListeners();
+  }
+
+  double _decrementOvers(double currentOvers, int ballsRemoved) {
+    if (ballsRemoved == 0) return currentOvers;
+    
+    int oversInt = currentOvers.toInt();
+    int ballsInt = ((currentOvers - oversInt) * 10).round();
+    
+    ballsInt -= ballsRemoved;
+    if (ballsInt < 0) {
+      int oversNeeded = (ballsInt.abs() / 6).ceil();
+      oversInt -= oversNeeded;
+      ballsInt = (ballsInt + (oversNeeded * 6)) % 6;
+      if (oversInt < 0) {
+        oversInt = 0;
+        ballsInt = 0;
+      }
+    }
+    
+    return oversInt + (ballsInt / 10.0);
+  }
+
+  void undoLastBall() {
+    if (_activeScorerMatchId == null) return;
+    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+    if (match.balls.isEmpty) return;
+
+    final lastBall = match.balls.removeLast();
+
+    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
+    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+
+    if (lastBall.strikerId != null) match.currentStrikerId = lastBall.strikerId!;
+    if (lastBall.nonStrikerId != null) match.currentNonStrikerId = lastBall.nonStrikerId!;
+    if (lastBall.bowlerId != null) match.currentBowlerId = lastBall.bowlerId!;
+
+    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
+    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+
+    int ballVal = 1;
+    if (lastBall.extraType == 'Wide' || lastBall.extraType == 'No Ball') {
+      ballVal = 0;
+    }
+
+    int totalRunsThisBall = lastBall.run + lastBall.extraRun;
+
+    if (match.isFirstInnings) {
+      match.runsA -= totalRunsThisBall;
+      if (match.runsA < 0) match.runsA = 0;
+      
+      if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
+        match.wicketsA -= 1;
+        if (match.wicketsA < 0) match.wicketsA = 0;
+      }
+      
+      match.oversA = _decrementOvers(match.oversA, ballVal);
+    } else {
+      match.runsB -= totalRunsThisBall;
+      if (match.runsB < 0) match.runsB = 0;
+      
+      if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
+        match.wicketsB -= 1;
+        if (match.wicketsB < 0) match.wicketsB = 0;
+      }
+      
+      match.oversB = _decrementOvers(match.oversB, ballVal);
+    }
+
+    if (lastBall.extraType == 'None' || lastBall.extraType == 'Leg Bye') {
+      striker.runsScored -= lastBall.run;
+      if (striker.runsScored < 0) striker.runsScored = 0;
+      
+      striker.ballsFaced -= ballVal;
+      if (striker.ballsFaced < 0) striker.ballsFaced = 0;
+    }
+
+    bowler.runsConceded -= totalRunsThisBall;
+    if (bowler.runsConceded < 0) bowler.runsConceded = 0;
+
+    if (lastBall.isWicket && lastBall.wicketType != 'Run Out' && lastBall.wicketType != 'Retired Out' && lastBall.wicketType != 'Retired Hurt') {
+      bowler.wicketsTaken -= 1;
+      if (bowler.wicketsTaken < 0) bowler.wicketsTaken = 0;
+    }
+
+    if (ballVal > 0) {
+      bowler.oversBowled = _decrementOvers(bowler.oversBowled, 1);
+    }
+
+    if (match.status == 'Completed') {
+      match.status = 'Live';
+    }
+
+    _saveMatches();
+    notifyListeners();
   }
 }
