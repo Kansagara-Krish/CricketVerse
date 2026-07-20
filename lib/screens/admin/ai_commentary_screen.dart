@@ -11,7 +11,7 @@ import '../../core/constants/app_constants.dart';
 
 class AiCommentaryScreen extends StatefulWidget {
   final CricketMatch match;
-  const AiCommentaryScreen({Key? key, required this.match}) : super(key: key);
+  const AiCommentaryScreen({super.key, required this.match});
 
   @override
   State<AiCommentaryScreen> createState() => _AiCommentaryScreenState();
@@ -49,11 +49,11 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
 
   void _seedDummyCommentary() {
     final items = [
-      _CommentaryItem(label: '1', color: AppTheme.textSecondary, text: 'Quick single. Kohli taps it to mid-on and they cross comfortably.', batsman: 'V. Kohli', bowler: 'M. Starc'),
-      _CommentaryItem(label: '4', color: AppTheme.primaryBlue, text: 'FOUR! Beautiful cover drive by Kohli through extra cover!', batsman: 'V. Kohli', bowler: 'M. Starc'),
-      _CommentaryItem(label: '0', color: AppTheme.textMuted, text: 'Dot ball. Good length, Yadav pushes back to the bowler.', batsman: 'S. Yadav', bowler: 'P. Cummins'),
-      _CommentaryItem(label: '6', color: AppTheme.primaryGreen, text: 'SIX! Suryakumar steps out and launches it over long-on!', batsman: 'S. Yadav', bowler: 'P. Cummins'),
-      _CommentaryItem(label: 'W', color: AppTheme.accentRed, text: 'WICKET! Clean bowled! Starc gets one through the gate!', batsman: 'R. Sharma', bowler: 'M. Starc'),
+      const _CommentaryItem(label: '1', color: AppTheme.textSecondary, text: 'Quick single. Kohli taps it to mid-on and they cross comfortably.', batsman: 'V. Kohli', bowler: 'M. Starc'),
+      const _CommentaryItem(label: '4', color: AppTheme.primaryBlue, text: 'FOUR! Beautiful cover drive by Kohli through extra cover!', batsman: 'V. Kohli', bowler: 'M. Starc'),
+      const _CommentaryItem(label: '0', color: AppTheme.textMuted, text: 'Dot ball. Good length, Yadav pushes back to the bowler.', batsman: 'S. Yadav', bowler: 'P. Cummins'),
+      const _CommentaryItem(label: '6', color: AppTheme.primaryGreen, text: 'SIX! Suryakumar steps out and launches it over long-on!', batsman: 'S. Yadav', bowler: 'P. Cummins'),
+      const _CommentaryItem(label: 'W', color: AppTheme.accentRed, text: 'WICKET! Clean bowled! Starc gets one through the gate!', batsman: 'R. Sharma', bowler: 'M. Starc'),
     ];
     setState(() => _feed.addAll(items.reversed));
   }
@@ -118,12 +118,12 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
-        title: Text('AI Commentary', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text('AI Commentary', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           TextButton.icon(
             onPressed: _generateOne,
             icon: const Icon(Icons.add_circle_outline, size: 18, color: AppTheme.primaryBlue),
-            label: Text('Generate', style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontSize: 12)),
+            label: Text('Generate', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontSize: 12)),
           ),
         ],
       ),
@@ -139,18 +139,18 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.2),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.4)),
+                    border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.4)),
                   ),
-                  child: Text('● LIVE', style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
+                  child: Text('● LIVE', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(width: 10),
                 Text('${widget.match.teamA.shortName} vs ${widget.match.teamB.shortName}',
-                    style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Text('${widget.match.runsA}/${widget.match.wicketsA}',
-                    style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -161,36 +161,36 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
             child: Row(
               children: [
                 Text('Auto Commentary',
-                    style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary)),
                 const Spacer(),
                 Switch(
                   value: _isAutoGenerating,
                   onChanged: (_) => _toggleAutoGenerate(),
-                  activeColor: AppTheme.primaryGreen,
+                  activeThumbColor: AppTheme.primaryGreen,
                 ),
                 if (_isAutoGenerating)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: Text('Every 3s',
-                        style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.primaryGreen)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryGreen)),
                   ),
               ],
             ),
           ),
 
           // Legend
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
                 _Legend('6', AppTheme.primaryGreen),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _Legend('4', AppTheme.primaryBlue),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _Legend('W', AppTheme.accentRed),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _Legend('Ext', AppTheme.accentOrange),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _Legend('•', Colors.white38),
               ],
             ),
@@ -203,7 +203,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                 ? Center(
                     child: Text('No commentary yet.\nTap Generate to start.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textMuted)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textMuted)),
                   )
                 : ListView.builder(
                     controller: _scrollCtrl,
@@ -218,13 +218,13 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: i == 0
-                                ? item.color.withOpacity(0.08)
-                                : Colors.white.withOpacity(0.03),
+                                ? item.color.withValues(alpha: 0.08)
+                                : Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: i == 0
-                                  ? item.color.withOpacity(0.3)
-                                  : Colors.white.withOpacity(0.05),
+                                  ? item.color.withValues(alpha: 0.3)
+                                  : Colors.white.withValues(alpha: 0.05),
                             ),
                           ),
                           child: Row(
@@ -236,12 +236,12 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                                 height: 36,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: item.color.withOpacity(0.15),
-                                  border: Border.all(color: item.color.withOpacity(0.5)),
+                                  color: item.color.withValues(alpha: 0.15),
+                                  border: Border.all(color: item.color.withValues(alpha: 0.5)),
                                 ),
                                 child: Center(
                                   child: Text(item.label,
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.plusJakartaSans(
                                           fontSize: 12, color: item.color, fontWeight: FontWeight.w800)),
                                 ),
                               ),
@@ -253,17 +253,17 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
                                     Row(
                                       children: [
                                         Text(item.batsman,
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.plusJakartaSans(
                                                 fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.w700)),
-                                        Text(' to ', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                                        Text(' to ', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                                         Text(item.bowler,
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.plusJakartaSans(
                                                 fontSize: 11, color: AppTheme.accentRed, fontWeight: FontWeight.w700)),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(item.text,
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.plusJakartaSans(
                                             fontSize: 13, color: AppTheme.textPrimary, height: 1.5)),
                                   ],
                                 ),
@@ -281,7 +281,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> {
         onPressed: _generateOne,
         backgroundColor: AppTheme.primaryBlue,
         icon: const Icon(Icons.mic_rounded, color: AppTheme.textPrimary),
-        label: Text('AI Generate', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+        label: Text('AI Generate', style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -309,14 +309,14 @@ class _Legend extends StatelessWidget {
           width: 18, height: 18,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withOpacity(0.2),
-            border: Border.all(color: color.withOpacity(0.5)),
+            color: color.withValues(alpha: 0.2),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
-          child: Center(child: Text(label, style: GoogleFonts.outfit(fontSize: 8, color: color, fontWeight: FontWeight.w800))),
+          child: Center(child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 8, color: color, fontWeight: FontWeight.w800))),
         ),
         const SizedBox(width: 4),
         Text(label == '6' ? 'Six' : label == '4' ? 'Four' : label == 'W' ? 'Wicket' : label == 'Ext' ? 'Extra' : 'Dot/Run',
-            style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
+            style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
       ],
     );
   }

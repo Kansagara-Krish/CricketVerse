@@ -9,7 +9,7 @@ import '../../core/routes/app_routes.dart';
 
 class TeamDetailScreen extends StatelessWidget {
   final Team team;
-  const TeamDetailScreen({Key? key, required this.team}) : super(key: key);
+  const TeamDetailScreen({super.key, required this.team});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class TeamDetailScreen extends StatelessWidget {
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color.withOpacity(0.4), AppTheme.bgDeep],
+                    colors: [color.withValues(alpha: 0.4), AppTheme.bgDeep],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -44,20 +44,20 @@ class TeamDetailScreen extends StatelessWidget {
                       tag: 'team_avatar_${team.id}',
                       child: CircleAvatar(
                         radius: 40,
-                        backgroundColor: color.withOpacity(0.3),
+                        backgroundColor: color.withValues(alpha: 0.3),
                         child: Text(
                           team.shortName.substring(0, team.shortName.length > 2 ? 2 : team.shortName.length),
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.plusJakartaSans(
                               color: color, fontWeight: FontWeight.w800, fontSize: 22),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(team.name,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     Text('${team.players.length} Players in Squad',
-                        style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
                   ],
                 ),
               ),
@@ -115,7 +115,7 @@ class TeamDetailScreen extends StatelessWidget {
                   Container(width: 3, height: 16, color: color,
                       margin: const EdgeInsets.only(right: 8)),
                   Text(title,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11, fontWeight: FontWeight.w700,
                           color: AppTheme.textMuted, letterSpacing: 1.5)),
                 ],
@@ -131,9 +131,9 @@ class TeamDetailScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 18,
-                      backgroundColor: color.withOpacity(0.15),
+                      backgroundColor: color.withValues(alpha: 0.15),
                       child: Text(p.name.substring(0, 1),
-                          style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold)),
+                          style: GoogleFonts.plusJakartaSans(color: color, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -141,9 +141,9 @@ class TeamDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.name,
-                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                           Text(p.nationality,
-                              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                         ],
                       ),
                     ),
@@ -151,9 +151,9 @@ class TeamDetailScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text('${p.runsScored} runs',
-                            style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
                         Text('${p.wicketsTaken} wkts',
-                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                       ],
                     ),
                     const SizedBox(width: 8),
@@ -181,17 +181,17 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
             Text(value,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 22, fontWeight: FontWeight.w800, color: color)),
             Text(label,
-                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
           ],
         ),
       ),

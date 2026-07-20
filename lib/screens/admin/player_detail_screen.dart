@@ -9,7 +9,7 @@ import '../../core/widgets/custom_notification.dart';
 
 class PlayerDetailScreen extends StatelessWidget {
   final Player player;
-  const PlayerDetailScreen({Key? key, required this.player}) : super(key: key);
+  const PlayerDetailScreen({super.key, required this.player});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +45,7 @@ class PlayerDetailScreen extends StatelessWidget {
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [roleColor.withOpacity(0.08), Colors.white],
+                    colors: [roleColor.withValues(alpha: 0.08), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -56,16 +56,16 @@ class PlayerDetailScreen extends StatelessWidget {
                     const SizedBox(height: 48),
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor: roleColor.withOpacity(0.12),
+                      backgroundColor: roleColor.withValues(alpha: 0.12),
                       child: Text(
                         player.name.substring(0, 1),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 32, color: roleColor, fontWeight: FontWeight.w800),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(player.name,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     Row(
@@ -74,19 +74,19 @@ class PlayerDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: roleColor.withOpacity(0.1),
+                            color: roleColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: roleColor.withOpacity(0.25)),
+                            border: Border.all(color: roleColor.withValues(alpha: 0.25)),
                           ),
                           child: Text(player.role,
-                              style: GoogleFonts.outfit(fontSize: 11, color: roleColor, fontWeight: FontWeight.bold)),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: roleColor, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 10),
                         Text(player.nationality,
-                            style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
                         const SizedBox(width: 6),
                         Text('• ${player.matchesPlayed} matches',
-                            style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
                       ],
                     ),
                   ],
@@ -181,7 +181,7 @@ class PlayerDetailScreen extends StatelessWidget {
           children: [
             const Icon(Icons.star, color: AppTheme.accentGold, size: 16),
             const SizedBox(width: 10),
-            Text(h, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary)),
+            Text(h, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary)),
           ],
         ),
       ),
@@ -202,12 +202,12 @@ class PlayerDetailScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Edit Player', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 16),
-            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: nameCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Player Name')),
             const SizedBox(height: 12),
-            TextField(controller: natCtrl, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: natCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Nationality')),
             const SizedBox(height: 20),
             SizedBox(
@@ -241,7 +241,7 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Container(width: 3, height: 18, color: color, margin: const EdgeInsets.only(right: 8)),
-        Text(title, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
+        Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700,
             color: AppTheme.textMuted, letterSpacing: 1.3)),
       ],
     );
@@ -264,7 +264,7 @@ class _StatBox extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.01),
+              color: Colors.black.withValues(alpha: 0.01),
               blurRadius: 4,
               offset: const Offset(0, 1),
             )
@@ -273,11 +273,11 @@ class _StatBox extends StatelessWidget {
         child: Column(
           children: [
             Text(value,
-                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
             const SizedBox(height: 4),
             Text(label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

@@ -8,7 +8,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/widgets/custom_notification.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  const NotificationsScreen({super.key});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -103,18 +103,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Text('Notifications', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text('Notifications', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             if (_unreadCount > 0) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentRed.withOpacity(0.12),
+                  color: AppTheme.accentRed.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.accentRed.withOpacity(0.3)),
+                  border: Border.all(color: AppTheme.accentRed.withValues(alpha: 0.3)),
                 ),
                 child: Text('$_unreadCount new',
-                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.accentRed, fontWeight: FontWeight.bold)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.accentRed, fontWeight: FontWeight.bold)),
               ),
             ],
           ],
@@ -123,7 +123,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           TextButton(
             onPressed: _unreadCount > 0 ? _markAllRead : null,
             child: Text('Mark All Read',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                   color: _unreadCount > 0 ? AppTheme.primaryBlue : AppTheme.textMuted,
                   fontSize: 12.5,
                   fontWeight: FontWeight.bold,
@@ -139,15 +139,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.08),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.notifications_off_outlined, color: AppTheme.primaryBlue, size: 44),
                   ),
                   const SizedBox(height: 16),
-                  Text('No Notifications', style: GoogleFonts.outfit(fontSize: 16, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                  Text('No Notifications', style: GoogleFonts.plusJakartaSans(fontSize: 16, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('You\'re all caught up!', style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textMuted)),
+                  Text('You\'re all caught up!', style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textMuted)),
                 ],
               ),
             )
@@ -169,7 +169,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     padding: const EdgeInsets.only(right: 20),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentRed.withOpacity(0.12),
+                      color: AppTheme.accentRed.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed),
@@ -184,12 +184,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isRead ? const Color(0xFFE2E8F0) : color.withOpacity(0.3),
+                          color: isRead ? const Color(0xFFE2E8F0) : color.withValues(alpha: 0.3),
                           width: isRead ? 1 : 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -201,7 +201,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.08),
+                              color: color.withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(icon, color: color, size: 18),
@@ -216,7 +216,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     Expanded(
                                       child: Text(
                                         n['title'] as String,
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontSize: 13.5,
                                           fontWeight: isRead ? FontWeight.w600 : FontWeight.w800,
                                           color: isRead ? AppTheme.textSecondary : AppTheme.textPrimary,
@@ -236,7 +236,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   n['body'] as String,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12.5,
                                     color: AppTheme.textSecondary,
                                     height: 1.35,
@@ -245,7 +245,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 const SizedBox(height: 6),
                                 Text(
                                   n['time'] as String,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     color: AppTheme.textMuted,
                                     fontWeight: FontWeight.w600,

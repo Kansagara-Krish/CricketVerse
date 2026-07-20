@@ -9,11 +9,11 @@ class CardEntranceAnimation extends StatefulWidget {
   final Duration baseDelay;
 
   const CardEntranceAnimation({
-    Key? key,
+    super.key,
     required this.child,
     this.index = 0,
     this.baseDelay = const Duration(milliseconds: 50),
-  }) : super(key: key);
+  });
 
   @override
   State<CardEntranceAnimation> createState() => _CardEntranceAnimationState();

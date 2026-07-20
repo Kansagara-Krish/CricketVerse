@@ -5,7 +5,7 @@ import '../core/theme/app_theme.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           ),
           // Dark overlay
           Container(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
           ),
           
           // Content
@@ -80,10 +80,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 3),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.3),
                           blurRadius: 20,
                           spreadRadius: 4,
                         ),
@@ -101,14 +101,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               // Title
               Text(
                 'CricketVerse AI',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: 1.2,
                   shadows: [
                     Shadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       offset: const Offset(0, 2),
                       blurRadius: 4,
                     ),
@@ -120,10 +120,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               // Tagline
               Text(
                 'INTELLIGENCE MEETS ACTION',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   letterSpacing: 3.5,
                 ),
               ),
@@ -144,10 +144,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               // Loading Stats Text
               Text(
                 'LOADING HIGH-FIDELITY STATS...',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   letterSpacing: 1.2,
                 ),
               ),

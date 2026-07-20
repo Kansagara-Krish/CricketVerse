@@ -128,13 +128,13 @@ class StorageService with ChangeNotifier {
     }
 
     _teams = [
-      Team(id: 'uvpce_a', name: 'UVPCE - A', shortName: 'UVPCE - A', logoColorHex: '0xFF0284C7', players: generatePlayersForTeam('UVPCE - A', 0)),
+      Team(id: 'uvpce_a', name: 'UVPCE - A', shortName: 'UVPCE - A', logoColorHex: '0xFF028A6B', players: generatePlayersForTeam('UVPCE - A', 0)),
       Team(id: 'uvpce_b', name: 'UVPCE - B', shortName: 'UVPCE - B', logoColorHex: '0xFF10B981', players: generatePlayersForTeam('UVPCE - B', 5)),
-      Team(id: 'uvpce_c', name: 'UVPCE - C', shortName: 'UVPCE - C', logoColorHex: '0xFF8B5CF6', players: generatePlayersForTeam('UVPCE - C', 10)),
+      Team(id: 'uvpce_c', name: 'UVPCE - C', shortName: 'UVPCE - C', logoColorHex: '0xFFD97706', players: generatePlayersForTeam('UVPCE - C', 10)),
       Team(id: 'uvpce_titans', name: 'UVPCE - Titans', shortName: 'UVPCE - Titans', logoColorHex: '0xFFF59E0B', players: generatePlayersForTeam('UVPCE - Titans', 15)),
       Team(id: 'uvpce_warriors', name: 'UVPCE - Warriors', shortName: 'UVPCE - Warriors', logoColorHex: '0xFFEF4444', players: generatePlayersForTeam('UVPCE - Warriors', 20)),
-      Team(id: 'uvpce_challengers', name: 'UVPCE - Challengers', shortName: 'UVPCE - Challengers', logoColorHex: '0xFFEC4899', players: generatePlayersForTeam('UVPCE - Challengers', 25)),
-      Team(id: 'uvpce_strikers', name: 'UVPCE - Strikers', shortName: 'UVPCE - Strikers', logoColorHex: '0xFF06B6D4', players: generatePlayersForTeam('UVPCE - Strikers', 3)),
+      Team(id: 'uvpce_challengers', name: 'UVPCE - Challengers', shortName: 'UVPCE - Challengers', logoColorHex: '0xFFEA580C', players: generatePlayersForTeam('UVPCE - Challengers', 25)),
+      Team(id: 'uvpce_strikers', name: 'UVPCE - Strikers', shortName: 'UVPCE - Strikers', logoColorHex: '0xFF0B6623', players: generatePlayersForTeam('UVPCE - Strikers', 3)),
       Team(id: 'uvpce_legends', name: 'UVPCE - Legends', shortName: 'UVPCE - Legends', logoColorHex: '0xFF14B8A6', players: generatePlayersForTeam('UVPCE - Legends', 8)),
     ];
     _saveTeams();
@@ -826,6 +826,11 @@ class StorageService with ChangeNotifier {
       match.status = 'Live';
     }
 
+    _saveMatches();
+    notifyListeners();
+  }
+
+  void saveMatchesState() {
     _saveMatches();
     notifyListeners();
   }

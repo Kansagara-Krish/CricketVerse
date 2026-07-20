@@ -5,13 +5,12 @@ import '../../services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+  const AdminDashboard({super.key});
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -19,7 +18,7 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 0: Home view, 1: Profile view
-  int _notificationCount = 5;
+  final int _notificationCount = 5;
 
   late AnimationController _drawerAnimationController;
   bool _isDrawerOpen = false;
@@ -77,7 +76,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.2),
+                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
                     radius: 22,
                     child: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryBlue, size: 24),
                   ),
@@ -87,7 +86,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     children: [
                       Text(
                         'Rajesh Kumar',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -95,7 +94,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       ),
                       Text(
                         'Tournament Admin',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white60,
                           fontSize: 11,
                         ),
@@ -156,7 +155,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               _buildMenuItem(Icons.logout_rounded, 'Logout', () async {
                 _toggleDrawer();
                 final confirm = await LogoutDialog.show(context);
-                if (confirm == true) {
+                if (confirm == true && context.mounted) {
                   storage.logout();
                   Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (route) => false);
                 }
@@ -183,7 +182,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
     return Container(
       margin: const EdgeInsets.only(bottom: 6, right: 40),
       child: Material(
-        color: isSelected ? Colors.white.withOpacity(0.08) : Colors.transparent,
+        color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
@@ -196,7 +195,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 const SizedBox(width: 14),
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     color: color,
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -227,9 +226,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               final double slide = _drawerAnimationController.value * 230.0;
               final double radius = _drawerAnimationController.value * 20.0;
               return Transform(
-                transform: Matrix4.identity()
-                  ..translate(slide)
-                  ..scale(scale),
+                transform: Matrix4.translationValues(slide, 0.0, 0.0)
+                  * Matrix4.diagonal3Values(scale, scale, 1.0),
                 alignment: Alignment.centerLeft,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(radius),
@@ -237,7 +235,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                     decoration: BoxDecoration(
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 16,
                           spreadRadius: 2,
                         ),
@@ -263,7 +261,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
                 title: Text(
                   'CricketVerse AI',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -320,15 +318,15 @@ class _DashboardHomeView extends StatelessWidget {
 
   Widget _buildCompactStatCard(String title, String value, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -339,18 +337,15 @@ class _DashboardHomeView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: color.withValues(alpha: 0.08),
+                child: Icon(icon, color: color, size: 16),
               ),
               Text(
                 value,
-                style: GoogleFonts.outfit(
-                  fontSize: 26,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.textPrimary,
                 ),
@@ -360,8 +355,10 @@ class _DashboardHomeView extends StatelessWidget {
           const Spacer(),
           Text(
             title,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: AppTheme.textSecondary,
             ),
@@ -381,7 +378,7 @@ class _DashboardHomeView extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -391,14 +388,14 @@ class _DashboardHomeView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             radius: 15,
             child: Icon(icon, color: color, size: 14),
           ),
           const SizedBox(height: 12),
           Text(
             value,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -407,7 +404,9 @@ class _DashboardHomeView extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             title,
-            style: GoogleFonts.outfit(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppTheme.textSecondary,
@@ -416,7 +415,7 @@ class _DashboardHomeView extends StatelessWidget {
           const SizedBox(height: 1),
           Text(
             subtitle,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 9.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.textMuted,
@@ -436,7 +435,6 @@ class _DashboardHomeView extends StatelessWidget {
     final upcomingCount = storage.matches.where((m) => m.status == 'Upcoming').length;
     final completedCount = storage.matches.where((m) => m.status == 'Completed').length;
     final teamCount = storage.teams.length;
-    final playerCount = storage.teams.fold(0, (sum, t) => sum + t.players.length);
 
     return RefreshIndicator(
       color: AppTheme.primaryBlue,
@@ -454,9 +452,9 @@ class _DashboardHomeView extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Good Day,', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text('Good Day,', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
                     Text('Rajesh Kumar 👋',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                   ],
                 ),
@@ -483,18 +481,18 @@ class _DashboardHomeView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text('● LIVE',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           '$liveCount live match in progress',
-                          style: GoogleFonts.outfit(fontSize: 13.5, color: Colors.white, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: Colors.white, fontWeight: FontWeight.w600),
                         ),
                       ),
                       const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 12),
@@ -505,7 +503,7 @@ class _DashboardHomeView extends StatelessWidget {
 
             // Stats Grid
             Text('SYSTEM OVERVIEW',
-                style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800,
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800,
                     color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 10),
 
@@ -527,7 +525,7 @@ class _DashboardHomeView extends StatelessWidget {
             
             // Cricket Analytics Section
             Text('CRICKET ANALYTICS',
-                style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800,
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800,
                     color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 10),
             
@@ -541,7 +539,7 @@ class _DashboardHomeView extends StatelessWidget {
                     '218/3',
                     'UVPCE Titans',
                     Icons.sports_score,
-                    const Color(0xFF8B5CF6),
+                    AppTheme.accentPurple,
                   ),
                   const SizedBox(width: 12),
                   _buildAnalyticsCard(
@@ -566,7 +564,7 @@ class _DashboardHomeView extends StatelessWidget {
 
             // Quick Actions
             Text('QUICK ACTIONS',
-                style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800,
+                style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800,
                     color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 10),
             Row(
@@ -592,12 +590,12 @@ class _DashboardHomeView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('RECENT MATCHES',
-                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800,
                         color: AppTheme.textMuted, letterSpacing: 1.3)),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, AppRoutes.matchList),
                   child: Text('View All',
-                      style: GoogleFonts.outfit(fontSize: 11.5, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -609,7 +607,7 @@ class _DashboardHomeView extends StatelessWidget {
                 index: index,
                 child: _MatchCard(match: m),
               );
-            }).toList(),
+            }),
             const SizedBox(height: 20),
           ],
         ),
@@ -633,9 +631,9 @@ class _QuickAction extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.06),
+            color: color.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.15)),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
           ),
           child: Column(
             children: [
@@ -644,7 +642,7 @@ class _QuickAction extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 9.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
+                style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -674,21 +672,21 @@ class _MatchCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     match.status == 'Live' ? '● ${match.status}' : match.status,
-                    style: GoogleFonts.outfit(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w700),
                   ),
                 ),
                 const Spacer(),
                 Text(match.matchType,
-                    style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textMuted)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted)),
                 const SizedBox(width: 8),
                 Text(match.date,
-                    style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textMuted)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted)),
               ],
             ),
             const SizedBox(height: 12),
@@ -708,16 +706,20 @@ class _MatchCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(match.teamA.shortName,
-                                style: GoogleFonts.outfit(
-                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                            Text(
+                              match.teamA.shortName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                            ),
                             Text(match.teamA.name,
-                                style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textSecondary),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis),
                             if (match.runsA > 0)
                               Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.plusJakartaSans(
                                       fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           ],
                         ),
@@ -728,7 +730,7 @@ class _MatchCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Text('VS',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
                 ),
                 Expanded(
@@ -739,16 +741,20 @@ class _MatchCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(match.teamB.shortName,
-                                style: GoogleFonts.outfit(
-                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                            Text(
+                              match.teamB.shortName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                            ),
                             Text(match.teamB.name,
-                                style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textSecondary),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textSecondary),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis),
                             if (match.runsB > 0)
                               Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.plusJakartaSans(
                                       fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           ],
                         ),
@@ -770,8 +776,14 @@ class _MatchCard extends StatelessWidget {
               children: [
                 const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
                 const SizedBox(width: 4),
-                Text(match.venue,
-                    style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.textMuted)),
+                Expanded(
+                  child: Text(
+                    match.venue,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted),
+                  ),
+                ),
               ],
             ),
           ],
@@ -793,8 +805,8 @@ class _ProfileView extends StatelessWidget {
         children: [
           const AppLogo(size: 72, withGlow: true),
           const SizedBox(height: 16),
-          Text('Rajesh Kumar', style: GoogleFonts.outfit(fontSize: 20, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-          Text('admin@cricketverse.ai', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+          Text('Rajesh Kumar', style: GoogleFonts.plusJakartaSans(fontSize: 20, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+          Text('admin@cricketverse.ai', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.adminProfile),
@@ -846,7 +858,7 @@ class _CricketSearchDelegate extends SearchDelegate<String> {
         itemCount: results.length,
         itemBuilder: (_, i) => ListTile(
           leading: const Icon(Icons.search, color: AppTheme.textMuted),
-          title: Text(results[i], style: GoogleFonts.outfit(color: AppTheme.textPrimary)),
+          title: Text(results[i], style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary)),
           onTap: () => close(context, results[i]),
         ),
       ),
@@ -858,12 +870,12 @@ class _CricketSearchDelegate extends SearchDelegate<String> {
         scaffoldBackgroundColor: AppTheme.bgDark,
         appBarTheme: const AppBarTheme(backgroundColor: Colors.white, elevation: 0),
         inputDecorationTheme: InputDecorationTheme(
-          hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+          hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
         ),
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.light().textTheme),
       );
 }

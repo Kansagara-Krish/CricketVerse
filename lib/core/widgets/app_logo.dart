@@ -7,7 +7,7 @@ class AppLogo extends StatelessWidget {
   final double size;
   final bool withGlow;
 
-  const AppLogo({Key? key, this.size = 40, this.withGlow = false}) : super(key: key);
+  const AppLogo({super.key, this.size = 40, this.withGlow = false});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,7 @@ class AppLogo extends StatelessWidget {
         boxShadow: withGlow
             ? [
                 BoxShadow(
-                  color: const Color(0xFF0284C7).withOpacity(0.4),
+                  color: const Color(0xFF028A6B).withValues(alpha: 0.4),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -34,7 +34,7 @@ class AppLogo extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF10B981)],
+                colors: [Color(0xFF028A6B), Color(0xFF10B981)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

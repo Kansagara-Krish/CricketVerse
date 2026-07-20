@@ -7,7 +7,7 @@ import '../../core/widgets/custom_notification.dart';
 class MatchSummaryDownloadScreen extends StatelessWidget {
   final Map<String, dynamic> matchDetails;
 
-  const MatchSummaryDownloadScreen({Key? key, required this.matchDetails}) : super(key: key);
+  const MatchSummaryDownloadScreen({super.key, required this.matchDetails});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text('Match Summary', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text('Match Summary', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
             icon: const Icon(Icons.download, color: AppTheme.primaryBlue),
@@ -72,7 +72,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+                textStyle: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 30),
@@ -93,7 +93,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
           children: [
             Text(
               "Match Result",
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
                 color: AppTheme.textMuted,
@@ -103,7 +103,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               resultText,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.textPrimary,
@@ -113,7 +113,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+              style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -137,7 +137,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
           children: [
             Text(
               "Top Performers",
-              style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
             const Divider(height: 20),
             _buildPerformerRow(p1, "Batting", "62* (38)"),
@@ -159,12 +159,12 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary)),
-                Text(role, style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11)),
+                Text(name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary)),
+                Text(role, style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11)),
               ],
             ),
           ),
-          Text(stats, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppTheme.textPrimary)),
+          Text(stats, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -189,24 +189,24 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                 ),
                 Text(
                   "$score ($overs)",
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                 ),
               ],
             ),
             const Divider(height: 20),
-            Text("Top Batsmen", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
+            Text("Top Batsmen", style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
             const SizedBox(height: 6),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p1, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("45 (30)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p1, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary)), Text("45 (30)", style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
             const SizedBox(height: 4),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p2, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("30 (20)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p2, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary)), Text("30 (20)", style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
             const SizedBox(height: 12),
-            Text("Top Bowlers", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
+            Text("Top Bowlers", style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.textMuted, letterSpacing: 0.5)),
             const SizedBox(height: 6),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p3, style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textSecondary)), Text("2/20 (4.0)", style: GoogleFonts.outfit(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p3, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary)), Text("2/20 (4.0)", style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textPrimary, fontWeight: FontWeight.bold))]),
           ],
         ),
       ),
@@ -225,7 +225,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
           children: [
             Text(
               "Run Rate Comparison",
-              style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -242,11 +242,11 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                         showTitles: true,
                         reservedSize: 22,
                         interval: 5,
-                        getTitlesWidget: (value, meta) => Text(value.toInt().toString(), style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textSecondary)),
+                        getTitlesWidget: (value, meta) => Text(value.toInt().toString(), style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textSecondary)),
                       ),
                     ),
                   ),
-                  borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withOpacity(0.2))),
+                  borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.2))),
                   lineBarsData: [
                     LineChartBarData(
                       spots: const [
@@ -261,7 +261,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(show: true, color: AppTheme.primaryBlue.withOpacity(0.08)),
+                      belowBarData: BarAreaData(show: true, color: AppTheme.primaryBlue.withValues(alpha: 0.08)),
                     ),
                     LineChartBarData(
                       spots: const [
@@ -276,7 +276,7 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(show: true, color: AppTheme.accentRed.withOpacity(0.08)),
+                      belowBarData: BarAreaData(show: true, color: AppTheme.accentRed.withValues(alpha: 0.08)),
                     ),
                   ],
                 ),

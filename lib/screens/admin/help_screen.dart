@@ -7,7 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 
 class HelpScreen extends StatefulWidget {
-  const HelpScreen({Key? key}) : super(key: key);
+  const HelpScreen({super.key});
 
   @override
   State<HelpScreen> createState() => _HelpScreenState();
@@ -22,7 +22,7 @@ class _HelpScreenState extends State<HelpScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
-        title: Text('Help & FAQ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text('Help & FAQ', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -45,8 +45,8 @@ class _HelpScreenState extends State<HelpScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Help Center', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                      Text('Find answers to common questions', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary)),
+                      Text('Help Center', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                      Text('Find answers to common questions', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary)),
                     ],
                   ),
                 ],
@@ -55,7 +55,7 @@ class _HelpScreenState extends State<HelpScreen> {
             const SizedBox(height: 24),
 
             Text('FREQUENTLY ASKED QUESTIONS',
-                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 14),
 
             // FAQ Accordion
@@ -70,13 +70,13 @@ class _HelpScreenState extends State<HelpScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
                     color: isOpen
-                        ? AppTheme.primaryBlue.withOpacity(0.08)
-                        : Colors.white.withOpacity(0.04),
+                        ? AppTheme.primaryBlue.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isOpen
-                          ? AppTheme.primaryBlue.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.07),
+                          ? AppTheme.primaryBlue.withValues(alpha: 0.4)
+                          : Colors.white.withValues(alpha: 0.07),
                     ),
                   ),
                   child: Column(
@@ -88,7 +88,7 @@ class _HelpScreenState extends State<HelpScreen> {
                             Expanded(
                               child: Text(
                                 faq['question']!,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 14,
                                   fontWeight: isOpen ? FontWeight.w700 : FontWeight.w500,
                                   color: isOpen ? Colors.white : Colors.white70,
@@ -107,11 +107,11 @@ class _HelpScreenState extends State<HelpScreen> {
                           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                           child: Column(
                             children: [
-                              Divider(color: AppTheme.primaryBlue.withOpacity(0.2)),
+                              Divider(color: AppTheme.primaryBlue.withValues(alpha: 0.2)),
                               const SizedBox(height: 8),
                               Text(
                                 faq['answer']!,
-                                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0x990F172A), height: 1.6),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0x990F172A), height: 1.6),
                               ),
                             ],
                           ),
@@ -120,12 +120,12 @@ class _HelpScreenState extends State<HelpScreen> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 28),
 
             Text('CONTACT SUPPORT',
-                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 14),
 
             _SupportOption(Icons.email_outlined, 'Email Support', 'support@cricketverse.ai', AppTheme.primaryBlue, () {
@@ -167,9 +167,9 @@ class _SupportOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
@@ -179,12 +179,12 @@ class _SupportOption extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                  Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.5)),
+            Icon(Icons.chevron_right_rounded, color: color.withValues(alpha: 0.5)),
           ],
         ),
       ),

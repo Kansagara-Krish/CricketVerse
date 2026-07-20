@@ -25,7 +25,7 @@ void main() {
 }
 
 class CricketVerseApp extends StatelessWidget {
-  const CricketVerseApp({Key? key}) : super(key: key);
+  const CricketVerseApp({super.key});
 
   @override
   Widget build(BuildContext context) {

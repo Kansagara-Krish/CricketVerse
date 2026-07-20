@@ -6,7 +6,7 @@ import '../../core/theme/app_theme.dart';
 
 class TeamDetailsScreen extends StatefulWidget {
   final Team team;
-  const TeamDetailsScreen({Key? key, required this.team}) : super(key: key);
+  const TeamDetailsScreen({super.key, required this.team});
 
   @override
   State<TeamDetailsScreen> createState() => _TeamDetailsScreenState();
@@ -36,7 +36,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
         ),
         title: Text(
           'Team Profile',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -60,27 +60,30 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
               final player = widget.team.players[index];
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.textPrimary.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.textPrimary.withOpacity(0.06)),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Color(intColor).withOpacity(0.1),
-                    foregroundColor: Color(intColor),
-                    child: Text(player.name.substring(0, 1)),
+                child: Material(
+                  color: AppTheme.textPrimary.withValues(alpha: 0.03),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: AppTheme.textPrimary.withValues(alpha: 0.06)),
                   ),
-                  title: Text(player.name, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                  subtitle: Text(player.role, style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0x4D0F172A)),
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.userPlayerDetails,
-                      arguments: player,
-                    );
-                  },
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Color(intColor).withValues(alpha: 0.1),
+                      foregroundColor: Color(intColor),
+                      child: Text(player.name.substring(0, 1)),
+                    ),
+                    title: Text(player.name, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    subtitle: Text(player.role, style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0x4D0F172A)),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.userPlayerDetails,
+                        arguments: player,
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -107,9 +110,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.textPrimary.withOpacity(0.03),
+        color: AppTheme.textPrimary.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.textPrimary.withOpacity(0.06)),
+        border: Border.all(color: AppTheme.textPrimary.withValues(alpha: 0.06)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -117,19 +120,19 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> with SingleTicker
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(opponent, style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(date, style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11)),
+              Text(opponent, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(date, style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11)),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: (isWon ? AppTheme.primaryGreen : Colors.redAccent).withOpacity(0.15),
+              color: (isWon ? AppTheme.primaryGreen : Colors.redAccent).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               result,
-              style: GoogleFonts.outfit(color: isWon ? AppTheme.primaryGreen : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+              style: GoogleFonts.plusJakartaSans(color: isWon ? AppTheme.primaryGreen : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
         ],

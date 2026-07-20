@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,7 +12,7 @@ import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 
 class ScorerDashboard extends StatefulWidget {
-  const ScorerDashboard({Key? key}) : super(key: key);
+  const ScorerDashboard({super.key});
 
   @override
   State<ScorerDashboard> createState() => _ScorerDashboardState();
@@ -23,7 +22,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   String? _tossWinner;
   String _tossDecision = 'Bat';
   bool _isAutoCommentary = true;
-  String _selectedWicketType = 'Bowled';
   int _currentViewIndex = 0; // 0: Live Scoring, 1: Profile
 
   late AnimationController _drawerAnimationController;
@@ -57,7 +55,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
 
   void _logout() async {
     final confirm = await LogoutDialog.show(context);
-    if (confirm == true) {
+    if (confirm == true && mounted) {
       Provider.of<StorageService>(context, listen: false).logout();
       Navigator.pushReplacementNamed(context, AppRoutes.auth);
     }
@@ -84,7 +82,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.2),
+                    backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
                     radius: 22,
                     child: const Icon(Icons.sports_cricket_rounded, color: AppTheme.primaryGreen, size: 24),
                   ),
@@ -94,7 +92,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     children: [
                       Text(
                         'Match Scorer',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -102,7 +100,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       ),
                       Text(
                         'Official Manager',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white60,
                           fontSize: 11,
                         ),
@@ -205,7 +203,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     return Container(
       margin: const EdgeInsets.only(bottom: 6, right: 40),
       child: Material(
-        color: isSelected ? Colors.white.withOpacity(0.08) : Colors.transparent,
+        color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
@@ -218,7 +216,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 const SizedBox(width: 14),
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     color: color,
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -258,9 +256,8 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               final double slide = _drawerAnimationController.value * 230.0;
               final double radius = _drawerAnimationController.value * 20.0;
               return Transform(
-                transform: Matrix4.identity()
-                  ..translate(slide)
-                  ..scale(scale),
+                transform: Matrix4.translationValues(slide, 0.0, 0.0)
+                  * Matrix4.diagonal3Values(scale, scale, 1.0),
                 alignment: Alignment.centerLeft,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(radius),
@@ -268,7 +265,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     decoration: BoxDecoration(
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 16,
                           spreadRadius: 2,
                         ),
@@ -292,7 +289,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 ),
                 title: Text(
                   _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -343,7 +340,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
         elevation: 0,
         title: Text(
           'Official Scorer Portal',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.plusJakartaSans(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -365,12 +362,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                   const SizedBox(height: 16),
                   Text(
                     'No Matches Assigned to You',
-                    style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Contact administrator to get scoring matches.',
-                    style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12),
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
@@ -406,18 +403,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.12),
+                                  color: statusColor.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                                 ),
                                 child: Text(
                                   match.status == 'Live' ? '● LIVE' : match.status.toUpperCase(),
-                                  style: GoogleFonts.outfit(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w800),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w800),
                                 ),
                               ),
                               Text(
                                 '${match.matchType} • ${match.date}',
-                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
                               ),
                             ],
                           ),
@@ -438,16 +435,21 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(match.teamA.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                          Text(
+                                            match.teamA.shortName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                          ),
                                           if (match.status != 'Upcoming')
-                                            Text('${match.runsA}/${match.wicketsA} (${match.oversA})', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                            Text('${match.runsA}/${match.wicketsA} (${match.oversA})', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Text('VS', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                              Text('VS', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
                               Expanded(
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
@@ -456,9 +458,14 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text(match.teamB.shortName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                          Text(
+                                            match.teamB.shortName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                          ),
                                           if (match.status != 'Upcoming')
-                                            Text('${match.runsB}/${match.wicketsB} (${match.oversB})', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                            Text('${match.runsB}/${match.wicketsB} (${match.oversB})', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),
@@ -484,7 +491,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               Expanded(
                                 child: Text(
                                   match.venue,
-                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -492,7 +499,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               const SizedBox(width: 12),
                               Text(
                                 'Tap to open Scoring Portal',
-                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
                               ),
                               const Icon(Icons.chevron_right_rounded, size: 14, color: AppTheme.primaryBlue),
                             ],
@@ -514,15 +521,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
-            backgroundColor: AppTheme.primaryGreen.withOpacity(0.12),
+            backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.12),
             radius: 36,
             child: const Icon(Icons.sports_cricket_rounded, color: AppTheme.primaryGreen, size: 40),
           ),
           const SizedBox(height: 16),
-          Text('Match Official Portal', style: GoogleFonts.outfit(fontSize: 18, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-          Text('scorer1@cricketverse.ai', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+          Text('Match Official Portal', style: GoogleFonts.plusJakartaSans(fontSize: 18, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+          Text('scorer1@cricketverse.ai', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
           const SizedBox(height: 24),
-          Text('Role: Match Official Manager', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.bold)),
+          Text('Role: Match Official Manager', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -543,7 +550,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.01),
+                  color: Colors.black.withValues(alpha: 0.01),
                   blurRadius: 6,
                 )
               ]
@@ -553,17 +560,17 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               children: [
                 Text(
                   'ASSIGNED MATCH',
-                  style: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${match.teamA.name} vs ${match.teamB.name}',
-                  style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${match.matchType} • ${match.venue} • ${match.date} ${match.time}',
-                  style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -572,18 +579,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
 
           Text(
             'Toss Configuration',
-            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, letterSpacing: 0.5),
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, letterSpacing: 0.5),
           ),
           const SizedBox(height: 16),
 
-          Text('Toss Winner', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text('Toss Winner', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             dropdownColor: AppTheme.bgMedium,
-            style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13.5),
-            value: _tossWinner,
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+            initialValue: _tossWinner,
             decoration: InputDecoration(
-              fillColor: Colors.black.withOpacity(0.02),
+              fillColor: Colors.black.withValues(alpha: 0.02),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             items: [
@@ -595,14 +602,14 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           ),
           const SizedBox(height: 16),
 
-          Text('Toss Decision', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text('Toss Decision', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             dropdownColor: AppTheme.bgMedium,
-            style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13.5),
-            value: _tossDecision,
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+            initialValue: _tossDecision,
             decoration: InputDecoration(
-              fillColor: Colors.black.withOpacity(0.02),
+              fillColor: Colors.black.withValues(alpha: 0.02),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             items: const [
@@ -647,7 +654,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 backgroundColor: AppTheme.primaryBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                textStyle: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
+                textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -686,19 +693,19 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 children: [
                   Text(
                     '${match.teamA.shortName} vs ${match.teamB.shortName} - ${match.matchType}',
-                    style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen.withOpacity(0.12),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
                         const CircleAvatar(radius: 2.5, backgroundColor: AppTheme.primaryGreen),
                         const SizedBox(width: 4),
-                        Text('LIVE', style: GoogleFonts.outfit(color: AppTheme.primaryGreen, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                        Text('LIVE', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryGreen, fontSize: 9.5, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -714,18 +721,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                   const SizedBox(width: 10),
                   Text(
                     '${battingTeam.shortName} ',
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                   ),
                   Text(
                     '$runs/$wickets',
-                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
                   ),
                 ],
               ),
               const SizedBox(height: 2),
               Text(
                 'Overs: ${overs.toStringAsFixed(1)} (CRR: ${crr.toStringAsFixed(1)})',
-                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -770,7 +777,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       Container(
                         margin: const EdgeInsets.only(left: 12),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -844,9 +851,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 11),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentRed.withOpacity(0.08),
+                            color: AppTheme.accentRed.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppTheme.accentRed.withOpacity(0.2)),
+                            border: Border.all(color: AppTheme.accentRed.withValues(alpha: 0.2)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -855,7 +862,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               const SizedBox(width: 8),
                               Text(
                                 'Record Wicket',
-                                style: GoogleFonts.outfit(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 13),
+                                style: GoogleFonts.plusJakartaSans(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ],
                           ),
@@ -873,13 +880,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           padding: const EdgeInsets.symmetric(vertical: 11),
                           decoration: BoxDecoration(
                             color: match.balls.isEmpty
-                                ? Colors.black.withOpacity(0.02)
+                                ? Colors.black.withValues(alpha: 0.02)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: match.balls.isEmpty
                                   ? const Color(0xFFE2E8F0)
-                                  : AppTheme.textSecondary.withOpacity(0.4),
+                                  : AppTheme.textSecondary.withValues(alpha: 0.4),
                             ),
                           ),
                           child: Row(
@@ -893,7 +900,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               const SizedBox(width: 6),
                               Text(
                                 'Undo',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.plusJakartaSans(
                                   color: match.balls.isEmpty ? AppTheme.textMuted : AppTheme.textPrimary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -925,14 +932,14 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           const SizedBox(width: 10),
                           Text(
                             'AI Commentary Generator',
-                            style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 12.5, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 12.5, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       Switch(
                         value: _isAutoCommentary,
                         onChanged: (val) => setState(() => _isAutoCommentary = val),
-                        activeColor: AppTheme.primaryBlue,
+                        activeThumbColor: AppTheme.primaryBlue,
                       ),
                     ],
                   ),
@@ -960,7 +967,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           side: const BorderSide(color: Color(0xFFE2E8F0)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          textStyle: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                          textStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -982,7 +989,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          textStyle: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                          textStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -1019,20 +1026,20 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 children: [
                   Text(
                     label.toUpperCase(),
-                    style: GoogleFonts.outfit(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 0.8),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 0.8),
                   ),
                   const SizedBox(height: 1),
                   Row(
                     children: [
                       Text(
                         name,
-                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                       ),
                       if (stats != null) ...[
                         const SizedBox(width: 8),
                         Text(
                           stats,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF0284C7),
@@ -1062,7 +1069,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.01),
+              color: Colors.black.withValues(alpha: 0.01),
               blurRadius: 4,
             ),
           ],
@@ -1072,12 +1079,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           children: [
             Text(
               val,
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: col),
+              style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: col),
             ),
             const SizedBox(height: 1),
             Text(
               sub,
-              style: GoogleFonts.outfit(fontSize: 9.5, color: isMaximum ? Colors.white70 : AppTheme.textSecondary, fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: isMaximum ? Colors.white70 : AppTheme.textSecondary, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -1103,7 +1110,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -1141,7 +1148,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             children: [
               Text(
                 isStriker ? 'Select New Striker' : 'Select New Non-Striker',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 12),
               Expanded(
@@ -1152,12 +1159,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     return ListTile(
                       dense: true,
                       leading: CircleAvatar(
-                        backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                        backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                         radius: 14,
                         child: Text(p.name.substring(0, 1), style: const TextStyle(fontSize: 11, color: AppTheme.primaryBlue)),
                       ),
-                      title: Text(p.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
-                      subtitle: Text(p.role, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary)),
+                      title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
+                      subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
                       onTap: () {
                         if (isStriker) {
                           storage.setStriker(p.id);
@@ -1196,7 +1203,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             children: [
               Text(
                 'Select Active Bowler',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 12),
               Expanded(
@@ -1207,12 +1214,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     return ListTile(
                       dense: true,
                       leading: CircleAvatar(
-                        backgroundColor: AppTheme.accentRed.withOpacity(0.1),
+                        backgroundColor: AppTheme.accentRed.withValues(alpha: 0.1),
                         radius: 14,
                         child: Text(p.name.substring(0, 1), style: const TextStyle(fontSize: 11, color: AppTheme.accentRed)),
                       ),
-                      title: Text(p.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
-                      subtitle: Text(p.role, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary)),
+                      title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
+                      subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
                       onTap: () {
                         storage.switchBowler(p.id);
                         Navigator.pop(ctx);
@@ -1266,7 +1273,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       context: context,
       barrierDismissible: true,
       barrierLabel: 'WicketConfirmDialog',
-      barrierColor: Colors.black.withOpacity(0.55),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (ctx, anim1, anim2, child) {
@@ -1304,7 +1311,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentRed.withOpacity(0.1),
+                            color: AppTheme.accentRed.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -1316,7 +1323,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         const SizedBox(width: 12),
                         Text(
                           currentStep == 1 ? 'Record Wicket' : 'Incoming Batsman',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
                         ),
                       ],
                     ),
@@ -1332,7 +1339,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                 children: [
                                   Text(
                                     'WHICH BATTER IS OUT?',
-                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                                   ),
                                   const SizedBox(height: 8),
                                   Row(
@@ -1345,7 +1352,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                                             decoration: BoxDecoration(
                                               color: dismissedId == striker.id
-                                                  ? AppTheme.accentRed.withOpacity(0.08)
+                                                  ? AppTheme.accentRed.withValues(alpha: 0.08)
                                                   : Colors.white,
                                               borderRadius: BorderRadius.circular(16),
                                               border: Border.all(
@@ -1359,13 +1366,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                                 const SizedBox(height: 6),
                                                 Text(
                                                   'Striker',
-                                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   striker.name,
                                                   textAlign: TextAlign.center,
-                                                  style: GoogleFonts.outfit(
+                                                  style: GoogleFonts.plusJakartaSans(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                     color: AppTheme.textPrimary,
@@ -1387,7 +1394,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                                             decoration: BoxDecoration(
                                               color: dismissedId == nonStriker.id
-                                                  ? AppTheme.accentRed.withOpacity(0.08)
+                                                  ? AppTheme.accentRed.withValues(alpha: 0.08)
                                                   : Colors.white,
                                               borderRadius: BorderRadius.circular(16),
                                               border: Border.all(
@@ -1401,13 +1408,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                                 const SizedBox(height: 6),
                                                 Text(
                                                   'Non-Striker',
-                                                  style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   nonStriker.name,
                                                   textAlign: TextAlign.center,
-                                                  style: GoogleFonts.outfit(
+                                                  style: GoogleFonts.plusJakartaSans(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                     color: AppTheme.textPrimary,
@@ -1425,15 +1432,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                   const SizedBox(height: 16),
                                   Text(
                                     'DISMISSAL TYPE',
-                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                                   ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String>(
                                     dropdownColor: Colors.white,
-                                    style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
-                                    value: wicketType,
+                                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
+                                    initialValue: wicketType,
                                     decoration: InputDecoration(
-                                      fillColor: Colors.black.withOpacity(0.02),
+                                      fillColor: Colors.black.withValues(alpha: 0.02),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     ),
                                     items: dropdownItems.map((val) {
@@ -1454,7 +1461,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                 children: [
                                   Text(
                                     'SELECT NEW BATSMAN',
-                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                                   ),
                                   const SizedBox(height: 8),
                                   Container(
@@ -1472,16 +1479,16 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                         return ListTile(
                                           dense: true,
                                           selected: isSel,
-                                          selectedTileColor: AppTheme.primaryBlue.withOpacity(0.06),
+                                          selectedTileColor: AppTheme.primaryBlue.withValues(alpha: 0.06),
                                           title: Text(
                                             player.name,
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.plusJakartaSans(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
                                               color: isSel ? AppTheme.primaryBlue : AppTheme.textPrimary,
                                             ),
                                           ),
-                                          subtitle: Text(player.role, style: GoogleFonts.outfit(fontSize: 11)),
+                                          subtitle: Text(player.role, style: GoogleFonts.plusJakartaSans(fontSize: 11)),
                                           trailing: isSel ? const Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: 18) : null,
                                           onTap: () {
                                             setDialogState(() {
@@ -1495,31 +1502,31 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                   const SizedBox(height: 16),
                                   Text(
                                     'BATSMAN POSITION',
-                                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                                   ),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
                                       Expanded(
                                         child: ChoiceChip(
-                                          label: Text('Striker', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          label: Text('Striker', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
                                           selected: selectedPosition == 'Striker',
                                           onSelected: (val) {
                                             if (val) setDialogState(() => selectedPosition = 'Striker');
                                           },
-                                          selectedColor: AppTheme.primaryBlue.withOpacity(0.12),
+                                          selectedColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
                                           labelStyle: TextStyle(color: selectedPosition == 'Striker' ? AppTheme.primaryBlue : AppTheme.textSecondary),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: ChoiceChip(
-                                          label: Text('Non-Striker', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          label: Text('Non-Striker', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
                                           selected: selectedPosition == 'Non-Striker',
                                           onSelected: (val) {
                                             if (val) setDialogState(() => selectedPosition = 'Non-Striker');
                                           },
-                                          selectedColor: AppTheme.primaryBlue.withOpacity(0.12),
+                                          selectedColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
                                           labelStyle: TextStyle(color: selectedPosition == 'Non-Striker' ? AppTheme.primaryBlue : AppTheme.textSecondary),
                                         ),
                                       ),
@@ -1540,7 +1547,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         },
                         child: Text(
                           currentStep == 2 ? 'Back' : 'Cancel',
-                          style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
                         ),
                       ),
                       ElevatedButton(
@@ -1593,7 +1600,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         ),
                         child: Text(
                           (currentStep == 1 && candidates.isNotEmpty) ? 'Next' : 'Confirm',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1615,7 +1622,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       context: context,
       barrierDismissible: true,
       barrierLabel: 'ExtraRunsDialog',
-      barrierColor: Colors.black.withOpacity(0.55),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (ctx, anim1, anim2, child) {
@@ -1639,7 +1646,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue.withOpacity(0.1),
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.add_moderator_rounded, color: AppTheme.primaryBlue, size: 20),
@@ -1647,7 +1654,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         const SizedBox(width: 12),
                         Text(
                           'Record Extra Runs',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
                         ),
                       ],
                     ),
@@ -1657,15 +1664,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       children: [
                         Text(
                           'EXTRA TYPE',
-                          style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           dropdownColor: Colors.white,
-                          style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
-                          value: extraType,
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
+                          initialValue: extraType,
                           decoration: InputDecoration(
-                            fillColor: Colors.black.withOpacity(0.02),
+                            fillColor: Colors.black.withValues(alpha: 0.02),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           ),
                           items: const [
@@ -1683,7 +1690,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         const SizedBox(height: 16),
                         Text(
                           'EXTRA RUNS',
-                          style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -1702,7 +1709,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                 child: Center(
                                   child: Text(
                                     '+$r',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.plusJakartaSans(
                                       color: isSel ? Colors.white : AppTheme.textPrimary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
@@ -1718,7 +1725,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                        child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -1742,7 +1749,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           foregroundColor: Colors.white,
                           elevation: 0,
                         ),
-                        child: Text('Confirm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        child: Text('Confirm', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   );
@@ -1778,7 +1785,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       context: context,
       barrierDismissible: false,
       barrierLabel: 'OverCompletedDialog',
-      barrierColor: Colors.black.withOpacity(0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (ctx, anim1, anim2, child) {
@@ -1802,7 +1809,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue.withOpacity(0.1),
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryBlue, size: 22),
@@ -1810,7 +1817,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         const SizedBox(width: 12),
                         Text(
                           'Over $overNumber Completed',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
                         ),
                       ],
                     ),
@@ -1822,7 +1829,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                         children: [
                           Text(
                             'CHOOSE BOWLER FOR NEXT OVER',
-                            style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 0.5),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 0.5),
                           ),
                           const SizedBox(height: 10),
                           Container(
@@ -1840,15 +1847,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                 return ListTile(
                                   dense: true,
                                   selected: isSel,
-                                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.06),
+                                  selectedTileColor: AppTheme.primaryBlue.withValues(alpha: 0.06),
                                   leading: CircleAvatar(
-                                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                                     radius: 12,
                                     child: Text(player.name.substring(0, 1), style: const TextStyle(fontSize: 10, color: AppTheme.primaryBlue)),
                                   ),
                                   title: Text(
                                     player.name,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
                                       color: isSel ? AppTheme.primaryBlue : AppTheme.textPrimary,
@@ -1856,7 +1863,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                   ),
                                   subtitle: Text(
                                     '${player.role} • ${player.oversBowled.toStringAsFixed(1)} ov', 
-                                    style: GoogleFonts.outfit(fontSize: 11)
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 11)
                                   ),
                                   trailing: isSel ? const Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: 18) : null,
                                   onTap: () {
@@ -1891,7 +1898,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         ),
-                        child: Text('Confirm Bowler', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        child: Text('Confirm Bowler', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   );
@@ -1910,12 +1917,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reset Match?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-        content: Text('Are you sure you want to reset this match score to 0/0 and delete all balls?', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+        title: Text('Reset Match?', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        content: Text('Are you sure you want to reset this match score to 0/0 and delete all balls?', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1928,7 +1935,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            child: Text('Reset', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            child: Text('Reset', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1943,18 +1950,18 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Undo Last Ball?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
         ),
         content: Text(
           'Are you sure you want to delete the last scored ball and revert the stats?',
-          style: GoogleFonts.outfit(color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
             ),
           ),
           ElevatedButton(
@@ -1970,7 +1977,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             ),
             child: Text(
               'Yes, Undo',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
             ),
           ),
         ],

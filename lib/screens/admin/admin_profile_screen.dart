@@ -11,7 +11,7 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
 
 class AdminProfileScreen extends StatefulWidget {
-  const AdminProfileScreen({Key? key}) : super(key: key);
+  const AdminProfileScreen({super.key});
 
   @override
   State<AdminProfileScreen> createState() => _AdminProfileScreenState();
@@ -46,15 +46,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
             ),
             const SizedBox(height: 20),
-            Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text('Edit Profile', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 20),
-            TextField(controller: nameCtrl, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: nameCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted))),
             const SizedBox(height: 14),
-            TextField(controller: emailCtrl, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: emailCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted))),
             const SizedBox(height: 14),
-            TextField(controller: orgCtrl, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: orgCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Organization', prefixIcon: Icon(Icons.business_outlined, color: AppTheme.textMuted))),
             const SizedBox(height: 24),
             SizedBox(
@@ -93,15 +93,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Change Password', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text('Change Password', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 20),
-            TextField(controller: oldPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: oldPassCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Current Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
             const SizedBox(height: 14),
-            TextField(controller: newPassCtrl, obscureText: true, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: newPassCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
             const SizedBox(height: 14),
-            TextField(controller: confirmCtrl, obscureText: true, style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+            TextField(controller: confirmCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
             const SizedBox(height: 24),
             SizedBox(
@@ -128,11 +128,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
-        title: Text('My Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text('My Profile', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           TextButton(
             onPressed: _editProfile,
-            child: Text('Edit', style: GoogleFonts.outfit(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
+            child: Text('Edit', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -161,11 +161,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             ),
             const SizedBox(height: 16),
             Text('Rajesh Kumar',
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             Text('Tournament Administrator',
-                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
             Text('admin@cricketverse.ai',
-                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primaryBlue)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryBlue)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -174,13 +174,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text('Admin Access',
-                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
             ),
 
             const SizedBox(height: 32),
 
             // Settings Section
-            _SectionHeader('ACCOUNT'),
+            const _SectionHeader('ACCOUNT'),
             _SettingsTile(Icons.edit_rounded, 'Edit Profile', 'Update name, email, bio', onTap: _editProfile),
             _SettingsTile(Icons.lock_outline_rounded, 'Change Password', 'Update your login password', onTap: _changePassword),
             _SettingsTile(Icons.shield_outlined, 'Privacy & Security', 'Manage privacy settings', onTap: () {
@@ -188,7 +188,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             }),
 
             const SizedBox(height: 20),
-            _SectionHeader('PREFERENCES'),
+            const _SectionHeader('PREFERENCES'),
             _SwitchTile(Icons.dark_mode_outlined, 'Dark Mode', 'App theme preference', _darkMode,
                 (v) => setState(() => _darkMode = v)),
             _SwitchTile(Icons.notifications_outlined, 'Push Notifications', 'Match alerts and updates', _notifications,
@@ -197,7 +197,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 (v) => setState(() => _liveUpdates = v)),
 
             const SizedBox(height: 20),
-            _SectionHeader('MORE'),
+            const _SectionHeader('MORE'),
             _SettingsTile(Icons.info_outline_rounded, 'About CricketVerse AI', 'App info and version',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.about)),
             _SettingsTile(Icons.help_outline_rounded, 'Help & FAQ', 'Get support',
@@ -213,7 +213,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final confirm = await LogoutDialog.show(context);
-                  if (confirm == true) {
+                  if (confirm == true && context.mounted) {
                     Provider.of<StorageService>(context, listen: false).logout();
                     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (r) => false);
                   }
@@ -221,9 +221,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentRed.withOpacity(0.15),
+                  backgroundColor: AppTheme.accentRed.withValues(alpha: 0.15),
                   foregroundColor: AppTheme.accentRed,
-                  side: BorderSide(color: AppTheme.accentRed.withOpacity(0.3)),
+                  side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.3)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -248,7 +248,7 @@ class _SectionHeader extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(title,
-            style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700,
                 color: AppTheme.textMuted, letterSpacing: 1.4)),
       ),
     );
@@ -277,8 +277,8 @@ class _SettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                  Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ),
@@ -311,12 +311,12 @@ class _SwitchTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+                Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged, activeColor: AppTheme.primaryGreen),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: AppTheme.primaryGreen),
         ],
       ),
     );

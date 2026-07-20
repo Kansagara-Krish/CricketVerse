@@ -12,7 +12,7 @@ import 'package:provider/provider.dart';
 
 class PredictionScreen extends StatefulWidget {
   final CricketMatch match;
-  const PredictionScreen({Key? key, required this.match}) : super(key: key);
+  const PredictionScreen({super.key, required this.match});
 
   @override
   State<PredictionScreen> createState() => _PredictionScreenState();
@@ -61,7 +61,7 @@ class _PredictionScreenState extends State<PredictionScreen>
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
-        title: Text('Match Prediction', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: Text('Match Prediction', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
@@ -87,7 +87,7 @@ class _PredictionScreenState extends State<PredictionScreen>
                   const Icon(Icons.auto_awesome, color: AppTheme.textPrimary, size: 16),
                   const SizedBox(width: 8),
                   Text('AI-Powered Prediction Engine',
-                      style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -125,7 +125,7 @@ class _PredictionScreenState extends State<PredictionScreen>
             const SizedBox(height: 24),
 
             // Bar comparison
-            _SectionLabel('WIN PROBABILITY'),
+            const _SectionLabel('WIN PROBABILITY'),
             const SizedBox(height: 16),
             _ProbBar(teamA.shortName, teamA.name, _probA, _barAnim, AppTheme.primaryBlue),
             const SizedBox(height: 12),
@@ -134,7 +134,7 @@ class _PredictionScreenState extends State<PredictionScreen>
             const SizedBox(height: 28),
 
             // Score Context
-            _SectionLabel('MATCH CONTEXT'),
+            const _SectionLabel('MATCH CONTEXT'),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
@@ -142,10 +142,10 @@ class _PredictionScreenState extends State<PredictionScreen>
               child: Column(
                 children: [
                   _ContextRow('Current Score', '${widget.match.runsA}/${widget.match.wicketsA} (${widget.match.oversA} ov)'),
-                  _ContextRow('Run Rate', '${widget.match.oversA > 0 ? (widget.match.runsA / widget.match.oversA).toStringAsFixed(2) : "—"}'),
+                  _ContextRow('Run Rate', widget.match.oversA > 0 ? (widget.match.runsA / widget.match.oversA).toStringAsFixed(2) : "—"),
                   if (widget.match.target > 0) ...[
                     _ContextRow('Target', '${widget.match.target}'),
-                    _ContextRow('Required RR', '${widget.match.oversA > 0 ? ((widget.match.target - widget.match.runsB) / max(1, 20 - widget.match.oversB)).toStringAsFixed(2) : "—"}'),
+                    _ContextRow('Required RR', widget.match.oversA > 0 ? ((widget.match.target - widget.match.runsB) / max(1, 20 - widget.match.oversB)).toStringAsFixed(2) : "—"),
                   ],
                   _ContextRow('Innings', widget.match.isFirstInnings ? '1st Innings' : '2nd Innings'),
                 ],
@@ -155,7 +155,7 @@ class _PredictionScreenState extends State<PredictionScreen>
             const SizedBox(height: 24),
 
             // Prediction Factors
-            _SectionLabel('PREDICTION FACTORS'),
+            const _SectionLabel('PREDICTION FACTORS'),
             const SizedBox(height: 12),
             ...AppConstants.predictionFactors.asMap().entries.map((e) {
               final pct = 40 + (e.key * 8 % 50);
@@ -173,13 +173,13 @@ class _PredictionScreenState extends State<PredictionScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(e.value,
-                                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             AnimatedBuilder(
                               animation: _barAnim,
                               builder: (_, __) => LinearProgressIndicator(
                                 value: (pct / 100) * _barAnim.value,
-                                backgroundColor: Colors.white.withOpacity(0.06),
+                                backgroundColor: Colors.white.withValues(alpha: 0.06),
                                 color: AppTheme.accentPurple,
                                 borderRadius: BorderRadius.circular(4),
                                 minHeight: 4,
@@ -190,12 +190,12 @@ class _PredictionScreenState extends State<PredictionScreen>
                       ),
                       const SizedBox(width: 10),
                       Text('$pct%',
-                          style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.accentPurple, fontWeight: FontWeight.w700)),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.accentPurple, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 20),
 
@@ -203,7 +203,7 @@ class _PredictionScreenState extends State<PredictionScreen>
             Text(
               '⚠️ Predictions are AI-generated estimates based on match data and historical patterns. Not guaranteed.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted, height: 1.5),
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, height: 1.5),
             ),
             const SizedBox(height: 40),
           ],
@@ -225,11 +225,11 @@ class _GaugePainter extends CustomPainter {
     final radius = size.width * 0.4;
     const strokeWidth = 20.0;
     final rect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-    final sweepAll = pi;
+    const sweepAll = pi;
 
     // Background arc
     final bgPaint = Paint()
-      ..color = Colors.black.withOpacity(0.06)
+      ..color = Colors.black.withValues(alpha: 0.06)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -268,8 +268,8 @@ class _GaugeLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(pct, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w900, color: color)),
-        Text(shortName, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
+        Text(pct, style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w900, color: color)),
+        Text(shortName, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary)),
       ],
     );
   }
@@ -284,7 +284,7 @@ class _SectionLabel extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Text(label,
-          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4)),
+          style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4)),
     );
   }
 }
@@ -301,12 +301,12 @@ class _ProbBar extends StatelessWidget {
     return Row(
       children: [
         SizedBox(width: 44,
-            child: Text(short, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: color))),
+            child: Text(short, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: color))),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(full, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
+              Text(full, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
               const SizedBox(height: 6),
               AnimatedBuilder(
                 animation: anim,
@@ -315,7 +315,7 @@ class _ProbBar extends StatelessWidget {
                     Container(
                         height: 10,
                         decoration: BoxDecoration(
-                          color: AppTheme.textPrimary.withOpacity(0.06),
+                          color: AppTheme.textPrimary.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(5),
                         )),
                     FractionallySizedBox(
@@ -325,7 +325,7 @@ class _ProbBar extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: color,
                           borderRadius: BorderRadius.circular(5),
-                          boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 6)],
+                          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6)],
                         ),
                       ),
                     ),
@@ -337,7 +337,7 @@ class _ProbBar extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Text('${prob.toStringAsFixed(0)}%',
-            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
       ],
     );
   }
@@ -353,8 +353,8 @@ class _ContextRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
-          Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
+          Text('$label: ', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
+          Expanded(child: Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
         ],
       ),
     );

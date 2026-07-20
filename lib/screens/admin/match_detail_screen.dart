@@ -7,7 +7,7 @@ import '../../core/widgets/team_logo.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final CricketMatch match;
-  const MatchDetailScreen({Key? key, required this.match}) : super(key: key);
+  const MatchDetailScreen({super.key, required this.match});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class MatchDetailScreen extends StatelessWidget {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 48, 24, 0),
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                     child: Column(
                       children: [
                         // Status + Match Type
@@ -46,18 +46,18 @@ class MatchDetailScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.2),
+                                color: statusColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: statusColor.withOpacity(0.5)),
+                                border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                               ),
                               child: Text(
                                 isLive ? '● LIVE' : match.status.toUpperCase(),
-                                style: GoogleFonts.outfit(fontSize: 11, color: statusColor, fontWeight: FontWeight.w800),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: statusColor, fontWeight: FontWeight.w800),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Text(match.matchType,
-                                style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted)),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -67,51 +67,58 @@ class MatchDetailScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            _TeamScore(
-                              shortName: match.teamA.shortName,
-                              fullName: match.teamA.name,
-                              runs: match.runsA,
-                              wickets: match.wicketsA,
-                              overs: match.oversA,
-                              isBatting: match.isFirstInnings && match.status == 'Live',
-                              logoColorHex: match.teamA.logoColorHex,
+                            Expanded(
+                              child: _TeamScore(
+                                shortName: match.teamA.shortName,
+                                fullName: match.teamA.name,
+                                runs: match.runsA,
+                                wickets: match.wicketsA,
+                                overs: match.oversA,
+                                isBatting: match.isFirstInnings && match.status == 'Live',
+                                logoColorHex: match.teamA.logoColorHex,
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('VS',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.plusJakartaSans(
                                         fontSize: 18, fontWeight: FontWeight.w900,
                                         color: AppTheme.textMuted)),
                                 if (match.target > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text('Target: ${match.target}',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.plusJakartaSans(
                                             fontSize: 10, color: AppTheme.accentGold)),
                                   ),
                               ],
                             ),
-                            _TeamScore(
-                              shortName: match.teamB.shortName,
-                              fullName: match.teamB.name,
-                              runs: match.runsB,
-                              wickets: match.wicketsB,
-                              overs: match.oversB,
-                              isBatting: !match.isFirstInnings && match.status == 'Live',
-                              logoColorHex: match.teamB.logoColorHex,
-                              alignRight: true,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _TeamScore(
+                                shortName: match.teamB.shortName,
+                                fullName: match.teamB.name,
+                                runs: match.runsB,
+                                wickets: match.wicketsB,
+                                overs: match.oversB,
+                                isBatting: !match.isFirstInnings && match.status == 'Live',
+                                logoColorHex: match.teamB.logoColorHex,
+                                alignRight: true,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '📍 ${match.venue}',
-                          style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted),
                           textAlign: TextAlign.center,
                         ),
                         Text(
                           '${match.date} at ${match.time}',
-                          style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
                     ),
@@ -129,7 +136,7 @@ class MatchDetailScreen extends StatelessWidget {
                 children: [
                   // Action Buttons
                   if (isLive) ...[
-                    _SectionLabel('LIVE TOOLS'),
+                    const _SectionLabel('LIVE TOOLS'),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -187,7 +194,7 @@ class MatchDetailScreen extends StatelessWidget {
                   ],
 
                   // Match Info
-                  _SectionLabel('MATCH INFO'),
+                  const _SectionLabel('MATCH INFO'),
                   const SizedBox(height: 12),
                   _InfoRow(Icons.emoji_events_outlined, 'Toss', '${match.tossWinner} — ${match.tossDecision}'),
                   _InfoRow(Icons.location_on_outlined, 'Venue', match.venue),
@@ -199,29 +206,29 @@ class MatchDetailScreen extends StatelessWidget {
                   // Playing XI
                   _SectionLabel('PLAYING XI — ${match.teamA.shortName}'),
                   const SizedBox(height: 8),
-                  ...match.playingXI_A.take(6).map((p) => _PlayerRow(p)).toList(),
+                  ...match.playingXI_A.take(6).map((p) => _PlayerRow(p)),
                   if (match.playingXI_A.length > 6)
                     TextButton(
                       onPressed: () {},
                       child: Text('+ ${match.playingXI_A.length - 6} more players',
-                          style: GoogleFonts.outfit(color: AppTheme.primaryBlue)),
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue)),
                     ),
 
                   const SizedBox(height: 12),
                   _SectionLabel('PLAYING XI — ${match.teamB.shortName}'),
                   const SizedBox(height: 8),
-                  ...match.playingXI_B.take(6).map((p) => _PlayerRow(p)).toList(),
+                  ...match.playingXI_B.take(6).map((p) => _PlayerRow(p)),
                   if (match.playingXI_B.length > 6)
                     TextButton(
                       onPressed: () {},
                       child: Text('+ ${match.playingXI_B.length - 6} more players',
-                          style: GoogleFonts.outfit(color: AppTheme.primaryBlue)),
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue)),
                     ),
 
                   // Ball-by-ball
                   if (match.balls.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _SectionLabel('RECENT BALLS'),
+                    const _SectionLabel('RECENT BALLS'),
                     const SizedBox(height: 10),
                     ...match.balls.reversed.take(5).map((b) {
                       String label;
@@ -239,19 +246,19 @@ class MatchDetailScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 14,
-                              backgroundColor: bc.withOpacity(0.2),
+                              backgroundColor: bc.withValues(alpha: 0.2),
                               child: Text(label,
-                                  style: GoogleFonts.outfit(fontSize: 12, color: bc, fontWeight: FontWeight.w800)),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: bc, fontWeight: FontWeight.w800)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(b.commentary,
-                                  style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textPrimary, height: 1.4)),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary, height: 1.4)),
                             ),
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
 
                   const SizedBox(height: 40),
@@ -294,10 +301,10 @@ class _TeamScore extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 4),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.2),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Text('BATTING', style: GoogleFonts.outfit(fontSize: 8, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
+            child: Text('BATTING', style: GoogleFonts.plusJakartaSans(fontSize: 8, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
           ),
         TeamLogo(
           teamName: fullName,
@@ -306,16 +313,24 @@ class _TeamScore extends StatelessWidget {
           size: 40,
         ),
         const SizedBox(height: 8),
-        Text(shortName,
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
-        Text(fullName,
-            style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
+        Text(
+          shortName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+        ),
+        Text(
+          fullName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted),
+        ),
         if (runs > 0 || overs > 0) ...[
           const SizedBox(height: 6),
           Text('$runs/$wickets',
-              style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+              style: GoogleFonts.plusJakartaSans(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
           Text('($overs overs)',
-              style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary)),
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
         ],
       ],
     );
@@ -329,7 +344,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(label,
-        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4));
+        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4));
   }
 }
 
@@ -346,10 +361,10 @@ class _InfoRow extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.primaryBlue),
           const SizedBox(width: 10),
-          Text('$label: ', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+          Text('$label: ', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
           Expanded(
             child: Text(value.isNotEmpty ? value : 'N/A',
-                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis),
           ),
         ],
@@ -371,13 +386,13 @@ class _PlayerRow extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: roleColor.withOpacity(0.1),
+            backgroundColor: roleColor.withValues(alpha: 0.1),
             child: Text(player.name.substring(0, 1),
-                style: GoogleFonts.outfit(color: roleColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.plusJakartaSans(color: roleColor, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(player.name, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textPrimary))),
-          Text(player.role, style: GoogleFonts.outfit(fontSize: 11, color: roleColor)),
+          Expanded(child: Text(player.name, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary))),
+          Text(player.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: roleColor)),
         ],
       ),
     );
@@ -399,9 +414,9 @@ class _ActionButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: [
@@ -409,7 +424,7 @@ class _ActionButton extends StatelessWidget {
               const SizedBox(height: 6),
               Text(label,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
             ],
           ),
         ),

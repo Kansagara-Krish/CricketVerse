@@ -23,7 +23,7 @@ class ConfirmDialog {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: confirmColor.withOpacity(0.1),
+                color: confirmColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.warning_rounded, color: confirmColor, size: 22),
@@ -32,7 +32,7 @@ class ConfirmDialog {
             Expanded(
               child: Text(
                 title,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF0F172A),
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -43,14 +43,14 @@ class ConfirmDialog {
         ),
         content: Text(
           message,
-          style: GoogleFonts.outfit(color: const Color(0xFF475569), fontSize: 14, height: 1.5),
+          style: GoogleFonts.plusJakartaSans(color: const Color(0xFF475569), fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(color: const Color(0xFF475569), fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(color: const Color(0xFF475569), fontWeight: FontWeight.w600),
             ),
           ),
           ElevatedButton(
@@ -60,7 +60,7 @@ class ConfirmDialog {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(confirmLabel, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            child: Text(confirmLabel, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,7 +9,7 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/custom_notification.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -177,13 +176,13 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color.withOpacity(0.12),
+          backgroundColor: color.withValues(alpha: 0.12),
           foregroundColor: color,
           elevation: 0,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: color.withOpacity(0.35), width: 1.2),
+            side: BorderSide(color: color.withValues(alpha: 0.35), width: 1.2),
           ),
         ),
         child: Row(
@@ -193,7 +192,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             const SizedBox(width: 4),
             Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
                 color: color,
@@ -238,8 +237,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.black.withOpacity(0.4),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.4),
+                  Colors.black.withValues(alpha: 0.7),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -267,10 +266,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           height: 80,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryBlue.withOpacity(0.3),
+                                color: AppTheme.primaryBlue.withValues(alpha: 0.3),
                                 blurRadius: 16,
                               )
                             ],
@@ -285,7 +284,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                         // Title
                         Text(
                           'CricketVerse AI',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
@@ -295,10 +294,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 4),
                         Text(
                           'INTELLIGENCE MEETS ACTION',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: 0.6),
                             letterSpacing: 2.5,
                           ),
                         ),
@@ -312,15 +311,15 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                             child: Container(
                               padding: const EdgeInsets.all(22),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.18),
+                                  color: Colors.white.withValues(alpha: 0.18),
                                   width: 1.2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.25),
+                                    color: Colors.black.withValues(alpha: 0.25),
                                     blurRadius: 24,
                                     offset: const Offset(0, 10),
                                   )
@@ -334,7 +333,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                   children: [
                                     Text(
                                       _isSignUp ? 'Create Account' : 'Welcome Back',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.plusJakartaSans(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
@@ -345,30 +344,30 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     // Email Field
                                     Text(
                                       'Email Address',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.white.withOpacity(0.85),
+                                        color: Colors.white.withValues(alpha: 0.85),
                                       ),
                                     ),
                                     const SizedBox(height: 6),
                                     TextFormField(
                                       controller: _emailController,
-                                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5),
+                                      style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                       decoration: InputDecoration(
                                         hintText: 'Enter your email or username',
-                                        hintStyle: GoogleFonts.outfit(color: Colors.white.withOpacity(0.4), fontSize: 12.5),
-                                        fillColor: Colors.white.withOpacity(0.06),
+                                        hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                                        fillColor: Colors.white.withValues(alpha: 0.06),
                                         filled: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         prefixIcon: const Icon(Icons.email_outlined, size: 16, color: Colors.white60),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                         ),
                                         enabledBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
@@ -390,10 +389,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       children: [
                                         Text(
                                           'Password',
-                                          style: GoogleFonts.outfit(
+                                          style: GoogleFonts.plusJakartaSans(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white.withOpacity(0.85),
+                                            color: Colors.white.withValues(alpha: 0.85),
                                           ),
                                         ),
                                         if (!_isSignUp)
@@ -407,7 +406,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                             },
                                             child: Text(
                                               'Forgot?',
-                                              style: GoogleFonts.outfit(
+                                              style: GoogleFonts.plusJakartaSans(
                                                 fontSize: 11,
                                                 color: AppTheme.primaryBlue,
                                                 fontWeight: FontWeight.w700,
@@ -420,21 +419,21 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     TextFormField(
                                       controller: _passwordController,
                                       obscureText: true,
-                                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5),
+                                      style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                       decoration: InputDecoration(
                                         hintText: 'Enter password',
-                                        hintStyle: GoogleFonts.outfit(color: Colors.white.withOpacity(0.4), fontSize: 12.5),
-                                        fillColor: Colors.white.withOpacity(0.06),
+                                        hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                                        fillColor: Colors.white.withValues(alpha: 0.06),
                                         filled: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         prefixIcon: const Icon(Icons.lock_outline, size: 16, color: Colors.white60),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                         ),
                                         enabledBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
@@ -454,31 +453,31 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       const SizedBox(height: 14),
                                       Text(
                                         'Confirm Password',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.white.withOpacity(0.85),
+                                          color: Colors.white.withValues(alpha: 0.85),
                                         ),
                                       ),
                                       const SizedBox(height: 6),
                                       TextFormField(
                                         controller: _confirmPasswordController,
                                         obscureText: true,
-                                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5),
+                                        style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                         decoration: InputDecoration(
                                           hintText: 'Re-enter password',
-                                          hintStyle: GoogleFonts.outfit(color: Colors.white.withOpacity(0.4), fontSize: 12.5),
-                                          fillColor: Colors.white.withOpacity(0.06),
+                                          hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                                          fillColor: Colors.white.withValues(alpha: 0.06),
                                           filled: true,
                                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                           prefixIcon: const Icon(Icons.lock_outline, size: 16, color: Colors.white60),
                                           border: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(10),
-                                            borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                           ),
                                           enabledBorder: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(10),
-                                            borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                                           ),
                                           focusedBorder: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(10),
@@ -511,7 +510,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         ),
                                         child: Text(
                                           _isSignUp ? 'Sign Up' : 'Sign In',
-                                          style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 14.5),
+                                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14.5),
                                         ),
                                       ),
                                     ),
@@ -520,15 +519,15 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     // OR Separator
                                     Row(
                                       children: [
-                                        Expanded(child: Divider(color: Colors.white.withOpacity(0.18))),
+                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
                                         Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 10),
                                           child: Text(
                                             'OR',
-                                            style: GoogleFonts.outfit(fontSize: 10, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.bold),
+                                            style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.bold),
                                           ),
                                         ),
-                                        Expanded(child: Divider(color: Colors.white.withOpacity(0.18))),
+                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
                                       ],
                                     ),
                                     const SizedBox(height: 14),
@@ -540,8 +539,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       child: OutlinedButton(
                                         onPressed: _continueAsGuest,
                                         style: OutlinedButton.styleFrom(
-                                          side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                                          backgroundColor: Colors.white.withOpacity(0.9),
+                                          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                                          backgroundColor: Colors.white.withValues(alpha: 0.9),
                                           foregroundColor: Colors.black87,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(10),
@@ -558,7 +557,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                             const SizedBox(width: 8),
                                             Text(
                                               'Continue with Google',
-                                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.black87),
+                                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.black87),
                                             ),
                                           ],
                                         ),
@@ -569,15 +568,15 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     // Quick Role Login Buttons
                                     Row(
                                       children: [
-                                        Expanded(child: Divider(color: Colors.white.withOpacity(0.18))),
+                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
                                         Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 10),
                                           child: Text(
                                             'QUICK LOGIN',
-                                            style: GoogleFonts.outfit(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white.withOpacity(0.5), letterSpacing: 0.8),
+                                            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 0.8),
                                           ),
                                         ),
-                                        Expanded(child: Divider(color: Colors.white.withOpacity(0.18))),
+                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
                                       ],
                                     ),
                                     const SizedBox(height: 10),
@@ -625,11 +624,11 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         child: RichText(
                                           text: TextSpan(
                                             text: _isSignUp ? 'Already have an account? ' : 'New to CricketVerse? ',
-                                            style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                                            style: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
                                             children: [
                                               TextSpan(
                                                 text: _isSignUp ? 'Sign In' : 'Sign Up',
-                                                style: GoogleFonts.outfit(
+                                                style: GoogleFonts.plusJakartaSans(
                                                   color: AppTheme.primaryBlue,
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -652,7 +651,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           onPressed: _continueAsGuest,
                           child: Text(
                             'CONTINUE AS GUEST',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                               color: Colors.white70,
                               fontSize: 11,
                               letterSpacing: 1.5,

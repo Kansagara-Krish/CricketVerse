@@ -9,10 +9,11 @@ import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/empty_state.dart';
-import '../../core/widgets/custom_notification.dart';
+import 'widgets/player_list_item.dart';
+import 'widgets/add_player_sheet.dart';
 
 class PlayerManagementScreen extends StatefulWidget {
-  const PlayerManagementScreen({Key? key}) : super(key: key);
+  const PlayerManagementScreen({super.key});
 
   @override
   State<PlayerManagementScreen> createState() => _PlayerManagementScreenState();
@@ -39,16 +40,17 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        title: const Text('Player Management'),
+        title: Text('Player Management', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         backgroundColor: AppTheme.bgDark,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            onPressed: () => _showAddPlayerDialog(context, storage),
+            icon: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.textPrimary),
+            onPressed: () => AddPlayerSheet.show(context, storage),
             tooltip: 'Add Player',
           ),
           IconButton(
-            icon: const Icon(Icons.group_add_rounded),
+            icon: const Icon(Icons.group_add_rounded, color: AppTheme.textPrimary),
             onPressed: () => Navigator.pushNamed(context, AppRoutes.teamManagement),
             tooltip: 'Manage Teams',
           ),
@@ -56,24 +58,39 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
       ),
       body: Column(
         children: [
+          // Search Input Field
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: TextField(
-              style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Search players by name or nationality...',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
-                suffixIcon: _search.isNotEmpty
-                    ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.textMuted),
-                        onPressed: () => setState(() => _search = ''))
-                    : null,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.015),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              onChanged: (v) => setState(() => _search = v),
+              child: TextField(
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search players by name or nationality...',
+                  prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
+                  suffixIcon: _search.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: AppTheme.textMuted, size: 18),
+                          onPressed: () => setState(() => _search = ''),
+                        )
+                      : null,
+                ),
+                onChanged: (v) => setState(() => _search = v),
+              ),
             ),
           ),
-          // Role Filter Chips
+
+          // Role Filter Chips (High-Contrast Redesign)
           SizedBox(
-            height: 44,
+            height: 38,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -85,37 +102,59 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                         ? AppTheme.accentRed
                         : r == 'All-rounder'
                             ? AppTheme.accentGold
-                            : Colors.white60;
+                            : AppTheme.textPrimary;
+
                 return GestureDetector(
                   onTap: () => setState(() => _roleFilter = r),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: selected ? col.withOpacity(0.2) : Colors.black.withOpacity(0.04),
+                      color: selected ? col : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: selected ? col : Colors.black.withOpacity(0.1)),
+                      border: Border.all(
+                        color: selected ? col : AppTheme.bgSurface,
+                      ),
+                      boxShadow: [
+                        if (!selected)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.01),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                      ],
                     ),
-                    child: Text(r,
-                        style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: selected ? col : Colors.white54,
-                            fontWeight: selected ? FontWeight.w700 : FontWeight.normal)),
+                    child: Center(
+                      child: Text(
+                        r,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: selected ? Colors.white : AppTheme.textSecondary,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
-                Text('${allPlayers.length} players',
-                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                Text(
+                  '${allPlayers.length} players found',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
+          const SizedBox(height: 4),
+
+          // Players List View
           Expanded(
             child: allPlayers.isEmpty
                 ? const EmptyState(
@@ -124,222 +163,24 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                     subtitle: 'Try adjusting the search or role filter.',
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
                     itemCount: allPlayers.length,
-                    itemBuilder: (_, i) {
+                    itemBuilder: (context, i) {
                       final pw = allPlayers[i];
-                      final roleColor = AppTheme.roleColor(pw.player.role);
-                      final teamColor =
-                          Color(int.tryParse(pw.teamColorHex) ?? 0xFF0284C7);
-                      return GestureDetector(
+                      return PlayerListItem(
+                        player: pw.player,
+                        teamShort: pw.teamShort,
+                        teamColorHex: pw.teamColorHex,
                         onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.playerDetail,
-                            arguments: pw.player),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          decoration: AppTheme.glassCard,
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 22,
-                                backgroundColor: teamColor.withOpacity(0.15),
-                                child: Text(
-                                  pw.player.name.substring(0, 1),
-                                  style: GoogleFonts.outfit(
-                                      color: teamColor, fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(pw.player.name,
-                                        style: GoogleFonts.outfit(
-                                            fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: roleColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(pw.player.role,
-                                              style: GoogleFonts.outfit(
-                                                  fontSize: 10, color: roleColor, fontWeight: FontWeight.w600)),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(pw.teamShort,
-                                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
-                                        const SizedBox(width: 4),
-                                        Text('• ${pw.player.nationality}',
-                                            style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text('${pw.player.runsScored}',
-                                      style: GoogleFonts.outfit(
-                                          fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primaryBlue)),
-                                  Text('runs',
-                                      style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted)),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
-                            ],
-                          ),
+                          context,
+                          AppRoutes.playerDetail,
+                          arguments: pw.player,
                         ),
                       );
                     },
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showAddPlayerDialog(BuildContext context, StorageService storage) {
-    final nameCtrl = TextEditingController();
-    final natCtrl = TextEditingController();
-    String selectedRole = 'Batter';
-    String selectedTeamId = storage.teams.isNotEmpty ? storage.teams[0].id : '';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Add New Player',
-                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameCtrl,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Player Name',
-                  prefixIcon: Icon(Icons.person, color: AppTheme.textMuted),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: natCtrl,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Nationality (e.g. IND)',
-                  prefixIcon: Icon(Icons.flag, color: AppTheme.textMuted),
-                ),
-              ),
-              const SizedBox(height: 14),
-              
-              DropdownButtonFormField<String>(
-                dropdownColor: Colors.white,
-                value: selectedRole,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13.5),
-                decoration: const InputDecoration(
-                  labelText: 'Player Role',
-                  prefixIcon: Icon(Icons.sports_cricket_rounded, color: AppTheme.textMuted),
-                ),
-                items: ['Batter', 'Bowler', 'All-rounder']
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                    .toList(),
-                onChanged: (v) => setModalState(() => selectedRole = v ?? selectedRole),
-              ),
-              const SizedBox(height: 14),
-
-              DropdownButtonFormField<String>(
-                dropdownColor: Colors.white,
-                value: selectedTeamId,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13.5),
-                decoration: const InputDecoration(
-                  labelText: 'Assign Team',
-                  prefixIcon: Icon(Icons.groups, color: AppTheme.textMuted),
-                ),
-                items: storage.teams
-                    .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name)))
-                    .toList(),
-                onChanged: (v) => setModalState(() => selectedTeamId = v ?? selectedTeamId),
-              ),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (nameCtrl.text.trim().isEmpty) {
-                      CustomNotification.show(context, 'Please enter a name!', type: NotificationType.warning);
-                      return;
-                    }
-                    if (natCtrl.text.trim().isEmpty) {
-                      CustomNotification.show(context, 'Please enter nationality!', type: NotificationType.warning);
-                      return;
-                    }
-                    if (selectedTeamId.isEmpty) {
-                      CustomNotification.show(context, 'Please assign a team!', type: NotificationType.warning);
-                      return;
-                    }
-
-                    final newPlayer = Player(
-                      id: 'player_${DateTime.now().millisecondsSinceEpoch}',
-                      name: nameCtrl.text.trim(),
-                      role: selectedRole,
-                      nationality: natCtrl.text.trim(),
-                    );
-
-                    storage.addPlayer(selectedTeamId, newPlayer);
-                    Navigator.pop(ctx);
-                    
-                    final teamName = storage.teams.firstWhere((t) => t.id == selectedTeamId).name;
-                    CustomNotification.show(
-                      context,
-                      'Player "${newPlayer.name}" successfully added to $teamName!',
-                      type: NotificationType.success,
-                    );
-                  },
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: Text('Add Player', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

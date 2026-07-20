@@ -10,7 +10,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/constants/app_constants.dart';
 
 class ScheduleMatchScreen extends StatefulWidget {
-  const ScheduleMatchScreen({Key? key}) : super(key: key);
+  const ScheduleMatchScreen({super.key});
 
   @override
   State<ScheduleMatchScreen> createState() => _ScheduleMatchScreenState();
@@ -55,7 +55,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
         child: child!,
       ),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       _timeCtrl.text = picked.format(context);
     }
   }
@@ -130,8 +130,8 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppTheme.accentRed),
       ),
-      labelStyle: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 13),
-      hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 13),
+      labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
+      hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13),
     );
 
     return Scaffold(
@@ -145,7 +145,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
         ),
         title: Text(
           'Schedule Match', 
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 18),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 18),
         ),
       ),
       body: Form(
@@ -184,8 +184,8 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('New Match', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                        Text('Fill in the match details below', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary)),
+                        Text('New Match', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                        Text('Fill in the match details below', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
                       ],
                     ),
                   ],
@@ -196,21 +196,21 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const _Label('TEAMS'),
               const SizedBox(height: 10),
               // Team A
-              Text('Team A (Home)', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+              Text('Team A (Home)', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-                value: _teamAId,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                initialValue: _teamAId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team A'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamAId = v),
               ),
               const SizedBox(height: 14),
-              Text('Team B (Away)', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+              Text('Team B (Away)', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
-                value: _teamBId,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                initialValue: _teamBId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team B'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamBId = v),
@@ -239,7 +239,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         child: Center(
                           child: Text(
                             type,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                               color: selected ? AppTheme.primaryBlue : AppTheme.textSecondary,
@@ -256,8 +256,8 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const _Label('VENUE'),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
-                value: _venue.isEmpty ? null : _venue,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
+                initialValue: _venue.isEmpty ? null : _venue,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Venue'),
                 items: AppConstants.venues
                     .map((v) => DropdownMenuItem(value: v, child: Text(v, overflow: TextOverflow.ellipsis)))
@@ -277,7 +277,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         controller: _dateCtrl,
                         readOnly: true,
                         onTap: _pickDate,
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                         decoration: inputDecorationTheme.copyWith(
                           hintText: 'DD-MM-YYYY',
                           prefixIcon: const Icon(Icons.calendar_today_outlined, color: AppTheme.textMuted, size: 18),
@@ -294,7 +294,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                         controller: _timeCtrl,
                         readOnly: true,
                         onTap: _pickTime,
-                        style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                         decoration: inputDecorationTheme.copyWith(
                           hintText: '--:--',
                           prefixIcon: const Icon(Icons.access_time, color: AppTheme.textMuted, size: 18),
@@ -311,7 +311,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const SizedBox(height: 4),
               Text(
                 'The scorer will use these to log in and update the score',
-                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textSecondary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 10),
               Row(
@@ -319,7 +319,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _scorerUserCtrl,
-                      style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                       decoration: inputDecorationTheme.copyWith(
                         labelText: 'Scorer Username',
                         prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textMuted, size: 18),
@@ -332,7 +332,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     child: TextFormField(
                       controller: _scorerPassCtrl,
                       obscureText: true,
-                      style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                       decoration: inputDecorationTheme.copyWith(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted, size: 18),
@@ -356,7 +356,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                    textStyle: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -377,7 +377,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.plusJakartaSans(
         fontSize: 11, 
         fontWeight: FontWeight.w700, 
         color: AppTheme.textSecondary, 

@@ -40,12 +40,11 @@ class _NotificationBannerWidget extends StatefulWidget {
   final VoidCallback onDismiss;
 
   const _NotificationBannerWidget({
-    Key? key,
     required this.message,
     required this.type,
     required this.duration,
     required this.onDismiss,
-  }) : super(key: key);
+  });
 
   @override
   State<_NotificationBannerWidget> createState() => _NotificationBannerWidgetState();
@@ -114,8 +113,7 @@ class _NotificationBannerWidgetState extends State<_NotificationBannerWidget>
         icon = Icons.warning_amber_rounded;
         break;
       case NotificationType.info:
-      default:
-        primaryColor = const Color(0xFF0284C7); // Vibrant Sky Blue
+        primaryColor = const Color(0xFF028A6B); // Premium Emerald Green
         icon = Icons.info_outline_rounded;
         break;
     }
@@ -137,10 +135,10 @@ class _NotificationBannerWidgetState extends State<_NotificationBannerWidget>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -153,7 +151,7 @@ class _NotificationBannerWidgetState extends State<_NotificationBannerWidget>
                     Expanded(
                       child: Text(
                         widget.message,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           color: const Color(0xFF0F172A),
                           fontWeight: FontWeight.w600,
                           fontSize: 13,

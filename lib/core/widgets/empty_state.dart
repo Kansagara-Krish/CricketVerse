@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -12,13 +13,13 @@ class EmptyState extends StatelessWidget {
   final VoidCallback? onButtonTap;
 
   const EmptyState({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
     this.buttonLabel,
     this.onButtonTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +33,8 @@ class EmptyState extends StatelessWidget {
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF0F172A).withOpacity(0.03),
-                border: Border.all(color: const Color(0xFF0F172A).withOpacity(0.06)),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                border: Border.all(color: const Color(0xFF0F172A).withValues(alpha: 0.06)),
               ),
               child: Icon(icon, size: 52, color: const Color(0x3D0F172A)),
             ),
@@ -41,7 +42,7 @@ class EmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF0F172A),
@@ -51,7 +52,7 @@ class EmptyState extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: const Color(0xFF475569),
                 height: 1.5,
@@ -64,7 +65,7 @@ class EmptyState extends StatelessWidget {
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(buttonLabel!),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
+                  backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -15,14 +15,14 @@ class StatCard extends StatelessWidget {
   final String? subtitle;
 
   const StatCard({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.value,
     required this.gradient,
     this.onTap,
     this.subtitle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +61,7 @@ class StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -71,7 +71,7 @@ class StatCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -81,7 +81,7 @@ class StatCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
-                    style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textMuted),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted),
                   ),
                 ],
               ],

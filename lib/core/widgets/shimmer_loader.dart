@@ -8,7 +8,7 @@ class ShimmerLoader extends StatelessWidget {
   final int itemCount;
   final double itemHeight;
 
-  const ShimmerLoader({Key? key, this.itemCount = 5, this.itemHeight = 80}) : super(key: key);
+  const ShimmerLoader({super.key, this.itemCount = 5, this.itemHeight = 80});
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +38,11 @@ class ShimmerCard extends StatelessWidget {
   final double borderRadius;
 
   const ShimmerCard({
-    Key? key,
+    super.key,
     this.height = 80,
     this.width,
     this.borderRadius = 16,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

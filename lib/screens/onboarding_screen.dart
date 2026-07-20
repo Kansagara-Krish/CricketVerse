@@ -4,7 +4,7 @@ import '../core/theme/app_theme.dart';
 import 'auth_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
+  const OnboardingScreen({super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -19,8 +19,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: "Follow Every Match Live",
       description: "Get real-time scores, deep AI insights, and immersive ball-by-ball commentary right from the stadium.",
       imagePath: "assets/images/onboarding_stadium.png",
-      gradientStart: const Color(0xFF0F4C81),
-      gradientEnd: const Color(0xFF1E3A8A),
+      gradientStart: const Color(0xFF0F5A47),
+      gradientEnd: const Color(0xFF028A6B),
       stepText: "STEP 1 OF 3",
     ),
     OnboardingData(
@@ -118,7 +118,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         onPressed: _navigateToAuth,
                         child: Text(
                           'Skip',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.primaryBlue,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
@@ -222,7 +222,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       // Title
                       Text(
                         currentSlide.title,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textPrimary,
@@ -233,7 +233,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       // Subtitle
                       Text(
                         currentSlide.description,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           height: 1.5,
                           color: AppTheme.textSecondary,
@@ -266,7 +266,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         children: [
                           Text(
                             currentSlide.stepText,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textMuted,
@@ -292,7 +292,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     children: [
                                       Text(
                                         'Get Started',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

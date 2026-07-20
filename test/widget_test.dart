@@ -12,10 +12,22 @@ import 'package:cricketverse_ai/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Set portrait screen size to prevent landscape layout overflows
+    tester.view.physicalSize = const Size(400, 850);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const CricketVerseApp());
 
     // Verify that splash screen or main app is built.
     expect(find.byType(MaterialApp), findsOneWidget);
+
+    // Let any splash timers finish to avoid pending timer exception
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
   });
 }

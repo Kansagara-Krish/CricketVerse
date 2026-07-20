@@ -12,7 +12,7 @@ class LogoutDialog {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'LogoutConfirmDialog',
-      barrierColor: Colors.black.withOpacity(0.55),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (ctx, anim1, anim2) {
         return const SizedBox.shrink();
@@ -46,7 +46,7 @@ class LogoutDialog {
                         borderRadius: BorderRadius.circular(24.0),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withValues(alpha: 0.15),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -58,7 +58,7 @@ class LogoutDialog {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentRed.withOpacity(0.1),
+                              color: AppTheme.accentRed.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -70,7 +70,7 @@ class LogoutDialog {
                           const SizedBox(height: 16),
                           Text(
                             'Logout Confirmation',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.textPrimary,
@@ -80,7 +80,7 @@ class LogoutDialog {
                           Text(
                             'Are you sure you want to sign out of CricketVerse AI? Your active session will be closed.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: AppTheme.textSecondary,
                               height: 1.4,
@@ -102,7 +102,7 @@ class LogoutDialog {
                                   ),
                                   child: Text(
                                     'Cancel',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
@@ -121,7 +121,7 @@ class LogoutDialog {
                                   ),
                                   child: Text(
                                     'Sign Out',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
