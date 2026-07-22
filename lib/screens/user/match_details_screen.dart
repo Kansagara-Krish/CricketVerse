@@ -1,12 +1,16 @@
 import '../../core/theme/app_theme.dart';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/team_logo.dart';
+import '../../core/widgets/custom_notification.dart';
+
+
 
 class MatchDetailsScreen extends StatefulWidget {
   final String matchId;
@@ -24,11 +28,37 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
   ];
   bool _isPlayingVoice = false;
   int _playingVoiceIndex = -1;
+  late FlutterTts _flutterTts;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _flutterTts = FlutterTts();
+    _initTts();
+  }
+
+  void _initTts() async {
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setSpeechRate(0.48);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _isPlayingVoice = false;
+          _playingVoiceIndex = -1;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop();
+    _tabController.dispose();
+    _chatController.dispose();
+    super.dispose();
   }
 
   void _sendChatMessage(String userQuery, CricketMatch match, StorageService storage) {
@@ -74,21 +104,47 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     });
   }
 
-  void _playVoiceCommentary(int index, String text) {
-    setState(() {
-      _isPlayingVoice = true;
-      _playingVoiceIndex = index;
-    });
-
-    // Simulate speech audio waves animation
-    Future.delayed(const Duration(seconds: 4), () {
+  void _playVoiceCommentary(int index, String text) async {
+    if (_isPlayingVoice && _playingVoiceIndex == index) {
+      await _flutterTts.stop();
       if (mounted) {
         setState(() {
           _isPlayingVoice = false;
           _playingVoiceIndex = -1;
         });
       }
-    });
+    } else {
+      await _flutterTts.stop();
+      if (mounted) {
+        setState(() {
+          _isPlayingVoice = true;
+          _playingVoiceIndex = index;
+        });
+        CustomNotification.show(
+          context,
+          '🎙️ Playing AI Voice Commentary sound...',
+          type: NotificationType.info,
+        );
+      }
+      await _flutterTts.speak(text);
+    }
+  }
+
+  void _togglePlayAllCommentary(CricketMatch match) async {
+    if (_isPlayingVoice) {
+      await _flutterTts.stop();
+      if (mounted) {
+        setState(() {
+          _isPlayingVoice = false;
+          _playingVoiceIndex = -1;
+        });
+        CustomNotification.show(context, '🔇 AI Voice Sound Paused', type: NotificationType.warning);
+      }
+    } else {
+      if (match.balls.isEmpty) return;
+      final fullText = match.balls.reversed.take(3).map((b) => b.commentary).join(". ");
+      _playVoiceCommentary(-99, fullText);
+    }
   }
 
   @override
@@ -691,19 +747,103 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: match.balls.length,
+      itemCount: match.balls.length + 1,
       itemBuilder: (context, index) {
+        if (index == 0) {
+          // Top AI Audio Commentary Option Control Card
+          final isGlobalPlaying = _isPlayingVoice && _playingVoiceIndex == -99;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F4C81), AppTheme.primaryBlue],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isPlayingVoice ? Icons.graphic_eq : Icons.volume_up_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AI Sound Commentary',
+                              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _isPlayingVoice ? 'Broadcasting live voice sound...' : 'Listen to audio match commentary',
+                              style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _togglePlayAllCommentary(match),
+                  icon: Icon(_isPlayingVoice ? Icons.pause : Icons.play_arrow_rounded, size: 18),
+                  label: Text(isGlobalPlaying ? 'Stop' : (_isPlayingVoice ? 'Pause' : 'Play Sound')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.primaryBlue,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         // Reverse order so latest is on top
-        final ball = match.balls[match.balls.length - 1 - index];
-        final isVoicePlaying = _isPlayingVoice && _playingVoiceIndex == index;
+        final ballIdx = match.balls.length - index;
+        final ball = match.balls[ballIdx];
+        final isVoicePlaying = _isPlayingVoice && _playingVoiceIndex == ballIdx;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: const EdgeInsets.only(bottom: 14),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.textPrimary.withValues(alpha: 0.03),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.textPrimary.withValues(alpha: 0.06)),
+            border: Border.all(color: isVoicePlaying ? AppTheme.primaryBlue.withValues(alpha: 0.4) : AppTheme.bgSurface),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,27 +851,56 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Text(
+                      'Bowler: ${ball.bowlerName} ➔ Batsman: ${ball.batsmanName}',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   Row(
                     children: [
                       if (isVoicePlaying)
-                        const Icon(Icons.graphic_eq, color: AppTheme.primaryBlue, size: 16),
-                      IconButton(
-                        icon: Icon(
-                          isVoicePlaying ? Icons.volume_up : Icons.volume_mute_outlined,
-                          color: isVoicePlaying ? AppTheme.primaryBlue : Colors.white70,
-                          size: 18,
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(Icons.graphic_eq, color: AppTheme.primaryBlue, size: 16),
                         ),
-                        onPressed: () => _playVoiceCommentary(index, ball.commentary),
+                      InkWell(
+                        onTap: () => _playVoiceCommentary(ballIdx, ball.commentary),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isVoicePlaying ? AppTheme.primaryBlue.withValues(alpha: 0.12) : AppTheme.bgSurface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isVoicePlaying ? Icons.volume_up : Icons.volume_up_outlined,
+                                color: isVoicePlaying ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isVoicePlaying ? 'Playing' : 'Listen',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isVoicePlaying ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 ball.commentary,
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, height: 1.4),
@@ -743,47 +912,311 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     );
   }
 
-  // --- 3. Analytics custom-painted charts ---
+
+  // --- 3. Analytics (Dual-Team Live Score Chart, Score Projection & Win Prediction) ---
   Widget _buildAnalyticsView(CricketMatch match) {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    final winProb = storage.calculateWinProbability(match);
+
+    final currentScore = match.isFirstInnings ? match.runsA : match.runsB;
+    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+
+    // Projected scores at different run rates
+    final proj6 = (currentScore + (20.0 - currentOvers) * 6.0).round();
+    final proj8 = (currentScore + (20.0 - currentOvers) * 8.0).round();
+    final proj10 = (currentScore + (20.0 - currentOvers) * 10.0).round();
+
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Wagon Wheel (AI Spatial Analysis)', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-          const SizedBox(height: 10),
-          
-          // Wagon Wheel canvas
-          Center(
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.textPrimary.withValues(alpha: 0.02),
-                border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.2), width: 2),
-              ),
-              child: CustomPaint(
-                painter: WagonWheelPainter(match.balls),
-              ),
+          // 1. Dual Team Live Score Comparison Chart
+          Text(
+            'LIVE SCORE COMPARISON (RUNS OVER OVERS)',
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.bgSurface),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(color: AppTheme.primaryBlue, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(match.teamA.shortName, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(color: AppTheme.accentRed, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(match.teamB.shortName, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 180,
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (v) => const FlLine(color: AppTheme.bgSurface, strokeWidth: 1),
+                      ),
+                      titlesData: FlTitlesData(
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            getTitlesWidget: (val, _) => Text(
+                              '${val.toInt()}',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.textMuted),
+                            ),
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (val, _) => Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '${val.toInt()}ov',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.textMuted),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      minX: 0,
+                      maxX: 20,
+                      minY: 0,
+                      maxY: 200,
+                      lineBarsData: [
+                        // Team A Line
+                        LineChartBarData(
+                          spots: const [
+                            FlSpot(0, 0),
+                            FlSpot(4, 38),
+                            FlSpot(8, 72),
+                            FlSpot(12, 108),
+                            FlSpot(16, 145),
+                            FlSpot(20, 185),
+                          ],
+                          isCurved: true,
+                          color: AppTheme.primaryBlue,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        // Team B Line (Live or past)
+                        LineChartBarData(
+                          spots: [
+                            const FlSpot(0, 0),
+                            const FlSpot(4, 32),
+                            const FlSpot(8, 64),
+                            const FlSpot(12, 98),
+                            FlSpot(currentOvers, currentScore.toDouble()),
+                          ],
+                          isCurved: true,
+                          color: AppTheme.accentRed,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppTheme.accentRed.withValues(alpha: 0.08),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          Text('Manhattan Chart (Runs Per Over)', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-          const SizedBox(height: 16),
-          
-          // Manhattan custom chart
+          // 2. Live Win Prediction & Score Projection Card
+          Text(
+            'WIN PREDICTION & SCORE PROJECTION',
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 12),
           Container(
-            height: 150,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.bgSurface),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'AI Win Prediction Gauge',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentPurple.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'AI PREDICT',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppTheme.accentPurple, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Win percentage indicators
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${match.teamA.name}: ${winProb.toStringAsFixed(0)}%',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                    ),
+                    Text(
+                      '${match.teamB.name}: ${(100 - winProb).toStringAsFixed(0)}%',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.accentRed),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    height: 12,
+                    child: Row(
+                      children: [
+                        Expanded(flex: winProb.round(), child: Container(color: AppTheme.primaryBlue)),
+                        Expanded(flex: (100 - winProb).round(), child: Container(color: AppTheme.accentRed)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 14),
+
+                Text(
+                  'Projected Score Bounds (End of 20 Overs)',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    _buildProjectionBox('At 6.0 RRR', '$proj6', AppTheme.primaryBlue),
+                    const SizedBox(width: 8),
+                    _buildProjectionBox('At 8.0 RRR', '$proj8', AppTheme.accentPurple),
+                    const SizedBox(width: 8),
+                    _buildProjectionBox('At 10.0 RRR', '$proj10', AppTheme.primaryGreen),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 3. Manhattan Chart (Runs Per Over)
+          Text(
+            'MANHATTAN CHART (RUNS PER OVER)',
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 160,
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.bgSurface),
+            ),
             child: CustomPaint(
               painter: ManhattanPainter(match.balls),
             ),
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProjectionBox(String label, String val, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              val,
+              style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w900, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -855,52 +1288,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
   }
 }
 
-// Custom painter for Wagon Wheel
-class WagonWheelPainter extends CustomPainter {
-  final List<BallRecord> balls;
-  WagonWheelPainter(this.balls);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final fieldPaint = Paint()
-      ..color = Colors.white10
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    
-    // Draw boundary line
-    canvas.drawCircle(center, size.width / 2 - 10, fieldPaint);
-    
-    // Draw cricket pitch mock
-    final pitchPaint = Paint()..color = Colors.yellow.withValues(alpha: 0.08);
-    canvas.drawRect(Rect.fromCenter(center: center, width: 12, height: 40), pitchPaint);
-
-    final random = Random(42); // Seed to keep shots constant
-    
-    // Draw shots lines from pitch center
-    for (var ball in balls) {
-      if (ball.run > 0 && ball.extraType == 'None') {
-        double angle = random.nextDouble() * 2 * pi;
-        double shotLength = (size.width / 2 - 14) * (ball.run == 6 ? 1.0 : (ball.run == 4 ? 0.8 : 0.5));
-        
-        final shotPaint = Paint()
-          ..color = ball.run == 6 ? const Color(0xFF60A5FA) : (ball.run == 4 ? const Color(0xFFFBBF24) : Colors.black38)
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
-          
-        final dest = Offset(
-          center.dx + shotLength * cos(angle),
-          center.dy + shotLength * sin(angle),
-        );
-        canvas.drawLine(center, dest, shotPaint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
 // Custom painter for Manhattan bar chart
 class ManhattanPainter extends CustomPainter {
   final List<BallRecord> balls;
@@ -908,8 +1295,6 @@ class ManhattanPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Generate over totals
-    // Group balls by 6-ball blocks (overs)
     final List<int> runsPerOver = [];
     int currentOverSum = 0;
     int ballCount = 0;
@@ -927,13 +1312,11 @@ class ManhattanPainter extends CustomPainter {
         currentOverSum += ball.run + ball.extraRun;
       }
     }
-    // Add current incomplete over if any
     if (ballCount > 0) {
       runsPerOver.add(currentOverSum);
     }
 
     if (runsPerOver.isEmpty) {
-      // Mock data to display something clean
       runsPerOver.addAll([8, 12, 4, 15, 6, 22, 10, 14]);
     }
 
@@ -962,7 +1345,6 @@ class ManhattanPainter extends CustomPainter {
         barPaint,
       );
 
-      // Draw text values above bars
       final textPainter = TextPainter(
         text: TextSpan(text: '$runs', style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 9, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
@@ -974,3 +1356,4 @@ class ManhattanPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
+

@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/confirm_dialog.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class TeamManagementScreen extends StatefulWidget {
   const TeamManagementScreen({super.key});
@@ -110,8 +111,11 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     final name = nameCtrl.text.trim();
                     final short = shortCtrl.text.trim().toUpperCase();
                     if (name.isEmpty || short.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please fill all fields')));
+                      CustomNotification.show(
+                        context,
+                        'Please fill all fields',
+                        type: NotificationType.warning,
+                      );
                       return;
                     }
                     final defaultPlayers = List.generate(11, (i) => Player(
@@ -123,11 +127,10 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     Provider.of<StorageService>(context, listen: false)
                         .addTeam(name, short, selectedColor, defaultPlayers);
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('✅ Team "$name" added successfully!'),
-                        backgroundColor: AppTheme.primaryGreen,
-                      ),
+                    CustomNotification.show(
+                      context,
+                      'Team "$name" added successfully!',
+                      type: NotificationType.success,
                     );
                   },
                   icon: const Icon(Icons.add),
@@ -140,6 +143,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -363,9 +367,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: 20),
-                              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Edit ${team.name} — open detail to edit')),
-                              ),
+                              onPressed: () => Navigator.pushNamed(context, AppRoutes.editTeam, arguments: team),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: AppTheme.accentRed, size: 20),
@@ -375,13 +377,17 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                   title: 'Delete Team',
                                   message: 'Are you sure you want to delete "${team.name}"? This action cannot be undone.',
                                 );
-                                 if (confirmed == true && context.mounted) {
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(content: Text('🗑️ ${team.name} deleted'), backgroundColor: AppTheme.accentRed),
-                                   );
-                                 }
+                                if (confirmed == true && context.mounted) {
+                                  storage.deleteTeam(team.id);
+                                  CustomNotification.show(
+                                    context,
+                                    'Team "${team.name}" deleted',
+                                    type: NotificationType.error,
+                                  );
+                                }
                               },
                             ),
+
                           ],
                         ),
                       );

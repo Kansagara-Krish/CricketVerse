@@ -54,10 +54,11 @@ class Player {
 
 class Team {
   final String id;
-  final String name;
-  final String shortName;
-  final String logoColorHex; // UI coloring matching the screenshots
+  String name;
+  String shortName;
+  String logoColorHex; // UI coloring matching the screenshots
   final List<Player> players;
+
 
   Team({
     required this.id,

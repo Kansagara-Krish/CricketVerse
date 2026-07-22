@@ -19,7 +19,9 @@ import '../../screens/admin/create_tournament_screen.dart';
 import '../../screens/admin/tournament_management_screen.dart';
 import '../../screens/admin/team_management_screen.dart';
 import '../../screens/admin/team_detail_screen.dart';
+import '../../screens/admin/edit_team_screen.dart';
 import '../../screens/admin/player_management_screen.dart';
+
 import '../../screens/admin/player_detail_screen.dart';
 import '../../screens/admin/schedule_match_screen.dart';
 import '../../screens/admin/match_list_screen.dart';
@@ -58,7 +60,9 @@ class AppRoutes {
   static const String tournamentList     = '/admin/tournaments';
   static const String teamManagement     = '/admin/teams';
   static const String teamDetail         = '/admin/teams/detail';
+  static const String editTeam           = '/admin/teams/edit';
   static const String playerManagement   = '/admin/players';
+
   static const String playerDetail       = '/admin/players/detail';
   static const String scheduleMatch      = '/admin/matches/schedule';
   static const String matchList          = '/admin/matches';
@@ -112,7 +116,10 @@ class AppRoutes {
         return _slideRoute(const TeamManagementScreen());
       case teamDetail:
         return _slideRoute(TeamDetailScreen(team: settings.arguments as dynamic));
+      case editTeam:
+        return _slideRoute(EditTeamScreen(team: settings.arguments as dynamic));
       case playerManagement:
+
         return _slideRoute(const PlayerManagementScreen());
       case playerDetail:
         return _slideRoute(PlayerDetailScreen(player: settings.arguments as dynamic));

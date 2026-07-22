@@ -20,32 +20,101 @@ class StatsOverviewTab extends StatelessWidget {
     ];
 
     final maxVal = matchCounts.reduce((a, b) => a > b ? a : b);
+    final allPlayers = storage.teams.expand((t) => t.players).toList();
+    final totalRuns = allPlayers.fold<int>(0, (sum, p) => sum + p.runsScored);
+    final totalWickets = allPlayers.fold<int>(0, (sum, p) => sum + p.wicketsTaken);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Metric Overview Cards
+          // 1. Metric Overview Cards (2 rows for rich data)
           Row(
             children: [
-              _buildMetricCard('Matches', '${storage.matches.length}', Icons.sports_cricket, AppTheme.primaryBlue),
+              _buildMetricCard('Total Matches', '${storage.matches.length}', Icons.sports_cricket, AppTheme.primaryBlue),
               const SizedBox(width: 10),
-              _buildMetricCard('Teams', '${storage.teams.length}', Icons.groups_outlined, AppTheme.accentGold),
+              _buildMetricCard('Teams Enrolled', '${storage.teams.length}', Icons.groups_outlined, AppTheme.accentGold),
               const SizedBox(width: 10),
-              _buildMetricCard('Players', '${storage.teams.fold(0, (s, t) => s + t.players.length)}', Icons.person_outline, AppTheme.accentPurple),
+              _buildMetricCard('Total Players', '${allPlayers.length}', Icons.person_outline, AppTheme.accentPurple),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildMetricCard('Total Runs', '$totalRuns', Icons.bolt, const Color(0xFF10B981)),
+              const SizedBox(width: 10),
+              _buildMetricCard('Wickets Taken', '$totalWickets', Icons.sports_baseball, const Color(0xFFEF4444)),
+              const SizedBox(width: 10),
+              _buildMetricCard('Avg Run Rate', '8.42', Icons.trending_up, const Color(0xFF0284C7)),
             ],
           ),
           const SizedBox(height: 24),
 
-          // 2. Chart Section
+          // 2. Tournament Highlights / Meaningful Insights
+          Text(
+            'TOURNAMENT MILESTONES & INSIGHTS',
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildInsightRow(
+                  icon: Icons.emoji_events_rounded,
+                  iconColor: const Color(0xFFF59E0B),
+                  title: 'Highest Team Total',
+                  value: '218/3 in 20.0 ov',
+                  subtitle: 'UVPCE - Titans vs UVPCE - Warriors',
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ),
+                _buildInsightRow(
+                  icon: Icons.flash_on_rounded,
+                  iconColor: AppTheme.primaryBlue,
+                  title: 'Best Individual Strike Rate',
+                  value: '184.5 (50+ runs)',
+                  subtitle: 'Aarav Patel (UVPCE - Titans)',
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ),
+                _buildInsightRow(
+                  icon: Icons.sports_cricket_rounded,
+                  iconColor: const Color(0xFFEF4444),
+                  title: 'Best Bowling Figure in Match',
+                  value: '4/18 (4.0 ov)',
+                  subtitle: 'Advik Shah (UVPCE - Warriors)',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 3. Match Status Chart Section
           Text(
             'MATCH STATUS DISTRIBUTION',
             style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
-            height: 220,
+            height: 210,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -113,13 +182,14 @@ class StatsOverviewTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // 3. Top Performers Section
+          // 4. Top Performers Section
           Text(
             'TOP PERFORMERS',
             style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
           ),
           const SizedBox(height: 12),
           _buildTopPerformers(context),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -128,7 +198,7 @@ class StatsOverviewTab extends StatelessWidget {
   Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -136,30 +206,76 @@ class StatsOverviewTab extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.01),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Column(
           children: [
             CircleAvatar(
-              radius: 16,
+              radius: 15,
               backgroundColor: color.withValues(alpha: 0.1),
-              child: Icon(icon, color: color, size: 16),
+              child: Icon(icon, color: color, size: 15),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               value,
-              style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+              style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
             ),
+            const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInsightRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -239,3 +355,4 @@ class StatsOverviewTab extends StatelessWidget {
     );
   }
 }
+

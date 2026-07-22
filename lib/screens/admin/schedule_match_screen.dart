@@ -6,8 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/routes/app_routes.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/card_entrance_animation.dart';
+
 
 class ScheduleMatchScreen extends StatefulWidget {
   const ScheduleMatchScreen({super.key});
@@ -63,20 +65,26 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_teamAId == null || _teamBId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both teams')),
+      CustomNotification.show(
+        context,
+        'Please select both teams',
+        type: NotificationType.warning,
       );
       return;
     }
     if (_teamAId == _teamBId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Team A and Team B must be different')),
+      CustomNotification.show(
+        context,
+        'Team A and Team B must be different',
+        type: NotificationType.warning,
       );
       return;
     }
     if (_venue.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a venue')),
+      CustomNotification.show(
+        context,
+        'Please select a venue',
+        type: NotificationType.warning,
       );
       return;
     }
@@ -92,19 +100,14 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
       scorerPass: _scorerPassCtrl.text.trim(),
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('✅ Match Scheduled Successfully! Scorer credentials assigned.'),
-        backgroundColor: AppTheme.primaryGreen,
-        action: SnackBarAction(
-          label: 'View',
-          textColor: Colors.white,
-          onPressed: () => Navigator.pushNamed(context, AppRoutes.matchList),
-        ),
-      ),
+    CustomNotification.show(
+      context,
+      'Match Scheduled Successfully! Scorer credentials assigned.',
+      type: NotificationType.success,
     );
     Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -156,41 +159,46 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.textPrimary,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.bgSurface),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(12),
+              CardEntranceAnimation(
+                index: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.bgSurface),
+
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.sports_cricket, color: AppTheme.primaryBlue),
                       ),
-                      child: const Icon(Icons.sports_cricket, color: AppTheme.primaryBlue),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('New Match', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                        Text('Fill in the match details below', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('New Match', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                          Text('Fill in the match details below', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
               const SizedBox(height: 24),
 
               const _Label('TEAMS'),

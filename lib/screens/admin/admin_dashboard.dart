@@ -567,21 +567,45 @@ class _DashboardHomeView extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800,
                     color: AppTheme.textMuted, letterSpacing: 1.3)),
             const SizedBox(height: 10),
-            Row(
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.65,
               children: [
-                _QuickAction(Icons.add_circle_rounded, 'Schedule\nMatch', AppTheme.primaryBlue,
-                    () => Navigator.pushNamed(context, AppRoutes.scheduleMatch)),
-                const SizedBox(width: 10),
-                _QuickAction(Icons.group_add_rounded, 'Add\nTeam', AppTheme.accentGold,
-                    () => Navigator.pushNamed(context, AppRoutes.teamManagement)),
-                const SizedBox(width: 10),
-                _QuickAction(Icons.bar_chart_rounded, 'Statistics', AppTheme.accentPurple,
-                    () => Navigator.pushNamed(context, AppRoutes.statistics)),
-                const SizedBox(width: 10),
-                _QuickAction(Icons.emoji_events_rounded, 'Tournament', AppTheme.accentRed,
-                    () => Navigator.pushNamed(context, AppRoutes.createTournament)),
+                _QuickActionCard(
+                  icon: Icons.add_circle_rounded,
+                  title: 'Schedule Match',
+                  subtitle: 'Set up fixture & scorer',
+                  color: AppTheme.primaryBlue,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.scheduleMatch),
+                ),
+                _QuickActionCard(
+                  icon: Icons.group_add_rounded,
+                  title: 'Manage Teams',
+                  subtitle: 'Rosters & players',
+                  color: AppTheme.accentGold,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.teamManagement),
+                ),
+                _QuickActionCard(
+                  icon: Icons.bar_chart_rounded,
+                  title: 'Statistics',
+                  subtitle: 'Tournament analytics',
+                  color: AppTheme.accentPurple,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.statistics),
+                ),
+                _QuickActionCard(
+                  icon: Icons.emoji_events_rounded,
+                  title: 'Tournament',
+                  subtitle: 'Format & schedule',
+                  color: AppTheme.accentRed,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.createTournament),
+                ),
               ],
             ),
+
 
             const SizedBox(height: 24),
 
@@ -616,33 +640,83 @@ class _DashboardHomeView extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickActionCard extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String title;
+  final String subtitle;
   final Color color;
   final VoidCallback onTap;
-  const _QuickAction(this.icon, this.label, this.color, this.onTap);
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      borderOnForeground: true,
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.15)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.015),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Column(
+          child: Row(
             children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -651,6 +725,7 @@ class _QuickAction extends StatelessWidget {
     );
   }
 }
+
 
 class _MatchCard extends StatelessWidget {
   final dynamic match;

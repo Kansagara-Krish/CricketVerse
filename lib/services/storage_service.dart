@@ -334,6 +334,48 @@ class StorageService with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTeam(String teamId, String name, String shortName, String colorHex) {
+    final index = _teams.indexWhere((t) => t.id == teamId);
+    if (index != -1) {
+      _teams[index].name = name;
+      _teams[index].shortName = shortName;
+      _teams[index].logoColorHex = colorHex;
+      _saveTeams();
+      notifyListeners();
+    }
+  }
+
+  void deleteTeam(String teamId) {
+    _teams.removeWhere((t) => t.id == teamId);
+    _saveTeams();
+    notifyListeners();
+  }
+
+  void updatePlayer(String teamId, Player updatedPlayer) {
+    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
+    final pIndex = team.players.indexWhere((p) => p.id == updatedPlayer.id);
+    if (pIndex != -1) {
+      team.players[pIndex] = updatedPlayer;
+    } else {
+      team.players.add(updatedPlayer);
+    }
+    _saveTeams();
+    notifyListeners();
+  }
+
+  void removePlayer(String teamId, String playerId) {
+    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
+    team.players.removeWhere((p) => p.id == playerId);
+    _saveTeams();
+    notifyListeners();
+  }
+
+  void saveTeamsState() {
+    _saveTeams();
+    notifyListeners();
+  }
+
+
   void scheduleMatch({
     required String teamAId,
     required String teamBId,

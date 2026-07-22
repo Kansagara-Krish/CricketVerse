@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class EditBallScreen extends StatefulWidget {
   const EditBallScreen({super.key});
@@ -15,26 +16,29 @@ class EditBallScreen extends StatefulWidget {
 class _EditBallScreenState extends State<EditBallScreen> {
   bool _isPaused = false;
 
-  void _deleteBall(int index, CricketMatch match) {
+  void _deleteBall(CricketMatch match, int index) {
     setState(() {
       final ball = match.balls.removeAt(index);
       
       // Deduct from totals
-      int totalRunsThisBall = ball.run + ball.extraRun;
       if (match.isFirstInnings) {
-        match.runsA -= totalRunsThisBall;
+        match.runsA -= (ball.run + ball.extraRun);
+        if (match.runsA < 0) match.runsA = 0;
         if (ball.isWicket) match.wicketsA -= 1;
         match.oversA = _decrementOvers(match.oversA);
       } else {
-        match.runsB -= totalRunsThisBall;
+        match.runsB -= (ball.run + ball.extraRun);
+        if (match.runsB < 0) match.runsB = 0;
         if (ball.isWicket) match.wicketsB -= 1;
         match.oversB = _decrementOvers(match.oversB);
       }
     });
 
     Provider.of<StorageService>(context, listen: false).saveMatchesState();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ball deleted. Scores updated.')),
+    CustomNotification.show(
+      context,
+      'Ball deleted. Scores updated.',
+      type: NotificationType.info,
     );
   }
 
@@ -114,8 +118,10 @@ class _EditBallScreenState extends State<EditBallScreen> {
                       setState(() {
                         _isPaused = !_isPaused;
                       });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(_isPaused ? 'Match paused officially!' : 'Match resumed!')),
+                      CustomNotification.show(
+                        context,
+                        _isPaused ? 'Match paused officially!' : 'Match resumed!',
+                        type: _isPaused ? NotificationType.warning : NotificationType.success,
                       );
                     },
                     icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
@@ -183,7 +189,7 @@ class _EditBallScreenState extends State<EditBallScreen> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                                onPressed: () => _deleteBall(revIdx, match),
+                                onPressed: () => _deleteBall(match, revIdx),
                               ),
                             ],
                           ),

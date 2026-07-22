@@ -65,11 +65,10 @@ class TeamDetailScreen extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_rounded, color: AppTheme.textPrimary),
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Edit team details')),
-                ),
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.editTeam, arguments: team),
               ),
             ],
+
           ),
 
           // Stats Row

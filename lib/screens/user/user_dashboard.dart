@@ -12,7 +12,8 @@ import 'home_tab_view.dart';
 import 'schedules_tab_view.dart';
 
 class UserDashboard extends StatefulWidget {
-  const UserDashboard({Key? key}) : super(key: key);
+  const UserDashboard({super.key});
+
 
   @override
   State<UserDashboard> createState() => _UserDashboardState();
