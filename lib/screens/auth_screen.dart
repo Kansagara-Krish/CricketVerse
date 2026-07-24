@@ -73,7 +73,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final storage = Provider.of<StorageService>(context, listen: false);
@@ -89,7 +89,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         );
         return;
       }
-      final success = storage.register(email, pass);
+      final success = await storage.register(email, pass);
+      if (!mounted) return;
       if (success) {
         CustomNotification.show(
           context,
@@ -105,7 +106,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         );
       }
     } else {
-      final success = storage.login(email, pass);
+      final success = await storage.login(email, pass);
+      if (!mounted) return;
       if (success) {
         CustomNotification.show(
           context,
@@ -146,9 +148,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
   }
 
-  void _quickLogin(String email, String password) {
+  Future<void> _quickLogin(String email, String password) async {
     final storage = Provider.of<StorageService>(context, listen: false);
-    final success = storage.login(email, password);
+    final success = await storage.login(email, password);
+    if (!mounted) return;
     if (success) {
       CustomNotification.show(
         context,

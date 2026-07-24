@@ -26,7 +26,6 @@ import '../../screens/admin/player_detail_screen.dart';
 import '../../screens/admin/schedule_match_screen.dart';
 import '../../screens/admin/match_list_screen.dart';
 import '../../screens/admin/match_detail_screen.dart';
-import '../../screens/admin/live_scoring_screen.dart';
 import '../../screens/admin/prediction_screen.dart';
 import '../../screens/admin/statistics_screen.dart';
 import '../../screens/admin/notifications_screen.dart';
@@ -62,12 +61,10 @@ class AppRoutes {
   static const String teamDetail         = '/admin/teams/detail';
   static const String editTeam           = '/admin/teams/edit';
   static const String playerManagement   = '/admin/players';
-
   static const String playerDetail       = '/admin/players/detail';
   static const String scheduleMatch      = '/admin/matches/schedule';
   static const String matchList          = '/admin/matches';
   static const String matchDetail        = '/admin/matches/detail';
-  static const String liveScoring        = '/admin/matches/live-scoring';
   static const String prediction         = '/admin/prediction';
   static const String statistics         = '/admin/statistics';
   static const String notifications      = '/admin/notifications';
@@ -129,8 +126,6 @@ class AppRoutes {
         return _slideRoute(const MatchListScreen());
       case matchDetail:
         return _slideRoute(MatchDetailScreen(match: settings.arguments as dynamic));
-      case liveScoring:
-        return _slideRoute(LiveScoringScreen(match: settings.arguments as dynamic));
       case prediction:
         return _slideRoute(PredictionScreen(match: settings.arguments as dynamic));
       case statistics:

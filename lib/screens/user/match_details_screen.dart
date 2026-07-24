@@ -36,6 +36,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     _tabController = TabController(length: 4, vsync: this);
     _flutterTts = FlutterTts();
     _initTts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<StorageService>(context, listen: false).subscribeToMatchLiveUpdates(widget.matchId);
+    });
   }
 
   void _initTts() async {
@@ -55,6 +58,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
 
   @override
   void dispose() {
+    Provider.of<StorageService>(context, listen: false).unsubscribeFromMatchLiveUpdates(widget.matchId);
     _flutterTts.stop();
     _tabController.dispose();
     _chatController.dispose();

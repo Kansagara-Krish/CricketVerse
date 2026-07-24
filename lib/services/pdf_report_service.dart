@@ -80,7 +80,7 @@ class PdfReportService {
                     children: [
                       pw.Text(
                         'CRICKETVERSE AI',
-                        style: pw.TextStyle(
+                        style: const pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 20,
                           fontWeight: pw.FontWeight.bold,
@@ -104,7 +104,7 @@ class PdfReportService {
                     ),
                     child: pw.Text(
                       'HIGH QUALITY REPORT',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         color: PdfColors.white,
                         fontSize: 9,
                         fontWeight: pw.FontWeight.bold,
@@ -209,7 +209,7 @@ class PdfReportService {
                   '45 runs off 27 balls'
                 ],
               ],
-              headerStyle: pw.TextStyle(
+              headerStyle: const pw.TextStyle(
                 color: PdfColors.white,
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 10,

@@ -151,6 +151,50 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
               ),
               
+              // Online Mode Switcher
+              Consumer<StorageService>(
+                builder: (context, storage, _) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12, right: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                              color: storage.isOnlineMode ? AppTheme.primaryGreen : AppTheme.textMuted,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 14),
+                            Text(
+                              storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: storage.isOnlineMode,
+                          activeThumbColor: AppTheme.primaryGreen,
+                          onChanged: (val) {
+                            storage.toggleOnlineMode(val);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              ),
+              
               // Logout
               _buildMenuItem(Icons.logout_rounded, 'Logout', () async {
                 _toggleDrawer();

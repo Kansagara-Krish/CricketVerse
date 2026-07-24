@@ -33,9 +33,9 @@ class LogoutDialog {
             child: Transform.scale(
               scale: scale,
               child: Align(
-                alignment: Alignment.center,
+                alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 32.0),
                   child: Material(
                     color: Colors.transparent,
                     child: Container(

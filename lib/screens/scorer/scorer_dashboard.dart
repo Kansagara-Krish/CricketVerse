@@ -34,10 +34,20 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final storage = Provider.of<StorageService>(context, listen: false);
+      if (storage.activeScorerMatchId != null) {
+        storage.subscribeToMatchLiveUpdates(storage.activeScorerMatchId!);
+      }
+    });
   }
 
   @override
   void dispose() {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    if (storage.activeScorerMatchId != null) {
+      storage.unsubscribeFromMatchLiveUpdates(storage.activeScorerMatchId!);
+    }
     _drawerAnimationController.dispose();
     super.dispose();
   }
@@ -176,6 +186,50 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 ),
               ),
               
+              // Online Mode Switcher
+              Consumer<StorageService>(
+                builder: (context, storage, _) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12, right: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                              color: storage.isOnlineMode ? AppTheme.primaryGreen : AppTheme.textMuted,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 14),
+                            Text(
+                              storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: storage.isOnlineMode,
+                          activeThumbColor: AppTheme.primaryGreen,
+                          onChanged: (val) {
+                            storage.toggleOnlineMode(val);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              ),
+
               // Logout
               _buildMenuItem(Icons.logout_rounded, 'Logout', () {
                 _toggleDrawer();
@@ -776,16 +830,33 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       ),
                       Container(
                         margin: const EdgeInsets.only(left: 12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.swap_vert_rounded, color: AppTheme.primaryBlue),
-                          onPressed: () {
-                            storage.swapStrikers();
-                            CustomNotification.show(context, 'Positions swapped', type: NotificationType.info);
-                          },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.swap_vert_rounded, color: AppTheme.primaryBlue),
+                                onPressed: () {
+                                  storage.swapStrikers();
+                                  CustomNotification.show(context, 'Positions swapped', type: NotificationType.info);
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'SWAP',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primaryBlue,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
