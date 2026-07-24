@@ -222,192 +222,156 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
       ),
       body: Column(
         children: [
-          // Live Score Header matches Screenshot 2026-07-09 152247.png
+          // Modern Compact Live Score Header Banner
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 )
               ]
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header (LIVE tag and Tournament Type)
+                // Top Tag Line
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE6F4EA),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.3)),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircleAvatar(radius: 3.5, backgroundColor: Color(0xFF10B981)),
-                          const SizedBox(width: 6),
-                          Text('LIVE', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF047857), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          const CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                          const SizedBox(width: 5),
+                          Text('LIVE', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF047857), fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                         ],
                       ),
                     ),
                     Text(
-                      'T20 World Cup - Final',
-                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                      'T20 World Cup • Final',
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 10.5, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
-                // Batting Team Row (Premium layout)
+                // Batting Team Row (Compact high contrast)
                 InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.userTeamDetails,
-                      arguments: battingTeam,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        TeamLogo(
-                          teamName: battingTeam.name,
-                          shortName: battingTeam.shortName,
-                          logoColorHex: battingTeam.logoColorHex,
-                          size: 40,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                battingTeam.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Batting Now',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.userTeamDetails, arguments: battingTeam),
+                  child: Row(
+                    children: [
+                      TeamLogo(
+                        teamName: battingTeam.name,
+                        shortName: battingTeam.shortName,
+                        logoColorHex: battingTeam.logoColorHex,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  '$runs/$wickets',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '($overs ov)',
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
                             Text(
-                              'CRR: ${crr.toStringAsFixed(1)}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                              battingTeam.shortName,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text('Batting', style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '$runs/$wickets',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '($overs ov)',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'CRR ${crr.toStringAsFixed(1)}',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Bowling Team Row
                 InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.userTeamDetails,
-                      arguments: bowlingTeam,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.01),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
-                    ),
-                    child: Row(
-                      children: [
-                        TeamLogo(
-                          teamName: bowlingTeam.name,
-                          shortName: bowlingTeam.shortName,
-                          logoColorHex: bowlingTeam.logoColorHex,
-                          size: 40,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            bowlingTeam.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Yet to Bat',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Target statement
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentPurple.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.12)),
-                  ),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.userTeamDetails, arguments: bowlingTeam),
                   child: Row(
                     children: [
-                      const Icon(Icons.sports_cricket_rounded, color: AppTheme.accentPurple, size: 16),
+                      TeamLogo(
+                        teamName: bowlingTeam.name,
+                        shortName: bowlingTeam.shortName,
+                        logoColorHex: bowlingTeam.logoColorHex,
+                        size: 32,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
+                          bowlingTeam.shortName,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
+                        ),
+                      ),
+                      Text(
+                        'Yet to Bat',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Compact Target statement
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentPurple.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sports_cricket_rounded, color: AppTheme.accentPurple, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
                           match.isFirstInnings
-                              ? 'First Innings in progress. Team A setting target.'
-                              : 'Target ${match.target} • Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls.',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.accentPurple, fontWeight: FontWeight.bold),
+                              ? '1st Innings in progress • ${match.teamA.shortName} setting target'
+                              : 'Target ${match.target} • Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.accentPurple, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -425,7 +389,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
             indicatorColor: AppTheme.primaryBlue,
             labelColor: AppTheme.textPrimary,
             unselectedLabelColor: AppTheme.textSecondary,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: const [
               Tab(text: 'Live Details'),
@@ -456,91 +420,391 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     );
   }
 
-  // --- Live details tab matching Screenshot 2026-07-09 152247.png ---
+  // --- Top Grade Modern Live details view ---
   Widget _buildLiveDetailsView(CricketMatch match, StorageService storage, Player striker, Player nonStriker, Player bowler, double winProb) {
+    final runsA = striker.runsScored;
+    final ballsA = striker.ballsFaced;
+    final srA = ballsA > 0 ? ((runsA / ballsA) * 100).toStringAsFixed(1) : '0.0';
+
+    final runsB = nonStriker.runsScored;
+    final ballsB = nonStriker.ballsFaced;
+    final srB = ballsB > 0 ? ((runsB / ballsB) * 100).toStringAsFixed(1) : '0.0';
+
+    final bowlerEco = bowler.oversBowled > 0 ? (bowler.runsConceded / bowler.oversBowled).toStringAsFixed(1) : '0.0';
+
+    final currentRuns = match.isFirstInnings ? match.runsA : match.runsB;
+    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+    final crr = currentOvers > 0 ? (currentRuns / currentOvers) : 0.0;
+
+    // Projected Score Calculation
+    final projMin = (currentRuns + (crr * (20 - currentOvers))).round();
+    final projMax = (projMin + 14);
+
+    // Partnership calculation
+    final partRuns = runsA + runsB;
+    final partBalls = ballsA + ballsB;
+    final partFlexA = partRuns > 0 ? (runsA / partRuns * 100).round() : 50;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Win probability card
+          // 1. Fixed AI Win Probability & Projected Score Card (No Horizontal Overflow!)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.bgSurface),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 )
               ]
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.analytics_outlined, color: AppTheme.accentPurple, size: 18),
-                    const SizedBox(width: 8),
-                    Text('AI Win Probability', style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Team names and percentage above the bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${match.teamA.name} (${winProb.toStringAsFixed(0)}%)',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: AppTheme.accentPurple, size: 14),
+                        const SizedBox(width: 6),
+                        Text('AI WIN PREDICTOR', style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.5)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
+                    Flexible(
                       child: Text(
-                        '(${(100 - winProb).toStringAsFixed(0)}%) ${match.teamB.name}',
+                        '${match.teamA.shortName} ${winProb.toStringAsFixed(0)}% • ${match.teamB.shortName} ${(100 - winProb).toStringAsFixed(0)}%',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                         textAlign: TextAlign.right,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.accentRed,
-                        ),
-                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Smooth rounded track bar
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   child: SizedBox(
-                    height: 10,
+                    height: 8,
                     child: Row(
                       children: [
                         Expanded(
-                          flex: winProb.round(),
-                          child: Container(
-                            color: AppTheme.primaryBlue, 
-                          ),
+                          flex: winProb.round().clamp(1, 99),
+                          child: Container(color: AppTheme.primaryBlue),
                         ),
                         Expanded(
-                          flex: (100 - winProb).round(),
-                          child: Container(
-                            color: AppTheme.accentRed, 
+                          flex: (100 - winProb).round().clamp(1, 99),
+                          child: Container(color: AppTheme.accentRed),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Projected Score Chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.trending_up_rounded, color: AppTheme.primaryBlue, size: 14),
+                          const SizedBox(width: 6),
+                          Text('PROJECTED SCORE', style: GoogleFonts.plusJakartaSans(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
+                        ],
+                      ),
+                      Text(
+                        '$projMin - $projMax @ ${(crr > 0 ? crr : 8.5).toStringAsFixed(1)} CRR',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 2. Live Partnership Card (Useful Top-Grade Feature)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.bgSurface),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.01),
+                  blurRadius: 6,
+                )
+              ]
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.handshake_outlined, color: AppTheme.primaryBlue, size: 14),
+                        const SizedBox(width: 6),
+                        Text('CURRENT PARTNERSHIP', style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.5)),
+                      ],
+                    ),
+                    Text(
+                      '$partRuns runs ($partBalls b)',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 6,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: partFlexA.clamp(1, 99),
+                          child: Container(color: AppTheme.primaryBlue),
+                        ),
+                        Expanded(
+                          flex: (100 - partFlexA).clamp(1, 99),
+                          child: Container(color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${striker.name.split(' ').first} $runsA ($ballsA)', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                    Text('${nonStriker.name.split(' ').first} $runsB ($ballsB)', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 3. Integrated High-Density Live Scorecard (Batters + Bowler in 1 unified Card)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.bgSurface),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.01),
+                  blurRadius: 6,
+                )
+              ]
+            ),
+            child: Column(
+              children: [
+                // Table Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 4, child: Text('BATTER', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('B', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('4s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('6s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 2, child: Text('SR', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                    ],
+                  ),
+                ),
+
+                // Striker Row
+                _buildCompactBatterRow(context, striker, isStriker: true, sr: srA),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+                // Non-Striker Row
+                _buildCompactBatterRow(context, nonStriker, isStriker: false, sr: srB),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+                // Bowler Table Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: const BoxDecoration(color: Color(0xFFF8FAFC)),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 4, child: Text('BOWLER', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('O', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('M', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 1, child: Text('W', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                      Expanded(flex: 2, child: Text('ECO', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted))),
+                    ],
+                  ),
+                ),
+
+                // Bowler Row
+                InkWell(
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.userPlayerDetails, arguments: bowler),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 4,
+                          child: Text(
+                            bowler.name,
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        Expanded(flex: 1, child: Text(bowler.oversBowled.toStringAsFixed(1), textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textPrimary))),
+                        Expanded(flex: 1, child: Text('0', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
+                        Expanded(flex: 1, child: Text('${bowler.runsConceded}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textPrimary))),
+                        Expanded(flex: 1, child: Text('${bowler.wicketsTaken}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentRed))),
+                        Expanded(flex: 2, child: Text(bowlerEco, textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textPrimary))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 4. RECENT Over Ribbon
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.bgSurface),
+            ),
+            child: Row(
+              children: [
+                Text('RECENT: ', style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: SizedBox(
+                    height: 28,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: match.balls.length > 8 ? 8 : match.balls.length,
+                      itemBuilder: (context, index) {
+                        final ball = match.balls[match.balls.length - 1 - index];
+                        Color bg = const Color(0xFFF1F5F9);
+                        Color textCol = AppTheme.textPrimary;
+                        String display = ball.run.toString();
+
+                        if (ball.isWicket) {
+                          bg = AppTheme.accentRed;
+                          textCol = Colors.white;
+                          display = 'W';
+                        } else if (ball.run == 6) {
+                          bg = AppTheme.accentPurple;
+                          textCol = Colors.white;
+                        } else if (ball.run == 4) {
+                          bg = const Color(0xFFFEF08A);
+                          textCol = const Color(0xFF854D0E);
+                        } else if (ball.extraType == 'Wide') {
+                          display = 'WD';
+                        } else if (ball.extraType == 'No Ball') {
+                          display = 'NB';
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: bg,
+                          ),
+                          child: Center(
+                            child: Text(
+                              display,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: textCol),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 5. FlChart Over-by-Over Bar Chart Trend
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.bgSurface),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('RUN RATE TREND (OVERS)', style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                    Text('Over 1 - 10', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 90,
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: 18,
+                      barTouchData: BarTouchData(enabled: false),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (val, meta) => Text(
+                              'O${val.toInt() + 1}',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      gridData: const FlGridData(show: false),
+                      barGroups: [
+                        _makeBarGroup(0, 6),
+                        _makeBarGroup(1, 12),
+                        _makeBarGroup(2, 8),
+                        _makeBarGroup(3, 14, isWicket: true),
+                        _makeBarGroup(4, 16),
+                        _makeBarGroup(5, 7),
+                        _makeBarGroup(6, 11),
                       ],
                     ),
                   ),
@@ -549,191 +813,66 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 20),
-
-          // RECENT timeline
-          Text('RECENT', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: match.balls.length > 6 ? 6 : match.balls.length,
-              itemBuilder: (context, index) {
-                final ball = match.balls[match.balls.length - 1 - index];
-                
-                Color bg = AppTheme.bgSurface;
-                Color textCol = AppTheme.textPrimary;
-                String display = ball.run.toString();
-
-                if (ball.isWicket) {
-                  bg = AppTheme.accentRed;
-                  textCol = Colors.white;
-                  display = 'W';
-                } else if (ball.run == 6) {
-                  bg = AppTheme.accentPurple;
-                  textCol = Colors.white;
-                } else if (ball.run == 4) {
-                  bg = const Color(0xFFFEF08A);
-                  textCol = const Color(0xFF854D0E);
-                } else if (ball.extraType == 'Wide') {
-                  display = 'WD';
-                } else if (ball.extraType == 'No Ball') {
-                  display = 'NB';
-                }
-
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: bg,
-                  ),
-                  child: Center(child: Text(display, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: textCol))),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // BATTERS Section
-          Text('BATTERS', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.bgSurface),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  blurRadius: 6,
-                )
-              ]
-            ),
-            child: Column(
-              children: [
-                _buildBatterRow(context, striker, isStriker: true),
-                const Divider(color: AppTheme.bgSurface),
-                _buildBatterRow(context, nonStriker),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // BOWLER Section
-          Text('BOWLER', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.bgSurface),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  blurRadius: 6,
-                )
-              ]
-            ),
-            child: InkWell(
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.userPlayerDetails,
-                  arguments: bowler,
-                );
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(bowler.name, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                  Text('${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded}', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // MATCH PROGRESSION Section matching Screenshot 2026-07-09 152247.png
-          Text('MATCH PROGRESSION', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          Container(
-            height: 120,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.bgSurface),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildProgressionBar(10, 30),
-                _buildProgressionBar(20, 50),
-                _buildProgressionBar(15, 40),
-                _buildProgressionBar(30, 80),
-                _buildProgressionBar(45, 100),
-                _buildProgressionBar(25, 60),
-                _buildProgressionBar(40, 90),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildProgressionBar(double height, double maxVal) {
-    return Container(
-      width: 16,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
-        borderRadius: BorderRadius.circular(4),
-      ),
+  BarChartGroupData _makeBarGroup(int x, double y, {bool isWicket = false}) {
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: y,
+          color: isWicket ? AppTheme.accentRed : AppTheme.primaryBlue,
+          width: 14,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ],
     );
   }
 
-  Widget _buildBatterRow(BuildContext context, Player player, {bool isStriker = false}) {
+  Widget _buildCompactBatterRow(BuildContext context, Player player, {required bool isStriker, required String sr}) {
     return InkWell(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          AppRoutes.userPlayerDetails,
-          arguments: player,
-        );
-      },
+      onTap: () => Navigator.pushNamed(context, AppRoutes.userPlayerDetails, arguments: player),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                if (isStriker) 
-                  Container(
-                    margin: const EdgeInsets.only(right: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryBlue,
-                      shape: BoxShape.circle,
+            Expanded(
+              flex: 4,
+              child: Row(
+                children: [
+                  if (isStriker)
+                    Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      '${player.name}${isStriker ? "*" : ""}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: isStriker ? FontWeight.bold : FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                Text(
-                  '${player.name}${isStriker ? "*" : ""}', 
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.textPrimary, 
-                    fontWeight: isStriker ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-            Text('${player.runsScored} (${player.ballsFaced})', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
+            Expanded(flex: 1, child: Text('${player.runsScored}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue))),
+            Expanded(flex: 1, child: Text('${player.ballsFaced}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
+            Expanded(flex: 1, child: Text('4', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
+            Expanded(flex: 1, child: Text('2', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
+            Expanded(flex: 2, child: Text(sr, textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary))),
           ],
         ),
       ),

@@ -3,24 +3,65 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../services/pdf_report_service.dart';
 
-class MatchSummaryDownloadScreen extends StatelessWidget {
+class MatchSummaryDownloadScreen extends StatefulWidget {
   final Map<String, dynamic> matchDetails;
 
   const MatchSummaryDownloadScreen({super.key, required this.matchDetails});
 
   @override
+  State<MatchSummaryDownloadScreen> createState() => _MatchSummaryDownloadScreenState();
+}
+
+class _MatchSummaryDownloadScreenState extends State<MatchSummaryDownloadScreen> {
+  bool _isGeneratingPdf = false;
+
+  Future<void> _handleDownloadPdf(String title) async {
+    setState(() => _isGeneratingPdf = true);
+    CustomNotification.show(
+      context,
+      'Generating high quality PDF report...',
+      type: NotificationType.info,
+    );
+
+    try {
+      await PdfReportService.generateAndShareReport(
+        context: context,
+        matchDetails: widget.matchDetails,
+      );
+      if (!mounted) return;
+      CustomNotification.show(
+        context,
+        '✅ PDF Report successfully compiled!',
+        type: NotificationType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      CustomNotification.show(
+        context,
+        'Failed to generate PDF: ${e.toString()}',
+        type: NotificationType.warning,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingPdf = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final title = matchDetails['title'] ?? 'Match Summary';
-    final teamAName = matchDetails['teamAName'] ?? 'Team A';
-    final teamBName = matchDetails['teamBName'] ?? 'Team B';
-    final scoreA = matchDetails['scoreA'] ?? '0/0';
-    final scoreB = matchDetails['scoreB'] ?? '0/0';
-    final oversA = matchDetails['oversA'] ?? '0.0 Overs';
-    final oversB = matchDetails['oversB'] ?? '0.0 Overs';
-    final resultText = matchDetails['result'] ?? 'No result available';
-    final List<String> teamAPlayers = List<String>.from(matchDetails['teamAPlayers'] ?? []);
-    final List<String> teamBPlayers = List<String>.from(matchDetails['teamBPlayers'] ?? []);
+    final title = widget.matchDetails['title'] ?? 'Match Summary';
+    final teamAName = widget.matchDetails['teamAName'] ?? 'Team A';
+    final teamBName = widget.matchDetails['teamBName'] ?? 'Team B';
+    final scoreA = widget.matchDetails['scoreA'] ?? '0/0';
+    final scoreB = widget.matchDetails['scoreB'] ?? '0/0';
+    final oversA = widget.matchDetails['oversA'] ?? '0.0 Overs';
+    final oversB = widget.matchDetails['oversB'] ?? '0.0 Overs';
+    final resultText = widget.matchDetails['result'] ?? 'No result available';
+    final List<String> teamAPlayers = List<String>.from(widget.matchDetails['teamAPlayers'] ?? []);
+    final List<String> teamBPlayers = List<String>.from(widget.matchDetails['teamBPlayers'] ?? []);
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -30,14 +71,14 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
         title: Text('Match Summary', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download, color: AppTheme.primaryBlue),
-            onPressed: () {
-              CustomNotification.show(
-                context,
-                'Downloading detailed PDF report for $title...',
-                type: NotificationType.info,
-              );
-            },
+            icon: _isGeneratingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryBlue),
+                  )
+                : const Icon(Icons.download, color: AppTheme.primaryBlue),
+            onPressed: _isGeneratingPdf ? null : () => _handleDownloadPdf(title),
             tooltip: 'Download Report',
           ),
         ],
@@ -58,15 +99,15 @@ class MatchSummaryDownloadScreen extends StatelessWidget {
             _buildRunRateGraphCard(context),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                CustomNotification.show(
-                  context,
-                  'Downloading detailed PDF report for $title...',
-                  type: NotificationType.info,
-                );
-              },
-              icon: const Icon(Icons.picture_as_pdf),
-              label: const Text('Download Full Match Report'),
+              onPressed: _isGeneratingPdf ? null : () => _handleDownloadPdf(title),
+              icon: _isGeneratingPdf
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.picture_as_pdf),
+              label: Text(_isGeneratingPdf ? 'Generating PDF...' : 'Download Full Match Report'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryBlue,
                 foregroundColor: Colors.white,
