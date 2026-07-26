@@ -1,0 +1,138 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("User")
+
+  @@map("users")
+}
+
+model Tournament {
+  id        String    @id
+  name      String
+  format    String    @default("T20")
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+  matches   Match[]
+
+  @@map("tournaments")
+}
+
+model Team {
+  id           String           @id
+  name         String
+  shortName    String           @map("short_name")
+  logoColorHex String           @default("0xFF028A6B") @map("logo_color_hex")
+  players      TeamPlayer[]
+  teamAMatches Match[]          @relation("TeamA")
+  teamBMatches Match[]          @relation("TeamB")
+  playingXIs   MatchPlayingXI[]
+
+  @@map("teams")
+}
+
+model Player {
+  id            String           @id
+  name          String
+  role          String
+  nationality   String           @default("IND")
+  runsScored    Int              @default(0) @map("runs_scored")
+  ballsFaced    Int              @default(0) @map("balls_faced")
+  wicketsTaken  Int              @default(0) @map("wickets_taken")
+  runsConceded  Int              @default(0) @map("runs_conceded")
+  oversBowled   Decimal          @default(0.0) @db.Decimal(5, 1) @map("overs_bowled")
+  matchesPlayed Int              @default(0) @map("matches_played")
+  teams         TeamPlayer[]
+  playingXIs    MatchPlayingXI[]
+
+  @@map("players")
+}
+
+model TeamPlayer {
+  teamId   String @map("team_id")
+  playerId String @map("player_id")
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, playerId])
+  @@map("team_players")
+}
+
+model Match {
+  id                  String           @id
+  tournamentId        String?          @map("tournament_id")
+  teamAId             String           @map("team_a_id")
+  teamBId             String           @map("team_b_id")
+  matchType           String           @default("T20") @map("match_type")
+  venue               String
+  date                String           @map("match_date")
+  time                String           @map("match_time")
+  status              String           @default("UPCOMING")
+  tossWinner          String           @default("") @map("toss_winner")
+  tossDecision        String           @default("") @map("toss_decision")
+  battingTeamId       String           @default("") @map("batting_team_id")
+  runsA               Int              @default(0) @map("runs_a")
+  wicketsA            Int              @default(0) @map("wickets_a")
+  oversA              Decimal          @default(0.0) @db.Decimal(4, 1) @map("overs_a")
+  runsB               Int              @default(0) @map("runs_b")
+  wicketsB            Int              @default(0) @map("wickets_b")
+  oversB              Decimal          @default(0.0) @db.Decimal(4, 1) @map("overs_b")
+  target              Int              @default(0)
+  isFirstInnings      Boolean          @default(true) @map("is_first_innings")
+  currentStrikerId    String           @default("") @map("current_striker_id")
+  currentNonStrikerId String           @default("") @map("current_non_striker_id")
+  currentBowlerId     String           @default("") @map("current_bowler_id")
+  scorerUsername      String           @map("scorer_username")
+  scorerPassword      String           @map("scorer_password")
+
+  tournament Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  teamA      Team             @relation("TeamA", fields: [teamAId], references: [id], onDelete: Cascade)
+  teamB      Team             @relation("TeamB", fields: [teamBId], references: [id], onDelete: Cascade)
+  playingXIs MatchPlayingXI[]
+  ballRecords BallRecord[]
+
+  @@map("matches")
+}
+
+model MatchPlayingXI {
+  matchId  String @map("match_id")
+  teamId   String @map("team_id")
+  playerId String @map("player_id")
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, teamId, playerId])
+  @@map("match_playing_xi")
+}
+
+model BallRecord {
+  id           Int      @id @default(autoincrement())
+  matchId      String   @map("match_id")
+  run          Int      @default(0)
+  extraRun     Int      @default(0) @map("extra_run")
+  extraType    String   @default("None") @map("extra_type")
+  isWicket     Boolean  @default(false) @map("is_wicket")
+  wicketType   String   @default("None") @map("wicket_type")
+  batsmanName  String   @map("batsman_name")
+  bowlerName   String   @map("bowler_name")
+  commentary   String   @db.Text
+  timestamp    DateTime @default(now())
+  strikerId    String?  @map("striker_id")
+  nonStrikerId String?  @map("non_striker_id")
+  bowlerId     String?  @map("bowler_id")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("ball_records")
+}
