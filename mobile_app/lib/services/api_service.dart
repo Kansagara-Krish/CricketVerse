@@ -88,6 +88,22 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getMe() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: _headers,
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getMe error: $e');
+      return null;
+    }
+  }
+
   // --- Teams API ---
   static Future<List<Team>> getTeams() async {
     try {
@@ -96,10 +112,10 @@ class ApiService {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => Team.fromJson(item)).toList();
       }
-      return [];
+      throw Exception('Failed to fetch teams. Status code: ${res.statusCode}');
     } catch (e) {
       debugPrint('ApiService getTeams error: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -196,10 +212,10 @@ class ApiService {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => CricketMatch.fromJson(item)).toList();
       }
-      return [];
+      throw Exception('Failed to fetch matches. Status code: ${res.statusCode}');
     } catch (e) {
       debugPrint('ApiService getMatches error: $e');
-      return [];
+      rethrow;
     }
   }
 

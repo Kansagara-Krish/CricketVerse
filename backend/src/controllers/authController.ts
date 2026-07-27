@@ -104,5 +104,12 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function getMe(req: any, res: Response) {
-  return res.status(200).json({ user: req.user });
+  let activeScorerMatchId: string | null = null;
+  if (req.user && req.user.role === 'Scorer' && req.user.id && req.user.id.startsWith('scorer_')) {
+    activeScorerMatchId = req.user.id.substring(7);
+  }
+  return res.status(200).json({
+    user: req.user,
+    activeScorerMatchId
+  });
 }

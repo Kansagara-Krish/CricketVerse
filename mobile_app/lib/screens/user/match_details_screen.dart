@@ -72,31 +72,46 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     });
     _chatController.clear();
 
-    // Determine mock reply
-    String reply = "I'm analyzing the match data...";
-    final query = userQuery.toLowerCase();
-    
     final runs = match.isFirstInnings ? match.runsA : match.runsB;
     final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
     final overs = match.isFirstInnings ? match.oversA : match.oversB;
     final winProb = storage.calculateWinProbability(match);
 
+    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
+    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty ? battingTeam.players[0] : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
+    );
+    final nonStriker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentNonStrikerId,
+      orElse: () => battingTeam.players.length > 1 ? battingTeam.players[1] : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
+    );
+    final bowler = bowlingTeam.players.firstWhere(
+      (p) => p.id == match.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty ? bowlingTeam.players[bowlingTeam.players.length - 1] : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+    );
+
+    String reply = "I'm analyzing the match data...";
+    final query = userQuery.toLowerCase();
+
     if (query.contains('who is winning') || query.contains('win probability')) {
-      reply = "According to our CricketVerse AI engine, Team A (${match.teamA.shortName}) has a ${winProb.toStringAsFixed(0)}% probability of winning the match, while ${match.teamB.shortName} stands at ${(100 - winProb).toStringAsFixed(0)}%.";
+      reply = "According to our CricketVerse AI engine, ${match.teamA.name} (${match.teamA.shortName}) has a ${winProb.toStringAsFixed(0)}% probability of winning, while ${match.teamB.name} (${match.teamB.shortName}) stands at ${(100 - winProb).toStringAsFixed(0)}%.";
     } else if (query.contains('score') || query.contains('current score')) {
-      reply = "The current score is ${match.battingTeamId == match.teamA.id ? match.teamA.shortName : match.teamB.shortName} $runs/$wickets in $overs overs.";
+      reply = "The current score is ${battingTeam.shortName} $runs/$wickets in ${overs.toStringAsFixed(1)} overs.";
     } else if (query.contains('last ball') || query.contains('last over')) {
       if (match.balls.isNotEmpty) {
         reply = "The last event was: '${match.balls.last.commentary}' by bowler ${match.balls.last.bowlerName} to batsman ${match.balls.last.batsmanName}.";
       } else {
         reply = "No balls have been bowled yet in this match.";
       }
-    } else if (query.contains('batter') || query.contains('batsman') || query.contains('kohli')) {
-      reply = "Virat Kohli is currently batting on 78* runs off 45 balls, displaying incredible control under pressure.";
+    } else if (query.contains('batter') || query.contains('batsman') || query.contains('striker') || query.contains('kohli')) {
+      reply = "${striker.name} is currently batting on ${striker.runsScored}* runs off ${striker.ballsFaced} balls. ${nonStriker.name} is at the non-striker's end with ${nonStriker.runsScored} runs off ${nonStriker.ballsFaced} balls.";
     } else if (query.contains('summary') || query.contains('highlights')) {
-      reply = "Match Highlights: IND had a strong start in the powerplay. V. Kohli anchored the innings scoring 78, while Suryakumar Yadav accelerated. Current run rate is at ${(runs / (overs > 0 ? overs : 1)).toStringAsFixed(1)}.";
+      reply = "Match Summary: ${match.teamA.shortName} vs ${match.teamB.shortName}. ${battingTeam.shortName} is currently batting at $runs/$wickets in ${overs.toStringAsFixed(1)} overs. The current run rate is ${(runs / (overs > 0 ? overs : 0.1)).toStringAsFixed(1)} runs per over. The active bowler is ${bowler.name}.";
     } else {
-      reply = "That's an interesting question! AI engine notes: The batsman's control rating is 92% and the pitch momentum favors batsman in the current block.";
+      reply = "The current run rate is ${(runs / (overs > 0 ? overs : 0.1)).toStringAsFixed(1)} runs per over, and the AI Win Predictor shows the win probability for ${match.teamA.shortName} is ${winProb.toStringAsFixed(0)}%.";
     }
 
     Future.delayed(const Duration(milliseconds: 600), () {
@@ -1460,7 +1475,22 @@ class ManhattanPainter extends CustomPainter {
     }
 
     if (runsPerOver.isEmpty) {
-      runsPerOver.addAll([8, 12, 4, 15, 6, 22, 10, 14]);
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'Waiting for overs to be completed...',
+          style: GoogleFonts.plusJakartaSans(
+            color: AppTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        Offset((size.width - textPainter.width) / 2, (size.height - textPainter.height) / 2),
+      );
+      return;
     }
 
     final int maxVal = runsPerOver.fold(10, (max, v) => v > max ? v : max);

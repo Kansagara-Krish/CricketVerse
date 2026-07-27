@@ -116,7 +116,7 @@ export async function getMatches(req: Request, res: Response) {
       select: { id: true },
     });
 
-    const matches = [];
+    const matches: any[] = [];
     for (const row of list) {
       let matchObj = await getCachedMatch(row.id);
       if (!matchObj) {

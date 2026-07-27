@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_routes.dart';
+import '../services/storage_service.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -34,11 +37,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _logoController.forward();
 
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+    Timer(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+      final storage = Provider.of<StorageService>(context, listen: false);
+      final isLoggedIn = await storage.tryTokenAuth();
+      if (!mounted) return;
+      
+      if (isLoggedIn) {
+        final role = storage.currentRole;
+        if (role == 'Admin') {
+          Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+        } else if (role == 'Scorer') {
+          Navigator.pushReplacementNamed(context, AppRoutes.scorerDashboard);
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
+        }
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      }
     });
   }
 

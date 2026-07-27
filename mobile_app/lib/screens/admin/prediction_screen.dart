@@ -44,9 +44,10 @@ class _PredictionScreenState extends State<PredictionScreen>
   }
 
   void _refresh() {
+    final storage = Provider.of<StorageService>(context, listen: false);
     setState(() {
-      _probA = (55 + Random().nextDouble() * 35).clamp(1, 99);
-      _probB = (100 - _probA).clamp(1, 99);
+      _probA = storage.calculateWinProbability(widget.match).clamp(1.0, 99.0);
+      _probB = (100 - _probA).clamp(1.0, 99.0);
     });
     _animCtrl.reset();
     _animCtrl.forward();

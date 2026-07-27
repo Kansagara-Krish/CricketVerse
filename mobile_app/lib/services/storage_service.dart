@@ -62,17 +62,16 @@ class StorageService with ChangeNotifier {
     if (_isOnlineMode) {
       try {
         final remoteTeams = await ApiService.getTeams();
-        if (remoteTeams.isNotEmpty) {
-          _teams = remoteTeams;
-        }
+        _teams = remoteTeams;
+        
         final remoteMatches = await ApiService.getMatches();
-        if (remoteMatches.isNotEmpty) {
-          _matches = remoteMatches;
-        }
+        _matches = remoteMatches;
+        
         notifyListeners();
         return;
       } catch (e) {
-        debugPrint('Error loading online data, falling back: $e');
+        debugPrint('Error loading online data: $e');
+        rethrow;
       }
     }
 
@@ -130,132 +129,12 @@ class StorageService with ChangeNotifier {
 
   // Preload UVPCE College cricket teams and player names
   void _loadDefaultTeams() {
-    final firstNames = [
-      'Aarav', 'Vihaan', 'Arjun', 'Kabir', 'Ishaan', 'Rohan', 'Aditya', 'Kunal',
-      'Reyansh', 'Vivaan', 'Advik', 'Sai', 'Atharva', 'Shaurya', 'Rudra', 'Aaryan',
-      'Veer', 'Aayaan', 'Kiaan', 'Krishna', 'Dev', 'Aryan', 'Madhav', 'Ryan',
-      'Dhruv', 'Kian', 'Yuvan'
-    ];
-    final lastNames = ['Patel', 'Shah', 'Mehta', 'Sharma', 'Joshi', 'Gani', 'Amin', 'Chaudhari', 'Vaghela', 'Trivedi', 'Dave'];
-
-    List<Player> generatePlayersForTeam(String teamShort, int startIndex) {
-      final roles = ['Batter', 'Batter', 'Batter', 'Batter', 'All-rounder', 'All-rounder', 'All-rounder', 'Bowler', 'Bowler', 'Bowler', 'Bowler'];
-      final List<Player> teamPlayers = [];
-      for (int i = 0; i < 11; i++) {
-        final fName = firstNames[(startIndex + i) % firstNames.length];
-        final lName = lastNames[(startIndex * 3 + i) % lastNames.length];
-        final fullName = '$fName $lName';
-        final id = '${teamShort.toLowerCase()}_${fName.toLowerCase()}_$i';
-        
-        final runs = (200 + (startIndex * 35 + i * 55) % 1800);
-        final wickets = (i >= 7) ? (10 + (startIndex * 4 + i * 5) % 50) : (0 + (startIndex + i) % 4);
-        final matches = 15 + (runs ~/ 120);
-
-        teamPlayers.add(Player(
-          id: id,
-          name: fullName,
-          role: roles[i],
-          nationality: 'IND',
-          runsScored: runs,
-          ballsFaced: (runs * 1.3).round(),
-          wicketsTaken: wickets,
-          matchesPlayed: matches,
-        ));
-      }
-      return teamPlayers;
-    }
-
-    _teams = [
-      Team(id: 'uvpce_a', name: 'UVPCE - A', shortName: 'UVPCE - A', logoColorHex: '0xFF028A6B', players: generatePlayersForTeam('UVPCE - A', 0)),
-      Team(id: 'uvpce_b', name: 'UVPCE - B', shortName: 'UVPCE - B', logoColorHex: '0xFF10B981', players: generatePlayersForTeam('UVPCE - B', 5)),
-      Team(id: 'uvpce_c', name: 'UVPCE - C', shortName: 'UVPCE - C', logoColorHex: '0xFFD97706', players: generatePlayersForTeam('UVPCE - C', 10)),
-      Team(id: 'uvpce_titans', name: 'UVPCE - Titans', shortName: 'UVPCE - Titans', logoColorHex: '0xFFF59E0B', players: generatePlayersForTeam('UVPCE - Titans', 15)),
-      Team(id: 'uvpce_warriors', name: 'UVPCE - Warriors', shortName: 'UVPCE - Warriors', logoColorHex: '0xFFEF4444', players: generatePlayersForTeam('UVPCE - Warriors', 20)),
-      Team(id: 'uvpce_challengers', name: 'UVPCE - Challengers', shortName: 'UVPCE - Challengers', logoColorHex: '0xFFEA580C', players: generatePlayersForTeam('UVPCE - Challengers', 25)),
-      Team(id: 'uvpce_strikers', name: 'UVPCE - Strikers', shortName: 'UVPCE - Strikers', logoColorHex: '0xFF0B6623', players: generatePlayersForTeam('UVPCE - Strikers', 3)),
-      Team(id: 'uvpce_legends', name: 'UVPCE - Legends', shortName: 'UVPCE - Legends', logoColorHex: '0xFF14B8A6', players: generatePlayersForTeam('UVPCE - Legends', 8)),
-    ];
+    _teams = [];
     _saveTeams();
   }
 
   void _loadDefaultMatches() {
-    if (_teams.isEmpty) _loadDefaultTeams();
-
-    final teamTitans = _teams.firstWhere((t) => t.id == 'uvpce_titans');
-    final teamWarriors = _teams.firstWhere((t) => t.id == 'uvpce_warriors');
-    final teamA = _teams.firstWhere((t) => t.id == 'uvpce_a');
-    final teamB = _teams.firstWhere((t) => t.id == 'uvpce_b');
-
-    // Live Match: Titans vs Warriors
-    final liveMatch = CricketMatch(
-      id: 'live_world_cup_final',
-      teamA: teamTitans,
-      teamB: teamWarriors,
-      matchType: 'T20',
-      venue: 'Narendra Modi Stadium',
-      date: '17-07-2026',
-      time: '19:30',
-      status: 'Live',
-      tossWinner: teamTitans.name,
-      tossDecision: 'Bat',
-      battingTeamId: 'uvpce_titans',
-      playingXI_A: teamTitans.players,
-      playingXI_B: teamWarriors.players,
-      runsA: 145,
-      wicketsA: 4,
-      oversA: 15.4,
-      runsB: 0,
-      wicketsB: 0,
-      oversB: 0.0,
-      target: 185,
-      scorerUsername: 'scorer1',
-      scorerPassword: '123',
-      currentStrikerId: teamTitans.players[0].id,
-      currentNonStrikerId: teamTitans.players[1].id,
-      currentBowlerId: teamWarriors.players[teamWarriors.players.length - 1].id,
-      isFirstInnings: true,
-      balls: [
-        BallRecord(
-          run: 4,
-          extraRun: 0,
-          extraType: 'None',
-          isWicket: false,
-          wicketType: 'None',
-          batsmanName: teamTitans.players[0].name,
-          bowlerName: teamWarriors.players[teamWarriors.players.length - 1].name,
-          commentary: 'CRACKING BOUNDARY! Smashed down the ground past mid-on for four!',
-          timestamp: DateTime.now(),
-        ),
-      ],
-    );
-
-    final completedMatch = CricketMatch(
-      id: 'completed_bilateral_1',
-      teamA: teamA,
-      teamB: teamB,
-      matchType: 'T20',
-      venue: 'Wankhede Stadium',
-      date: '15-07-2026',
-      time: '14:30',
-      status: 'Completed',
-      tossWinner: teamB.name,
-      tossDecision: 'Bowl',
-      battingTeamId: 'uvpce_a',
-      playingXI_A: teamA.players,
-      playingXI_B: teamB.players,
-      runsA: 168,
-      wicketsA: 6,
-      oversA: 20.0,
-      runsB: 169,
-      wicketsB: 5,
-      oversB: 19.3,
-      target: 169,
-      scorerUsername: 'scorer2',
-      scorerPassword: '456',
-      balls: [],
-    );
-
-    _matches = [liveMatch, completedMatch];
+    _matches = [];
     _saveMatches();
   }
 
@@ -282,6 +161,34 @@ class StorageService with ChangeNotifier {
   }
 
   // --- Authentications ---
+  Future<bool> tryTokenAuth() async {
+    if (!_isOnlineMode) return false;
+    try {
+      final res = await ApiService.getMe();
+      if (res != null && res['user'] != null) {
+        _currentUserEmail = res['user']['email'];
+        _currentRole = res['user']['role'];
+        if (_currentRole == 'Scorer') {
+          _activeScorerMatchId = res['activeScorerMatchId'];
+          if (_activeScorerMatchId == null && res['user']['id'] != null) {
+            final String userId = res['user']['id'];
+            if (userId.startsWith('scorer_')) {
+              _activeScorerMatchId = userId.substring(7);
+            }
+          }
+        } else {
+          _activeScorerMatchId = null;
+        }
+        await loadData();
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('tryTokenAuth error: $e');
+    }
+    return false;
+  }
+
   Future<bool> login(String usernameOrEmail, String password) async {
     if (_isOnlineMode) {
       final res = await ApiService.login(usernameOrEmail, password);
