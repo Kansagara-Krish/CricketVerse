@@ -80,17 +80,17 @@ Choose a role below to view the application walkthrough screens:
 
 | Admin Login | Admin Dashboard | Tournament List |
 | :---: | :---: | :---: |
-| <img src="mobile_app/ss/admin/login_screen.jpeg" width="220" /> | <img src="mobile_app/ss/admin/admin_dashboard.jpeg" width="220" /> | <img src="mobile_app/ss/admin/tournament_list.jpeg" width="220" /> |
+| ![Admin Login](mobile_app/ss/admin/login_screen.jpeg) | ![Admin Dashboard](mobile_app/ss/admin/admin_dashboard.jpeg) | ![Tournament List](mobile_app/ss/admin/tournament_list.jpeg) |
 | *Admin / Multi-Role Authentication* | *System Overview & Analytics Home* | *Active Tournaments Feed* |
 
 | Team Management | Player Management | Player Details |
 | :---: | :---: | :---: |
-| <img src="mobile_app/ss/admin/team_management.jpeg" width="220" /> | <img src="mobile_app/ss/admin/player_management.jpeg" width="220" /> | <img src="mobile_app/ss/admin/player_details.jpeg" width="220" /> |
+| ![Team Management](mobile_app/ss/admin/team_management.jpeg) | ![Player Management](mobile_app/ss/admin/player_management.jpeg) | ![Player Details](mobile_app/ss/admin/player_details.jpeg) |
 | *Franchise Roster & Squad Control* | *Player Directory & Category Filters* | *Individual Player Career Statistics* |
 
 | AI Settings | Notifications | General Statistics |
 | :---: | :---: | :---: |
-| <img src="mobile_app/ss/admin/ai_settings.jpeg" width="220" /> | <img src="mobile_app/ss/admin/notifications.jpeg" width="220" /> | <img src="mobile_app/ss/admin/statistics.jpeg" width="220" /> |
+| ![AI Settings](mobile_app/ss/admin/ai_settings.jpeg) | ![Notifications](mobile_app/ss/admin/notifications.jpeg) | ![General Statistics](mobile_app/ss/admin/statistics.jpeg) |
 | *Voice Commentary & Win Predictor Config* | *Real-Time Live Match Notifications* | *Tournament Overviews & Milestones* |
 
 </details>
@@ -102,7 +102,7 @@ Choose a role below to view the application walkthrough screens:
 
 | Live Scoring Terminal | Record Wicket Dialog |
 | :---: | :---: |
-| <img src="mobile_app/ss/manager/live_scoring.jpeg" width="220" /> | <img src="mobile_app/ss/manager/record_wicket.jpeg" width="220" /> |
+| ![Live Scoring Terminal](mobile_app/ss/manager/live_scoring.jpeg) | ![Record Wicket Dialog](mobile_app/ss/manager/record_wicket.jpeg) |
 | *Live scoring terminal for official managers* | *Wicket recording overlay dialog* |
 
 </details>
@@ -114,12 +114,12 @@ Choose a role below to view the application walkthrough screens:
 
 | Fan Dashboard | Fan Live Match Details | Match Summary Report |
 | :---: | :---: | :---: |
-| <img src="mobile_app/ss/user/fan_dashboard.jpeg" width="220" /> | <img src="mobile_app/ss/user/fan_match_details.jpeg" width="220" /> | <img src="mobile_app/ss/user/match_summary.jpeg" width="220" /> |
+| ![Fan Dashboard](mobile_app/ss/user/fan_dashboard.jpeg) | ![Fan Live Match Details](mobile_app/ss/user/fan_match_details.jpeg) | ![Match Summary Report](mobile_app/ss/user/match_summary.jpeg) |
 | *Fan live match scoring hub* | *Live scoreboard & player stats* | *Innings summary & download report* |
 
 | Match Predictions | Scenario Simulator |
 | :---: | :---: |
-| <img src="mobile_app/ss/user/match_predictions.jpeg" width="220" /> | <img src="mobile_app/ss/user/prediction_simulator.jpeg" width="220" /> |
+| ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) |
 | *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
 
 </details>
