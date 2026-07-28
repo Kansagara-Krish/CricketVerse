@@ -9,6 +9,54 @@ CricketVerse AI is a premium, high-fidelity Flutter prototype showcasing a compr
 
 ---
 
+## 📸 App Screenshots
+
+Here are the application walkthrough screens:
+
+### 🛡️ Admin Screens
+
+### Admin Panels & Dashboard
+
+| Admin Login | Admin Dashboard | Tournament List |
+| :---: | :---: | :---: |
+| ![Admin Login](mobile_app/ss/admin/login_screen.jpeg) | ![Admin Dashboard](mobile_app/ss/admin/admin_dashboard.jpeg) | ![Tournament List](mobile_app/ss/admin/tournament_list.jpeg) |
+| *Admin / Multi-Role Authentication* | *System Overview & Analytics Home* | *Active Tournaments Feed* |
+
+| Team Management | Player Management | Player Details |
+| :---: | :---: | :---: |
+| ![Team Management](mobile_app/ss/admin/team_management.jpeg) | ![Player Management](mobile_app/ss/admin/player_management.jpeg) | ![Player Details](mobile_app/ss/admin/player_details.jpeg) |
+| *Franchise Roster & Squad Control* | *Player Directory & Category Filters* | *Individual Player Career Statistics* |
+
+| AI Settings | Notifications | General Statistics |
+| :---: | :---: | :---: |
+| ![AI Settings](mobile_app/ss/admin/ai_settings.jpeg) | ![Notifications](mobile_app/ss/admin/notifications.jpeg) | ![General Statistics](mobile_app/ss/admin/statistics.jpeg) |
+| *Voice Commentary & Win Predictor Config* | *Real-Time Live Match Notifications* | *Tournament Overviews & Milestones* |
+
+### 📝 Manager Screens
+
+### Live Scoring & Control Panels
+
+| Live Scoring Terminal | Record Wicket Dialog |
+| :---: | :---: |
+| ![Live Scoring Terminal](mobile_app/ss/manager/live_scoring.jpeg) | ![Record Wicket Dialog](mobile_app/ss/manager/record_wicket.jpeg) |
+| *Live scoring terminal for official managers* | *Wicket recording overlay dialog* |
+
+### 👤 User / Fan Screens
+
+### Live Match View & Analytics
+
+| Fan Dashboard | Fan Live Match Details | Match Summary Report |
+| :---: | :---: | :---: |
+| ![Fan Dashboard](mobile_app/ss/user/fan_dashboard.jpeg) | ![Fan Live Match Details](mobile_app/ss/user/fan_match_details.jpeg) | ![Match Summary Report](mobile_app/ss/user/match_summary.jpeg) |
+| *Fan live match scoring hub* | *Live scoreboard & player stats* | *Innings summary & download report* |
+
+| Match Predictions | Scenario Simulator |
+| :---: | :---: |
+| ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) |
+| *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
+
+---
+
 ## 🚀 Key Features
 
 - **Live Match Center**: Real-time scoring, ball-by-ball updates, and dynamic scoreboards.
@@ -68,57 +116,6 @@ Common screens accessible during the user journey.
 *   **Shared Details**: Public Match Details, Public Team Details, Public Player Details, News Details
 
 ---
-
-## 📸 App Screenshots
-
-Here are the application walkthrough screens:
-
-### 🛡️ Admin Screens
-
-### Admin Panels & Dashboard
-
-| Admin Login | Admin Dashboard | Tournament List |
-| :---: | :---: | :---: |
-| ![Admin Login](mobile_app/ss/admin/login_screen.jpeg) | ![Admin Dashboard](mobile_app/ss/admin/admin_dashboard.jpeg) | ![Tournament List](mobile_app/ss/admin/tournament_list.jpeg) |
-| *Admin / Multi-Role Authentication* | *System Overview & Analytics Home* | *Active Tournaments Feed* |
-
-| Team Management | Player Management | Player Details |
-| :---: | :---: | :---: |
-| ![Team Management](mobile_app/ss/admin/team_management.jpeg) | ![Player Management](mobile_app/ss/admin/player_management.jpeg) | ![Player Details](mobile_app/ss/admin/player_details.jpeg) |
-| *Franchise Roster & Squad Control* | *Player Directory & Category Filters* | *Individual Player Career Statistics* |
-
-| AI Settings | Notifications | General Statistics |
-| :---: | :---: | :---: |
-| ![AI Settings](mobile_app/ss/admin/ai_settings.jpeg) | ![Notifications](mobile_app/ss/admin/notifications.jpeg) | ![General Statistics](mobile_app/ss/admin/statistics.jpeg) |
-| *Voice Commentary & Win Predictor Config* | *Real-Time Live Match Notifications* | *Tournament Overviews & Milestones* |
-
-### 📝 Manager Screens
-
-### Live Scoring & Control Panels
-
-| Live Scoring Terminal | Record Wicket Dialog |
-| :---: | :---: |
-| ![Live Scoring Terminal](mobile_app/ss/manager/live_scoring.jpeg) | ![Record Wicket Dialog](mobile_app/ss/manager/record_wicket.jpeg) |
-| *Live scoring terminal for official managers* | *Wicket recording overlay dialog* |
-
-### 👤 User / Fan Screens
-
-### Live Match View & Analytics
-
-| Fan Dashboard | Fan Live Match Details | Match Summary Report |
-| :---: | :---: | :---: |
-| ![Fan Dashboard](mobile_app/ss/user/fan_dashboard.jpeg) | ![Fan Live Match Details](mobile_app/ss/user/fan_match_details.jpeg) | ![Match Summary Report](mobile_app/ss/user/match_summary.jpeg) |
-| *Fan live match scoring hub* | *Live scoreboard & player stats* | *Innings summary & download report* |
-
-| Match Predictions | Scenario Simulator |
-| :---: | :---: |
-| ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) |
-| *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
-
-
-
----
-
 
 ## 🎨 Design Philosophy
 
