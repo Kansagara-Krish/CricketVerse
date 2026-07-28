@@ -15,7 +15,7 @@ CricketVerse AI is a premium, high-fidelity Flutter prototype showcasing a compr
 - **AI-Powered Insights**: Simulated AI voice commentary feed and live win probability predictions using advanced factor analysis.
 - **Tournament Management**: Complete administration of tournaments, matches, teams, and players.
 - **Comprehensive Statistics**: High-fidelity charts and graphs for player/team performance tracking.
-- **Role-Based Access**: Dedicated dashboards and workflows for Admins, Scorers, and End-Users.
+- **Role-Based Access**: Dedicated dashboards and workflows for Admins, Managers, and End-Users.
 - **Premium UI/UX**: Dark mode by default, Hero animations, smooth page transitions, shimmer loading effects, and modern typography.
 
 ---
@@ -50,10 +50,10 @@ The Admin has full control over the ecosystem.
 *   **AI & Analytics**: AI Commentary Feed, Prediction Engine, Analytics & Statistics
 *   **System**: Notifications, Admin Profile, AI Settings, Help & Support, About Project
 
-### 2. 📝 Match Scorer (Official/Moderator) (2 Dedicated Pages)
-*Credentials: `scorer@cricketverse.ai` / `scorer123`*
-The Match Scorer is responsible for updating live match events.
-*   **Dashboards**: Scorer Dashboard (Active Matches)
+### 2. 📝 Match Manager (Official/Moderator) (2 Dedicated Pages)
+*Credentials: `manager@cricketverse.ai` / `manager123`*
+The Match Manager is responsible for updating live match events.
+*   **Dashboards**: Manager Dashboard (Active Matches)
 *   **Live Operations**: Live Ball-by-Ball Entry Screen
 
 ### 3. 👤 User (Cricket Fan) (2 Dedicated Pages)
@@ -68,6 +68,64 @@ Common screens accessible during the user journey.
 *   **Shared Details**: Public Match Details, Public Team Details, Public Player Details, News Details
 
 ---
+
+## 📸 App Screenshots
+
+Choose a role below to view the application walkthrough screens:
+
+<details>
+<summary>🛡️ Admin Screens (Click to expand)</summary>
+
+### Admin Panels & Dashboard
+
+| Admin Login | Admin Dashboard | Tournament List |
+| :---: | :---: | :---: |
+| <img src="ss/admin/login_screen.jpeg" width="220" /> | <img src="ss/admin/admin_dashboard.jpeg" width="220" /> | <img src="ss/admin/tournament_list.jpeg" width="220" /> |
+| *Admin / Multi-Role Authentication* | *System Overview & Analytics Home* | *Active Tournaments Feed* |
+
+| Team Management | Player Management | Player Details |
+| :---: | :---: | :---: |
+| <img src="ss/admin/team_management.jpeg" width="220" /> | <img src="ss/admin/player_management.jpeg" width="220" /> | <img src="ss/admin/player_details.jpeg" width="220" /> |
+| *Franchise Roster & Squad Control* | *Player Directory & Category Filters* | *Individual Player Career Statistics* |
+
+| AI Settings | Notifications | General Statistics |
+| :---: | :---: | :---: |
+| <img src="ss/admin/ai_settings.jpeg" width="220" /> | <img src="ss/admin/notifications.jpeg" width="220" /> | <img src="ss/admin/statistics.jpeg" width="220" /> |
+| *Voice Commentary & Win Predictor Config* | *Real-Time Live Match Notifications* | *Tournament Overviews & Milestones* |
+
+</details>
+
+<details>
+<summary>📝 Manager Screens (Click to expand)</summary>
+
+### Live Scoring & Control Panels
+
+| Live Scoring Terminal | Record Wicket Dialog |
+| :---: | :---: |
+| <img src="ss/manager/live_scoring.jpeg" width="220" /> | <img src="ss/manager/record_wicket.jpeg" width="220" /> |
+| *Live scoring terminal for official managers* | *Wicket recording overlay dialog* |
+
+</details>
+
+<details>
+<summary>👤 User / Fan Screens (Click to expand)</summary>
+
+### Live Match View & Analytics
+
+| Fan Dashboard | Fan Live Match Details | Match Summary Report |
+| :---: | :---: | :---: |
+| <img src="ss/user/fan_dashboard.jpeg" width="220" /> | <img src="ss/user/fan_match_details.jpeg" width="220" /> | <img src="ss/user/match_summary.jpeg" width="220" /> |
+| *Fan live match scoring hub* | *Live scoreboard & player stats* | *Innings summary & download report* |
+
+| Match Predictions | Scenario Simulator |
+| :---: | :---: |
+| <img src="ss/user/match_predictions.jpeg" width="220" /> | <img src="ss/user/prediction_simulator.jpeg" width="220" /> |
+| *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
+
+</details>
+
+---
+
 
 ## 🎨 Design Philosophy
 

@@ -53,13 +53,13 @@ This document tracks the tasks required to remove mock data from the Flutter mob
 
 - [x] **Auth Tests**:
   - [x] Test Admin login (`admin@cricketverse.ai` / `admin123`).
-  - [x] Test Scorer login with match-specific credentials.
+  - [x] Test Manager login with match-specific credentials.
   - [x] Test standard User registration and login flow.
 - [x] **Admin Workflow Tests**:
   - [x] Create a new team with 11 players and verify persistence in PostgreSQL via Prisma.
-  - [x] Schedule a new match between Team A and Team B with assigned scorer credentials.
+  - [x] Schedule a new match between Team A and Team B with assigned manager credentials.
   - [x] Activate match to LIVE status and verify real-time status update across client apps.
-- [x] **Scorer Live Scoring Tests**:
+- [x] **Manager Live Scoring Tests**:
   - [x] Perform toss setup (winner, decision, first batting team).
   - [x] Record normal runs (0, 1, 2, 3, 4, 6) and verify strike rotation.
   - [x] Record extra runs (Wides, No Balls, Leg Byes).
@@ -67,6 +67,6 @@ This document tracks the tasks required to remove mock data from the Flutter mob
   - [x] Test "Undo Last Ball" functionality and verify score/stat reversal in database.
   - [x] Complete first innings and verify target calculation and innings transition.
 - [x] **User Live View & Real-Time Sync Tests**:
-  - [x] Open user match detail screen on phone and verify instant Socket.IO updates on every ball scored by scorer.
+  - [x] Open user match detail screen on phone and verify instant Socket.IO updates on every ball scored by manager.
   - [x] Verify live commentary feed updates dynamically.
   - [x] Download PDF summary report and verify accuracy of scores and scorecard statistics.
