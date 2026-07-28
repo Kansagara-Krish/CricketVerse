@@ -71,10 +71,9 @@ Common screens accessible during the user journey.
 
 ## 📸 App Screenshots
 
-Choose a role below to view the application walkthrough screens:
+Here are the application walkthrough screens:
 
-<details>
-<summary>🛡️ Admin Screens (Click to expand)</summary>
+### 🛡️ Admin Screens
 
 ### Admin Panels & Dashboard
 
@@ -93,10 +92,7 @@ Choose a role below to view the application walkthrough screens:
 | ![AI Settings](mobile_app/ss/admin/ai_settings.jpeg) | ![Notifications](mobile_app/ss/admin/notifications.jpeg) | ![General Statistics](mobile_app/ss/admin/statistics.jpeg) |
 | *Voice Commentary & Win Predictor Config* | *Real-Time Live Match Notifications* | *Tournament Overviews & Milestones* |
 
-</details>
-
-<details>
-<summary>📝 Manager Screens (Click to expand)</summary>
+### 📝 Manager Screens
 
 ### Live Scoring & Control Panels
 
@@ -105,10 +101,7 @@ Choose a role below to view the application walkthrough screens:
 | ![Live Scoring Terminal](mobile_app/ss/manager/live_scoring.jpeg) | ![Record Wicket Dialog](mobile_app/ss/manager/record_wicket.jpeg) |
 | *Live scoring terminal for official managers* | *Wicket recording overlay dialog* |
 
-</details>
-
-<details>
-<summary>👤 User / Fan Screens (Click to expand)</summary>
+### 👤 User / Fan Screens
 
 ### Live Match View & Analytics
 
@@ -122,7 +115,7 @@ Choose a role below to view the application walkthrough screens:
 | ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) |
 | *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
 
-</details>
+
 
 ---
 
