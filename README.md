@@ -50,10 +50,10 @@ Here are the application walkthrough screens:
 | ![Fan Dashboard](mobile_app/ss/user/fan_dashboard.jpeg) | ![Fan Live Match Details](mobile_app/ss/user/fan_match_details.jpeg) | ![Match Summary Report](mobile_app/ss/user/match_summary.jpeg) |
 | *Fan live match scoring hub* | *Live scoreboard & player stats* | *Innings summary & download report* |
 
-| Match Predictions | Scenario Simulator |
-| :---: | :---: |
-| ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) |
-| *AI analytics & momentum tracker* | *What-If prediction scenario sliders* |
+| Match Predictions | Scenario Simulator | AI Commentary |
+| :---: | :---: | :---: |
+| ![Match Predictions](mobile_app/ss/user/match_predictions.jpeg) | ![Scenario Simulator](mobile_app/ss/user/prediction_simulator.jpeg) | ![AI Commentary](mobile_app/ss/user/ai_commentary.jpeg) |
+| *AI analytics & momentum tracker* | *What-If prediction scenario sliders* | *Live AI generated audio commentary* |
 
 ---
 
