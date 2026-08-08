@@ -1,21 +1,128 @@
 // lib/screens/admin/tournament_management_screen.dart
-// Tournament list with dummy data
+// Tournament list with dynamic inline editing
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/widgets/custom_notification.dart';
 
-class TournamentManagementScreen extends StatelessWidget {
+class TournamentManagementScreen extends StatefulWidget {
   const TournamentManagementScreen({super.key});
 
-  static const _tournaments = [
+  @override
+  State<TournamentManagementScreen> createState() => _TournamentManagementScreenState();
+}
+
+class _TournamentManagementScreenState extends State<TournamentManagementScreen> {
+  final List<Map<String, String>> _mutableTournaments = [
     {'name': 'T20 World Cup 2026', 'format': 'T20', 'teams': '16', 'status': 'Live', 'start': '01-07-2026', 'end': '30-07-2026', 'matches': '45'},
     {'name': 'IPL Season 19', 'format': 'T20', 'teams': '10', 'status': 'Upcoming', 'start': '01-09-2026', 'end': '30-11-2026', 'matches': '74'},
     {'name': 'CricketVerse Premier League', 'format': 'T20', 'teams': '8', 'status': 'Upcoming', 'start': '15-08-2026', 'end': '14-09-2026', 'matches': '28'},
     {'name': 'India-Australia Bilateral ODI', 'format': 'ODI', 'teams': '2', 'status': 'Completed', 'start': '01-06-2026', 'end': '20-06-2026', 'matches': '5'},
     {'name': 'Asia Cup 2026', 'format': 'ODI', 'teams': '6', 'status': 'Upcoming', 'start': '01-10-2026', 'end': '20-10-2026', 'matches': '13'},
   ];
+
+  void _showInlineEditSheet(int index) {
+    final tourn = _mutableTournaments[index];
+    final nameCtrl = TextEditingController(text: tourn['name']);
+    String format = tourn['format']!;
+    String status = tourn['status']!;
+    final teamsCtrl = TextEditingController(text: tourn['teams']);
+    final matchesCtrl = TextEditingController(text: tourn['matches']);
+    final startCtrl = TextEditingController(text: tourn['start']);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Edit Tournament Details', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameCtrl,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(labelText: 'Tournament Name'),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: format,
+                dropdownColor: Colors.white,
+                decoration: const InputDecoration(labelText: 'Format'),
+                items: ['T20', 'ODI'].map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                onChanged: (v) {
+                  if (v != null) setModalState(() => format = v);
+                },
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: status,
+                dropdownColor: Colors.white,
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: ['Live', 'Upcoming', 'Completed'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (v) {
+                  if (v != null) setModalState(() => status = v);
+                },
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: teamsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'TeamsCount'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: matchesCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'MatchesCount'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _mutableTournaments[index] = {
+                        'name': nameCtrl.text.trim(),
+                        'format': format,
+                        'teams': teamsCtrl.text.trim(),
+                        'status': status,
+                        'start': startCtrl.text.trim(),
+                        'end': tourn['end']!,
+                        'matches': matchesCtrl.text.trim(),
+                      };
+                    });
+                    Navigator.pop(ctx);
+                    CustomNotification.show(
+                      context,
+                      'Tournament updated successfully!',
+                      type: NotificationType.success,
+                    );
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +147,9 @@ class TournamentManagementScreen extends StatelessWidget {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        itemCount: _tournaments.length,
+        itemCount: _mutableTournaments.length,
         itemBuilder: (_, i) {
-          final t = _tournaments[i];
+          final t = _mutableTournaments[i];
           final statusColor = AppTheme.statusColor(t['status']!);
           return Container(
             margin: const EdgeInsets.only(bottom: 14),
@@ -57,7 +164,7 @@ class TournamentManagementScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentPurple.withValues(alpha: 0.15),
+                          color: AppTheme.accentPurple.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.emoji_events_rounded, color: AppTheme.accentPurple),
@@ -75,9 +182,9 @@ class TournamentManagementScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.15),
+                                    color: statusColor.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                                    border: Border.all(color: statusColor.withOpacity(0.4)),
                                   ),
                                   child: Text(t['status']!,
                                       style: GoogleFonts.plusJakartaSans(fontSize: 10, color: statusColor, fontWeight: FontWeight.w700)),
@@ -128,17 +235,13 @@ class TournamentManagementScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.createTournament,
-                            arguments: t,
-                          ),
+                          onPressed: () => _showInlineEditSheet(i),
                           icon: const Icon(Icons.edit_rounded, size: 16),
                           label: const Text('Edit'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentPurple.withValues(alpha: 0.2),
+                            backgroundColor: AppTheme.accentPurple.withOpacity(0.2),
                             foregroundColor: AppTheme.accentPurple,
-                            side: BorderSide(color: AppTheme.accentPurple.withValues(alpha: 0.4)),
+                            side: BorderSide(color: AppTheme.accentPurple.withOpacity(0.4)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),

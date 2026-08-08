@@ -6,10 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
-
 
 class ScheduleMatchScreen extends StatefulWidget {
   const ScheduleMatchScreen({super.key});
@@ -22,7 +20,6 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _teamAId, _teamBId;
   String _matchType = 'T20';
-  String _venue = '';
   final _dateCtrl = TextEditingController();
   final _timeCtrl = TextEditingController();
   final _scorerUserCtrl = TextEditingController();
@@ -80,20 +77,12 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
       );
       return;
     }
-    if (_venue.isEmpty) {
-      CustomNotification.show(
-        context,
-        'Please select a venue',
-        type: NotificationType.warning,
-      );
-      return;
-    }
 
     Provider.of<StorageService>(context, listen: false).scheduleMatch(
       teamAId: _teamAId!,
       teamBId: _teamBId!,
       matchType: _matchType,
-      venue: _venue,
+      venue: 'Main Stadium', // defaulted internally
       date: _dateCtrl.text,
       time: _timeCtrl.text,
       scorerUser: _scorerUserCtrl.text.trim(),
@@ -107,7 +96,6 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
     );
     Navigator.pop(context);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -167,10 +155,9 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppTheme.bgSurface),
-
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
+                        color: Colors.black.withOpacity(0.02),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
@@ -258,19 +245,6 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     ),
                   );
                 }).toList(),
-              ),
-
-              const SizedBox(height: 20),
-              const _Label('VENUE'),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
-                initialValue: _venue.isEmpty ? null : _venue,
-                decoration: inputDecorationTheme.copyWith(hintText: 'Select Venue'),
-                items: AppConstants.venues
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v, overflow: TextOverflow.ellipsis)))
-                    .toList(),
-                onChanged: (v) => setState(() => _venue = v ?? ''),
               ),
 
               const SizedBox(height: 20),

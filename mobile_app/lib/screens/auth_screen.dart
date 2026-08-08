@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../services/storage_service.dart';
+import '../services/socket_service.dart';
 import '../core/routes/app_routes.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/custom_notification.dart';
@@ -18,6 +19,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _isSignUp = false;
   final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -34,6 +36,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     
+    // Register global socket notification listener
+    SocketService.connect();
+    SocketService.listenToGlobalNotifications((data) {
+      if (mounted) {
+        CustomNotification.show(
+          context,
+          data['message'] ?? 'Notification received',
+          type: NotificationType.info,
+        );
+      }
+    });
+
     // Setup Background Video Player
     _videoController = VideoPlayerController.asset('assets/images/stadium_video.mp4')
       ..initialize().then((_) {
@@ -68,6 +82,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     _videoController.dispose();
     _fadeController.dispose();
     _emailController.dispose();
+    _nameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -79,6 +94,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     final storage = Provider.of<StorageService>(context, listen: false);
     final email = _emailController.text.trim();
     final pass = _passwordController.text.trim();
+    final name = _nameController.text.trim();
 
     if (_isSignUp) {
       if (pass != _confirmPasswordController.text.trim()) {
@@ -89,7 +105,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         );
         return;
       }
-      final success = await storage.register(email, pass);
+      final success = await storage.register(email, pass, name);
       if (!mounted) return;
       if (success) {
         CustomNotification.show(
@@ -344,6 +360,50 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     ),
                                     const SizedBox(height: 16),
               
+                                    // Full Name Field (only for Sign Up)
+                                    if (_isSignUp) ...[
+                                      Text(
+                                        'Full Name',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      TextFormField(
+                                        controller: _nameController,
+                                        style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter your full name',
+                                          hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                                          fillColor: Colors.white.withValues(alpha: 0.06),
+                                          filled: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          prefixIcon: const Icon(Icons.person_outline, size: 16, color: Colors.white60),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (_isSignUp && (value == null || value.trim().isEmpty)) {
+                                            return 'Please enter your full name';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 14),
+                                    ],
+
                                     // Email Field
                                     Text(
                                       'Email Address',

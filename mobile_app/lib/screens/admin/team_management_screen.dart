@@ -11,6 +11,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/confirm_dialog.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/card_entrance_animation.dart';
 
 class TeamManagementScreen extends StatefulWidget {
   const TeamManagementScreen({super.key});
@@ -92,10 +93,10 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: isSelected ? 0.3 : 0.1),
+                        color: color.withOpacity(isSelected ? 0.3 : 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: isSelected ? color : color.withValues(alpha: 0.3), width: isSelected ? 2 : 1),
+                            color: isSelected ? color : color.withOpacity(0.3), width: isSelected ? 2 : 1),
                       ),
                       child: Text(c['label']!,
                           style: GoogleFonts.plusJakartaSans(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
@@ -118,14 +119,9 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                       );
                       return;
                     }
-                    final defaultPlayers = List.generate(11, (i) => Player(
-                      id: '${short.toLowerCase()}_p${i + 1}',
-                      name: '$short Player ${i + 1}',
-                      role: i < 5 ? 'Batter' : (i < 8 ? 'All-rounder' : 'Bowler'),
-                      nationality: short,
-                    ));
+                    // Newly created team starts with 0 players
                     Provider.of<StorageService>(context, listen: false)
-                        .addTeam(name, short, selectedColor, defaultPlayers);
+                        .addTeam(name, short, selectedColor, []);
                     Navigator.pop(ctx);
                     CustomNotification.show(
                       context,
@@ -143,7 +139,6 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -176,25 +171,6 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header title and subtitle
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Team & Player Management',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Manage your franchise roster, add new talent, and organize squads.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
-          ),
-
           // Tabs row (Teams / Players)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
@@ -242,25 +218,35 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppTheme.bgDeep,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.bgSurface),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.015),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
-                      const SizedBox(width: 10),
+                      const Icon(Icons.search_rounded, color: AppTheme.primaryBlue, size: 20),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
-                          style: const TextStyle(color: AppTheme.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
                           onChanged: (v) => setState(() => _searchQuery = v),
                           decoration: InputDecoration(
-                            hintText: 'Search teams...',
-                            hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13),
+                            hintText: 'Search teams by name or code...',
+                            hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13.5),
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             filled: false,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),
@@ -306,89 +292,92 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     itemBuilder: (_, i) {
                       final team = filtered[i];
                       final color = Color(int.tryParse(team.logoColorHex) ?? 0xFF028A6B);
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.bgSurface),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: color.withValues(alpha: 0.15),
-                              child: Icon(Icons.shield_outlined, color: color, size: 24),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    team.name,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 15, 
-                                      fontWeight: FontWeight.bold, 
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${team.players.length} Players • 8 Support Staff',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFDCFCE7),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Active',
+                      return CardEntranceAnimation(
+                        key: ValueKey(team.id),
+                        index: i,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppTheme.bgSurface),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: color.withOpacity(0.15),
+                                child: Icon(Icons.shield_outlined, color: color, size: 24),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      team.name,
                                       style: GoogleFonts.plusJakartaSans(
-                                        color: const Color(0xFF16A34A),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15, 
+                                        fontWeight: FontWeight.bold, 
+                                        color: AppTheme.textPrimary,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${team.players.length} Players • 8 Support Staff',
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDCFCE7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Active',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: const Color(0xFF16A34A),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: 20),
-                              onPressed: () => Navigator.pushNamed(context, AppRoutes.editTeam, arguments: team),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: AppTheme.accentRed, size: 20),
-                              onPressed: () async {
-                                final confirmed = await ConfirmDialog.show(
-                                  context,
-                                  title: 'Delete Team',
-                                  message: 'Are you sure you want to delete "${team.name}"? This action cannot be undone.',
-                                );
-                                if (confirmed == true && context.mounted) {
-                                  storage.deleteTeam(team.id);
-                                  CustomNotification.show(
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: 20),
+                                onPressed: () => Navigator.pushNamed(context, AppRoutes.editTeam, arguments: team),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppTheme.accentRed, size: 20),
+                                onPressed: () async {
+                                  final confirmed = await ConfirmDialog.show(
                                     context,
-                                    'Team "${team.name}" deleted',
-                                    type: NotificationType.error,
+                                    title: 'Delete Team',
+                                    message: 'Are you sure you want to delete "${team.name}"? This action cannot be undone.',
                                   );
-                                }
-                              },
-                            ),
-
-                          ],
+                                  if (confirmed == true && context.mounted) {
+                                    storage.deleteTeam(team.id);
+                                    CustomNotification.show(
+                                      context,
+                                      'Team "${team.name}" deleted',
+                                      type: NotificationType.error,
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

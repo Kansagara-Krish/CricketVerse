@@ -1,0 +1,33 @@
+Overall changes 
+
+delete or remove all default player, tournament and match
+
+on click back button in mobile don't close if their is previous page then redirect their and if it last page then take conformation that they want to exit from app  
+
+1. Take Full name at registration time as well for user 
+2. Make sure admin and user can change their Full name , Email addres as well password only for password  otp conformation 
+3.Make sure the notification from the all users,admin can get and all kind of like new tournament create new match if any match start by manager and make notification system real
+4.make top success delete and any message remove by swap any direct can top left , right if swap down new div open with more info about that same for notification if new happen live same left to right coming animation and left to right unvisible animation with smooth effects this effect for all user and if two notification don't over lap each see separate 
+
+Admin side changes
+
+1. on click Tournament list Edit button all details of that tournament visible to edit instead of create tournament page 
+2. don't put any player by default when try to create team no problem their will be 0 player no problem 
+3. redesign Team management page no need of extra text like Team & Player management apply better theme for search part and animation of visibility of their result
+4. in Player management to player card edit option remove Nationality option put team name on click drop down to select new team take conformation to change in that player, no Nationality while create new player 
+5. Remove match location option while create new match as well in match details pages
+6. Auto Commentary by default for all match 
+
+Manager side change
+
+1.If manager start new match it means both team is 0 0 on click that match from official scorer portal screen it take conformation and toss result pop open first with both team captain name , take which team win toss and what select 
+2. Take conformation before stop AI commentary as well pause and start match from official timeline edtor page 
+
+User side changes
+
+1. Make sure valid name is visible on dashboard page and all
+2.on dashboard all details should be real live match score treading players and remove search part from dashboard no need 
+3. Make notification properly working for User 
+4. per user their Favorite Teams and all notification setting store are work perfectly
+5.remove language option no need
+6. Let user update their profile name email and password same as admin can do 

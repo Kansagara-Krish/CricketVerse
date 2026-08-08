@@ -3,9 +3,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/confirm_dialog.dart';
+import '../../services/storage_service.dart';
 
 class PlayerDetailScreen extends StatelessWidget {
   final Player player;
@@ -45,7 +48,7 @@ class PlayerDetailScreen extends StatelessWidget {
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [roleColor.withValues(alpha: 0.08), Colors.white],
+                    colors: [roleColor.withOpacity(0.08), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -56,7 +59,7 @@ class PlayerDetailScreen extends StatelessWidget {
                     const SizedBox(height: 48),
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor: roleColor.withValues(alpha: 0.12),
+                      backgroundColor: roleColor.withOpacity(0.12),
                       child: Text(
                         player.name.substring(0, 1),
                         style: GoogleFonts.plusJakartaSans(
@@ -74,9 +77,9 @@ class PlayerDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: roleColor.withValues(alpha: 0.1),
+                            color: roleColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: roleColor.withValues(alpha: 0.25)),
+                            border: Border.all(color: roleColor.withOpacity(0.25)),
                           ),
                           child: Text(player.role,
                               style: GoogleFonts.plusJakartaSans(fontSize: 11, color: roleColor, fontWeight: FontWeight.bold)),
@@ -189,42 +192,155 @@ class PlayerDetailScreen extends StatelessWidget {
   }
 
   void _showEditSheet(BuildContext context) {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    Team? currentTeam;
+    for (final t in storage.teams) {
+      if (t.players.any((p) => p.id == player.id)) {
+        currentTeam = t;
+        break;
+      }
+    }
+
     final nameCtrl = TextEditingController(text: player.name);
-    final natCtrl = TextEditingController(text: player.nationality);
+    String selectedRole = player.role;
+    String? selectedTeamId = currentTeam?.id;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-            const SizedBox(height: 16),
-            TextField(controller: nameCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Player Name')),
-            const SizedBox(height: 12),
-            TextField(controller: natCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Nationality')),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  CustomNotification.show(
-                    context,
-                    'Player "${nameCtrl.text}" updated successfully!',
-                    type: NotificationType.success,
-                  );
-                },
-                child: const Text('Save Changes'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => Padding(
+          padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+              const SizedBox(height: 16),
+              
+              // Name Field
+              TextField(
+                controller: nameCtrl, 
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Player Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Role Dropdown
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Player Role',
+                  prefixIcon: Icon(Icons.sports_cricket_outlined),
+                ),
+                items: ['Batter', 'Bowler', 'All-rounder'].map((role) {
+                  return DropdownMenuItem<String>(
+                    value: role,
+                    child: Text(role),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => selectedRole = val);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Team Dropdown
+              DropdownButtonFormField<String>(
+                value: selectedTeamId,
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Assign Team',
+                  prefixIcon: Icon(Icons.shield_outlined),
+                ),
+                items: storage.teams.map((t) {
+                  return DropdownMenuItem<String>(
+                    value: t.id,
+                    child: Text(t.name),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => selectedTeamId = val);
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final name = nameCtrl.text.trim();
+                    if (name.isEmpty) {
+                      CustomNotification.show(context, 'Player name cannot be empty', type: NotificationType.warning);
+                      return;
+                    }
+
+                    final updatedPlayer = Player(
+                      id: player.id,
+                      name: name,
+                      role: selectedRole,
+                      nationality: player.nationality,
+                      runsScored: player.runsScored,
+                      ballsFaced: player.ballsFaced,
+                      wicketsTaken: player.wicketsTaken,
+                      runsConceded: player.runsConceded,
+                      oversBowled: player.oversBowled,
+                      matchesPlayed: player.matchesPlayed,
+                    );
+
+                    if (selectedTeamId != currentTeam?.id) {
+                      // Show confirmation dialog before changing team
+                      final confirmed = await ConfirmDialog.show(
+                        context,
+                        title: 'Change Team Assignment',
+                        message: 'Are you sure you want to move this player to another team?',
+                      );
+
+                      if (confirmed == true) {
+                        if (currentTeam != null) {
+                          storage.removePlayer(currentTeam.id, player.id);
+                        }
+                        if (selectedTeamId != null) {
+                          storage.addPlayer(selectedTeamId!, updatedPlayer);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          CustomNotification.show(
+                            context,
+                            'Player "$name" updated and moved successfully!',
+                            type: NotificationType.success,
+                          );
+                        }
+                      }
+                    } else {
+                      if (currentTeam != null) {
+                        storage.updatePlayer(currentTeam.id, updatedPlayer);
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        CustomNotification.show(
+                          context,
+                          'Player "$name" updated successfully!',
+                          type: NotificationType.success,
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -264,7 +380,7 @@ class _StatBox extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.01),
+              color: Colors.black.withOpacity(0.01),
               blurRadius: 4,
               offset: const Offset(0, 1),
             )

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { invalidateCachedMatch, getCachedMatch, setCachedMatch } from '../config/redis';
-import { broadcastMatchUpdate } from '../sockets/socketHandler';
+import { broadcastMatchUpdate, broadcastNotification } from '../sockets/socketHandler';
 
 // Helper to fetch and rebuild match data to broadcast/return
 async function getFullMatchData(matchId: string) {
@@ -246,6 +246,17 @@ export async function startMatchSetup(req: Request, res: Response) {
     if (updatedMatch) {
       await setCachedMatch(matchId, updatedMatch);
       broadcastMatchUpdate(matchId, 'match_update', updatedMatch);
+
+      try {
+        const tossDecisionText = updatedMatch.tossDecision === 'Bat' ? 'batting' : 'bowling';
+        broadcastNotification({
+          title: 'Match Started! 🏏',
+          message: `${updatedMatch.tossWinner} won the toss and chose to ${tossDecisionText}. ${updatedMatch.teamA.name} vs ${updatedMatch.teamB.name} is now LIVE!`,
+          timestamp: new Date().toISOString()
+        });
+      } catch (broadcastErr) {
+        console.error('Error broadcasting start match notification:', broadcastErr);
+      }
     }
 
     return res.status(200).json(updatedMatch);

@@ -10,6 +10,7 @@ import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/card_entrance_animation.dart';
+import '../../services/socket_service.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({super.key});
@@ -30,6 +31,19 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+
+    // Register global socket notification listener
+    SocketService.connect();
+    SocketService.listenToGlobalNotifications((data) {
+      if (mounted) {
+        CustomNotification.show(
+          context,
+          data['message'] ?? 'Notification received',
+          type: NotificationType.info,
+        );
+      }
+    });
+
     _drawerAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -539,18 +553,8 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                           const Divider(height: 1, color: Color(0xFFF1F5F9)),
                           const SizedBox(height: 8),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  match.venue,
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
                               Text(
                                 'Tap to open Scoring Portal',
                                 style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
@@ -623,7 +627,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${match.matchType} • ${match.venue} • ${match.date} ${match.time}',
+                  '${match.matchType} • ${match.date} ${match.time}',
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
@@ -673,7 +677,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             onChanged: (val) => setState(() => _tossDecision = val ?? 'Bat'),
           ),
           const SizedBox(height: 32),
-
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -687,20 +690,56 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                   );
                   return;
                 }
-                
-                String firstBattingId;
-                if (_tossWinner == match.teamA.name) {
-                  firstBattingId = _tossDecision == 'Bat' ? match.teamA.id : match.teamB.id;
-                } else {
-                  firstBattingId = _tossDecision == 'Bat' ? match.teamB.id : match.teamA.id;
-                }
 
-                storage.startMatchSetup(match.id, _tossWinner!, _tossDecision, firstBattingId);
-                CustomNotification.show(
-                  context,
-                  'Match started successfully! Playing XIs initialized.',
-                  type: NotificationType.success,
-                );
+                final captainA = match.teamA.players.isNotEmpty ? match.teamA.players[0].name : 'Unknown';
+                final captainB = match.teamB.players.isNotEmpty ? match.teamB.players[0].name : 'Unknown';
+                final winnerCaptain = (_tossWinner == match.teamA.name) ? captainA : captainB;
+                
+                showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Confirm Toss Results'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Winner: $_tossWinner (Captain: $winnerCaptain)'),
+                        const SizedBox(height: 8),
+                        Text('Decision: $_tossDecision first'),
+                        const SizedBox(height: 12),
+                        Text('Team A: ${match.teamA.name}\nCaptain: $captainA', style: const TextStyle(fontSize: 12)),
+                        const SizedBox(height: 8),
+                        Text('Team B: ${match.teamB.name}\nCaptain: $captainB', style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Confirm'),
+                      ),
+                    ],
+                  ),
+                ).then((confirmed) {
+                  if (confirmed == true) {
+                    String firstBattingId;
+                    if (_tossWinner == match.teamA.name) {
+                      firstBattingId = _tossDecision == 'Bat' ? match.teamA.id : match.teamB.id;
+                    } else {
+                      firstBattingId = _tossDecision == 'Bat' ? match.teamB.id : match.teamA.id;
+                    }
+
+                    storage.startMatchSetup(match.id, _tossWinner!, _tossDecision, firstBattingId);
+                    CustomNotification.show(
+                      context,
+                      'Match started successfully! Playing XIs initialized.',
+                      type: NotificationType.success,
+                    );
+                  }
+                });
               },
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               label: const Text('Start Match & Lineups'),
@@ -1009,7 +1048,32 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       ),
                       Switch(
                         value: _isAutoCommentary,
-                        onChanged: (val) => setState(() => _isAutoCommentary = val),
+                        onChanged: (val) async {
+                          if (val == false) {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Disable AI Commentary?'),
+                                content: const Text('Are you sure you want to turn off automatic AI commentary generation for subsequent balls?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Disable'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              setState(() => _isAutoCommentary = false);
+                            }
+                          } else {
+                            setState(() => _isAutoCommentary = true);
+                          }
+                        },
                         activeThumbColor: AppTheme.primaryBlue,
                       ),
                     ],

@@ -23,8 +23,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   bool _liveUpdates = true;
 
   void _editProfile() {
-    final nameCtrl = TextEditingController(text: 'Rajesh Kumar');
-    final emailCtrl = TextEditingController(text: 'admin@cricketverse.ai');
+    final storage = Provider.of<StorageService>(context, listen: false);
+    final nameCtrl = TextEditingController(text: storage.currentUserName);
+    final emailCtrl = TextEditingController(text: storage.currentUserEmail);
     final orgCtrl = TextEditingController(text: 'CricketVerse Organization');
 
     showModalBottomSheet(
@@ -48,23 +49,52 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             const SizedBox(height: 20),
             Text('Edit Profile', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 20),
-            TextField(controller: nameCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted))),
+            TextField(
+              controller: nameCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 14),
-            TextField(controller: emailCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted))),
+            TextField(
+              controller: emailCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 14),
-            TextField(controller: orgCtrl, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Organization', prefixIcon: Icon(Icons.business_outlined, color: AppTheme.textMuted))),
+            TextField(
+              controller: orgCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(labelText: 'Organization', prefixIcon: Icon(Icons.business_outlined, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ Profile updated successfully!'), backgroundColor: AppTheme.primaryGreen),
-                  );
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  final email = emailCtrl.text.trim();
+                  if (name.isEmpty || email.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ Fields cannot be empty'), backgroundColor: AppTheme.accentRed),
+                    );
+                    return;
+                  }
+                  final ok = await storage.updateProfile(name: name, email: email);
+                  if (ok) {
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('✅ Profile updated successfully!'), backgroundColor: AppTheme.primaryGreen),
+                      );
+                      setState(() {});
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('❌ Update failed. Email may already be taken.'), backgroundColor: AppTheme.accentRed),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Save Changes'),
               ),
@@ -75,8 +105,36 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
-  void _changePassword() {
-    final oldPassCtrl = TextEditingController();
+  void _changePassword() async {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    // Show a loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    final otpCode = await storage.requestPasswordOtp();
+    if (!mounted) return;
+    Navigator.pop(context); // Dismiss loading indicator
+    
+    if (otpCode == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Failed to request OTP code.'), backgroundColor: AppTheme.accentRed),
+      );
+      return;
+    }
+
+    // Show verification code staged for prototype
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('🔒 Verification Code: $otpCode (staged for prototype)'),
+        backgroundColor: AppTheme.primaryGreen,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+
+    final otpCtrl = TextEditingController(text: otpCode); // Autofill
     final newPassCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
 
@@ -95,23 +153,63 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           children: [
             Text('Change Password', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 20),
-            TextField(controller: oldPassCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Current Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
+            TextField(
+              controller: otpCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '4-Digit OTP Code', prefixIcon: Icon(Icons.pin_outlined, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 14),
-            TextField(controller: newPassCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
+            TextField(
+              controller: newPassCtrl, 
+              obscureText: true, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 14),
-            TextField(controller: confirmCtrl, obscureText: true, style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted))),
+            TextField(
+              controller: confirmCtrl, 
+              obscureText: true, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted)),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('🔒 Password changed successfully!'), backgroundColor: AppTheme.primaryGreen),
-                  );
+                onPressed: () async {
+                  final otp = otpCtrl.text.trim();
+                  final newPass = newPassCtrl.text.trim();
+                  final confirm = confirmCtrl.text.trim();
+
+                  if (otp.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ All fields are required'), backgroundColor: AppTheme.accentRed),
+                    );
+                    return;
+                  }
+                  if (newPass != confirm) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ Passwords do not match'), backgroundColor: AppTheme.accentRed),
+                    );
+                    return;
+                  }
+
+                  final ok = await storage.updatePassword(otp, newPass);
+                  if (ok) {
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('🔒 Password updated successfully!'), backgroundColor: AppTheme.primaryGreen),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('❌ Failed to update password. Invalid or expired OTP.'), backgroundColor: AppTheme.accentRed),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Update Password'),
               ),
@@ -124,6 +222,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = Provider.of<StorageService>(context);
+    final displayName = storage.currentUserName ?? 'Rajesh Kumar';
+    final email = storage.currentUserEmail ?? 'admin@cricketverse.ai';
+
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
@@ -160,11 +262,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text('Rajesh Kumar',
+            Text(displayName,
                 style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             Text('Tournament Administrator',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
-            Text('admin@cricketverse.ai',
+            Text(email,
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryBlue)),
             const SizedBox(height: 8),
             Container(
@@ -221,9 +323,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentRed.withValues(alpha: 0.15),
+                  backgroundColor: AppTheme.accentRed.withOpacity(0.15),
                   foregroundColor: AppTheme.accentRed,
-                  side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.3)),
+                  side: BorderSide(color: AppTheme.accentRed.withOpacity(0.3)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

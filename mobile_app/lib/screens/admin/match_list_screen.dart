@@ -164,15 +164,6 @@ class _MatchTile extends StatelessWidget {
                   Text(match.matchType,
                       style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                   const Spacer(),
-                  const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      match.venue.split(',').first,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                    ),
-                  ),
                 ],
               ),
             ),

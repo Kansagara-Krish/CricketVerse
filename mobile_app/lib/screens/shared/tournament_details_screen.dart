@@ -163,7 +163,7 @@ class _TournamentDetailsScreenState extends State<TournamentDetailsScreen> with 
               );
             },
             title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textPrimary)),
-            subtitle: Text('${match.venue} • ${match.date}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
+            subtitle: Text(match.date, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(

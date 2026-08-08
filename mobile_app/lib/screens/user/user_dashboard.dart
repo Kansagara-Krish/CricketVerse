@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../core/routes/app_routes.dart';
+import '../../services/socket_service.dart';
 import 'match_details_screen.dart';
 import '../../core/widgets/custom_notification.dart';
 import 'prediction_tab_view.dart';
@@ -21,6 +22,22 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   int _currentIndex = 0; // Default to Home
+
+  @override
+  void initState() {
+    super.initState();
+    // Register global socket notification listener
+    SocketService.connect();
+    SocketService.listenToGlobalNotifications((data) {
+      if (mounted) {
+        CustomNotification.show(
+          context,
+          data['message'] ?? 'Notification received',
+          type: NotificationType.info,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -28,7 +28,6 @@ class AddPlayerSheet extends StatefulWidget {
 
 class _AddPlayerSheetState extends State<AddPlayerSheet> {
   final _nameCtrl = TextEditingController();
-  final _natCtrl = TextEditingController();
   String _selectedRole = 'Batter';
   late String _selectedTeamId;
 
@@ -41,7 +40,6 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _natCtrl.dispose();
     super.dispose();
   }
 
@@ -77,15 +75,6 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
             decoration: const InputDecoration(
               labelText: 'Player Name',
               prefixIcon: Icon(Icons.person, color: AppTheme.textMuted),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _natCtrl,
-            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
-              labelText: 'Nationality (e.g. IND)',
-              prefixIcon: Icon(Icons.flag, color: AppTheme.textMuted),
             ),
           ),
           const SizedBox(height: 14),
@@ -127,10 +116,6 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
                   CustomNotification.show(context, 'Please enter a name!', type: NotificationType.warning);
                   return;
                 }
-                if (_natCtrl.text.trim().isEmpty) {
-                  CustomNotification.show(context, 'Please enter nationality!', type: NotificationType.warning);
-                  return;
-                }
                 if (_selectedTeamId.isEmpty) {
                   CustomNotification.show(context, 'Please assign a team!', type: NotificationType.warning);
                   return;
@@ -140,7 +125,7 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
                   id: 'player_${DateTime.now().millisecondsSinceEpoch}',
                   name: _nameCtrl.text.trim(),
                   role: _selectedRole,
-                  nationality: _natCtrl.text.trim(),
+                  nationality: 'IND',
                 );
 
                 widget.storage.addPlayer(_selectedTeamId, newPlayer);

@@ -119,7 +119,7 @@ class _SchedulesTabViewState extends State<SchedulesTabView> {
                   ],
                 ),
                 title: Text('${match.teamA.name} vs ${match.teamB.name}', style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                subtitle: Text('${match.venue} • ${match.date} ${match.time}', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12)),
+                subtitle: Text('${match.date} ${match.time}', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12)),
                 trailing: Text(
                   match.status,
                   style: GoogleFonts.plusJakartaSans(

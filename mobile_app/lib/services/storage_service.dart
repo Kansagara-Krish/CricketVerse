@@ -18,11 +18,14 @@ class StorageService with ChangeNotifier {
   String? _currentRole; // "Admin", "Scorer", "User", "Guest"
   String? _activeScorerMatchId; // Active match ID currently being scored
   bool _isOnlineMode = false;
+  String? _currentUserName;
+  String? _offlineOtp;
 
   List<Team> get teams => _teams;
   List<CricketMatch> get matches => _matches;
   String? get currentRole => _currentRole;
   String? get currentUserEmail => _currentUserEmail;
+  String? get currentUserName => _currentUserName;
   String? get activeScorerMatchId => _activeScorerMatchId;
   bool get isOnlineMode => _isOnlineMode;
 
@@ -168,6 +171,7 @@ class StorageService with ChangeNotifier {
       if (res != null && res['user'] != null) {
         _currentUserEmail = res['user']['email'];
         _currentRole = res['user']['role'];
+        _currentUserName = res['user']['name'];
         if (_currentRole == 'Scorer') {
           _activeScorerMatchId = res['activeScorerMatchId'];
           if (_activeScorerMatchId == null && res['user']['id'] != null) {
@@ -195,6 +199,7 @@ class StorageService with ChangeNotifier {
       if (res != null) {
         _currentUserEmail = res['user']['email'];
         _currentRole = res['user']['role'];
+        _currentUserName = res['user']['name'];
         _activeScorerMatchId = res['activeScorerMatchId'];
         await loadData();
         return true;
@@ -206,6 +211,7 @@ class StorageService with ChangeNotifier {
     if (usernameOrEmail == 'admin@cricketverse.ai' && password == 'admin123') {
       _currentUserEmail = 'admin@cricketverse.ai';
       _currentRole = 'Admin';
+      _currentUserName = 'Rajesh Kumar';
       _activeScorerMatchId = null;
       notifyListeners();
       return true;
@@ -221,6 +227,7 @@ class StorageService with ChangeNotifier {
     if (matchScoring != null) {
       _currentUserEmail = usernameOrEmail;
       _currentRole = 'Scorer';
+      _currentUserName = 'Official Scorer';
       _activeScorerMatchId = matchScoring.id; // Scorer matches immediately to their match ID
       notifyListeners();
       return true;
@@ -229,6 +236,7 @@ class StorageService with ChangeNotifier {
     if (_users.containsKey(usernameOrEmail) && _users[usernameOrEmail] == password) {
       _currentUserEmail = usernameOrEmail;
       _currentRole = 'User';
+      _currentUserName = _prefs?.getString('name_$usernameOrEmail') ?? usernameOrEmail.split('@')[0];
       _activeScorerMatchId = null;
       notifyListeners();
       return true;
@@ -237,12 +245,13 @@ class StorageService with ChangeNotifier {
     return false;
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<bool> register(String email, String password, String name) async {
     if (_isOnlineMode) {
-      final res = await ApiService.register(email, password);
+      final res = await ApiService.register(email, password, name);
       if (res != null) {
         _currentUserEmail = res['user']['email'];
         _currentRole = res['user']['role'];
+        _currentUserName = res['user']['name'];
         await loadData();
         return true;
       }
@@ -254,10 +263,12 @@ class StorageService with ChangeNotifier {
       return false;
     }
     _users[email] = password;
+    _prefs?.setString('name_$email', name);
     _saveUsers();
     
     _currentUserEmail = email;
     _currentRole = 'User';
+    _currentUserName = name;
     notifyListeners();
     return true;
   }
@@ -265,12 +276,14 @@ class StorageService with ChangeNotifier {
   void loginAsGuest() {
     _currentUserEmail = 'guest@cricketverse.ai';
     _currentRole = 'Guest';
+    _currentUserName = 'Guest Fan';
     notifyListeners();
   }
 
   Future<void> logout() async {
     _currentUserEmail = null;
     _currentRole = null;
+    _currentUserName = null;
     _activeScorerMatchId = null;
     if (_isOnlineMode) {
       await ApiService.clearToken();
@@ -992,6 +1005,118 @@ class StorageService with ChangeNotifier {
 
   void saveMatchesState() {
     if (!_isOnlineMode) _saveMatches();
+    notifyListeners();
+  }
+
+  // --- Profile, Password and Settings persistence helper methods ---
+  Future<bool> updateProfile({String? name, String? email}) async {
+    if (_isOnlineMode) {
+      final res = await ApiService.updateProfile(name: name, email: email);
+      if (res != null) {
+        _currentUserEmail = res['user']['email'];
+        _currentUserName = res['user']['name'];
+        notifyListeners();
+        return true;
+      }
+      return false;
+    }
+
+    // --- Offline update profile ---
+    if (_currentUserEmail == null) return false;
+    
+    if (email != null && email != _currentUserEmail) {
+      if (_users.containsKey(email)) {
+        return false; // Email already in use offline
+      }
+      final pwd = _users[_currentUserEmail!];
+      _users.remove(_currentUserEmail!);
+      _users[email] = pwd ?? 'user123';
+      
+      // Update name preference key
+      final oldName = _prefs?.getString('name_$_currentUserEmail') ?? _currentUserName;
+      if (oldName != null) {
+        _prefs?.setString('name_$email', oldName);
+      }
+      _prefs?.remove('name_$_currentUserEmail');
+      
+      _currentUserEmail = email;
+    }
+
+    if (name != null) {
+      _currentUserName = name;
+      _prefs?.setString('name_$_currentUserEmail', name);
+    }
+
+    _saveUsers();
+    notifyListeners();
+    return true;
+  }
+
+  Future<String?> requestPasswordOtp() async {
+    if (_isOnlineMode) {
+      final res = await ApiService.requestPasswordOtp();
+      if (res != null && res['otp'] != null) {
+        return res['otp'].toString();
+      }
+      return null;
+    }
+
+    // --- Offline Request OTP ---
+    _offlineOtp = (1000 + Random().nextInt(9000)).toString();
+    debugPrint('Offline OTP generated: $_offlineOtp');
+    return _offlineOtp;
+  }
+
+  Future<bool> updatePassword(String otp, String newPassword) async {
+    if (_isOnlineMode) {
+      return await ApiService.updatePassword(otp, newPassword);
+    }
+
+    // --- Offline Update Password ---
+    if (_offlineOtp == null || _offlineOtp != otp) {
+      return false;
+    }
+
+    if (_currentUserEmail != null) {
+      _users[_currentUserEmail!] = newPassword;
+      _saveUsers();
+      _offlineOtp = null;
+      return true;
+    }
+    return false;
+  }
+
+  // Favorites persistence
+  List<String> getFavoriteTeams() {
+    if (_currentUserEmail == null) return [];
+    final key = 'favorites_${_currentUserEmail}';
+    return _prefs?.getStringList(key) ?? [];
+  }
+
+  Future<void> toggleFavoriteTeam(String teamId) async {
+    if (_currentUserEmail == null) return;
+    final key = 'favorites_${_currentUserEmail}';
+    final current = getFavoriteTeams();
+    if (current.contains(teamId)) {
+      current.remove(teamId);
+    } else {
+      current.add(teamId);
+    }
+    await _prefs?.setStringList(key, current);
+    notifyListeners();
+  }
+
+  // Notification settings persistence
+  bool getNotificationSetting(String settingKey) {
+    if (_currentUserEmail == null) return true; // Default to true
+    final key = 'notif_${settingKey}_${_currentUserEmail}';
+    return _prefs?.getBool(key) ?? true;
+  }
+
+  Future<void> setNotificationSetting(String settingKey, bool value) async {
+    if (_currentUserEmail == null) return;
+    final key = 'notif_${settingKey}_${_currentUserEmail}';
+    await _prefs?.setBool(key, value);
     notifyListeners();
   }
 }

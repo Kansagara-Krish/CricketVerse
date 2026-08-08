@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
+import '../../services/socket_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/card_entrance_animation.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -31,6 +33,19 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
+    
+    // Register global socket notification listener
+    SocketService.connect();
+    SocketService.listenToGlobalNotifications((data) {
+      if (mounted) {
+        CustomNotification.show(
+          context,
+          data['message'] ?? 'Notification received',
+          type: NotificationType.info,
+        );
+      }
+    });
+
     _drawerAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -890,21 +905,7 @@ class _MatchCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textMuted),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    match.venue,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted),
-                  ),
-                ),
-              ],
-            ),
+            const SizedBox(height: 4),
           ],
         ),
       ),

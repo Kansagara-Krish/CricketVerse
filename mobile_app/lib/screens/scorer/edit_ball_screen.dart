@@ -114,15 +114,39 @@ class _EditBallScreenState extends State<EditBallScreen> {
                     ],
                   ),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _isPaused = !_isPaused;
-                      });
-                      CustomNotification.show(
-                        context,
-                        _isPaused ? 'Match paused officially!' : 'Match resumed!',
-                        type: _isPaused ? NotificationType.warning : NotificationType.success,
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(_isPaused ? 'Resume Match Scoring?' : 'Pause Match Scoring?'),
+                          content: Text(_isPaused 
+                              ? 'Are you sure you want to resume the scoring session and enable broadcasts?'
+                              : 'Are you sure you want to pause the scoring session and halt broadcasts?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Confirm'),
+                            ),
+                          ],
+                        ),
                       );
+
+                      if (confirmed == true) {
+                        setState(() {
+                          _isPaused = !_isPaused;
+                        });
+                        if (mounted) {
+                          CustomNotification.show(
+                            context,
+                            _isPaused ? 'Match paused officially!' : 'Match resumed!',
+                            type: _isPaused ? NotificationType.warning : NotificationType.success,
+                          );
+                        }
+                      }
                     },
                     icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
                     label: Text(_isPaused ? 'Resume' : 'Pause'),

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,17 +17,204 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
-  // Localized UI state variables
-  final Set<String> _favTeamIds = {'uvpce_titans'};
-  bool _notifMatchStart = true;
-  bool _notifWickets = true;
-  bool _notifCommentary = false;
   String _themeMode = 'Light';
-  String _selectedLanguage = 'English';
+
+  void _editProfile(StorageService storage) {
+    final nameCtrl = TextEditingController(text: storage.currentUserName);
+    final emailCtrl = TextEditingController(text: storage.currentUserEmail);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 20),
+            Text('Edit Profile', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: nameCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Full Name', 
+                prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: emailCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Email Address', 
+                prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  final email = emailCtrl.text.trim();
+                  if (name.isEmpty || email.isEmpty) {
+                    CustomNotification.show(context, 'Fields cannot be empty', type: NotificationType.error);
+                    return;
+                  }
+                  final ok = await storage.updateProfile(name: name, email: email);
+                  if (ok) {
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      CustomNotification.show(context, 'Profile updated successfully!', type: NotificationType.success);
+                      setState(() {});
+                    }
+                  } else {
+                    if (mounted) {
+                      CustomNotification.show(context, 'Update failed. Email may already be taken.', type: NotificationType.error);
+                    }
+                  }
+                },
+                child: const Text('Save Changes'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _changePassword(StorageService storage) async {
+    // Show a loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    final otpCode = await storage.requestPasswordOtp();
+    if (!mounted) return;
+    Navigator.pop(context); // Dismiss loading indicator
+    
+    if (otpCode == null) {
+      CustomNotification.show(context, 'Failed to request OTP code.', type: NotificationType.error);
+      return;
+    }
+
+    // Show dialog/modal informing the OTP code (prototype validation)
+    CustomNotification.show(
+      context,
+      'Verification Code: $otpCode (staged for prototype)',
+      type: NotificationType.success,
+      duration: const Duration(seconds: 6),
+    );
+
+    final otpCtrl = TextEditingController(text: otpCode); // Autofill for convenience in prototype!
+    final newPassCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Change Password', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: otpCtrl, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '4-Digit OTP Code', 
+                prefixIcon: Icon(Icons.pin_outlined, color: AppTheme.textMuted),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: newPassCtrl, 
+              obscureText: true, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'New Password', 
+                prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: confirmCtrl, 
+              obscureText: true, 
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Confirm New Password', 
+                prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final otp = otpCtrl.text.trim();
+                  final newPass = newPassCtrl.text.trim();
+                  final confirm = confirmCtrl.text.trim();
+
+                  if (otp.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                    CustomNotification.show(context, 'All fields are required', type: NotificationType.error);
+                    return;
+                  }
+                  if (newPass != confirm) {
+                    CustomNotification.show(context, 'Passwords do not match', type: NotificationType.error);
+                    return;
+                  }
+
+                  final ok = await storage.updatePassword(otp, newPass);
+                  if (ok) {
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      CustomNotification.show(context, 'Password updated successfully!', type: NotificationType.success);
+                    }
+                  } else {
+                    if (mounted) {
+                      CustomNotification.show(context, 'Failed to update password. Invalid or expired OTP.', type: NotificationType.error);
+                    }
+                  }
+                },
+                child: const Text('Update Password'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
+    final favTeamsList = storage.getFavoriteTeams();
+    final favTeamIds = favTeamsList.toSet();
+
+    final notifMatchStart = storage.getNotificationSetting('match_start');
+    final notifWickets = storage.getNotificationSetting('wickets');
+    final notifCommentary = storage.getNotificationSetting('commentary');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
@@ -44,25 +232,38 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           _buildCategoryHeader('ACCOUNT & PREFERENCES'),
           const SizedBox(height: 8),
           _buildProfileTile(
+            icon: Icons.edit_rounded,
+            title: 'Edit Profile',
+            subtitle: 'Change name or email',
+            onTap: () => _editProfile(storage),
+          ),
+          _buildProfileTile(
+            icon: Icons.lock_outline_rounded,
+            title: 'Change Password',
+            subtitle: 'Secure your account',
+            onTap: () => _changePassword(storage),
+          ),
+          _buildProfileTile(
             icon: Icons.favorite_border,
             title: 'Favorite Teams',
-            subtitle: '${_favTeamIds.length} selected',
-            onTap: () => ProfileDialogs.showFavoriteTeams(context, storage, _favTeamIds, () => setState(() {})),
+            subtitle: '${favTeamIds.length} selected',
+            onTap: () => ProfileDialogs.showFavoriteTeams(context, storage, favTeamIds, () => setState(() {})),
           ),
           _buildProfileTile(
             icon: Icons.notifications_none,
             title: 'Notification Settings',
-            subtitle: _getNotificationSummary(),
+            subtitle: _getNotificationSummary(notifMatchStart, notifWickets, notifCommentary),
             onTap: () => ProfileDialogs.showNotifications(
               context,
-              _notifMatchStart,
-              _notifWickets,
-              _notifCommentary,
-              (m, w, c) => setState(() {
-                _notifMatchStart = m;
-                _notifWickets = w;
-                _notifCommentary = c;
-              }),
+              notifMatchStart,
+              notifWickets,
+              notifCommentary,
+              (m, w, c) async {
+                await storage.setNotificationSetting('match_start', m);
+                await storage.setNotificationSetting('wickets', w);
+                await storage.setNotificationSetting('commentary', c);
+                setState(() {});
+              },
             ),
           ),
           _buildProfileTile(
@@ -70,12 +271,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             title: 'Theme Settings',
             subtitle: _themeMode,
             onTap: () => ProfileDialogs.showThemeChooser(context, _themeMode, (theme) => setState(() => _themeMode = theme)),
-          ),
-          _buildProfileTile(
-            icon: Icons.language,
-            title: 'App Language',
-            subtitle: _selectedLanguage,
-            onTap: () => ProfileDialogs.showLanguageChooser(context, _selectedLanguage, (lang) => setState(() => _selectedLanguage = lang)),
           ),
 
           const SizedBox(height: 20),
@@ -128,6 +323,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 
   Widget _buildBioHeader(StorageService storage) {
+    final displayName = storage.currentUserName ?? 'Fan';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -147,7 +343,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Alex',
+                displayName,
                 style: GoogleFonts.plusJakartaSans(fontSize: 19, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
               ),
               const SizedBox(width: 6),
@@ -204,7 +400,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: color.withValues(alpha: 0.1),
+            backgroundColor: color.withOpacity(0.1),
             child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(height: 10),
@@ -264,7 +460,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: AppTheme.bgSurface.withValues(alpha: 0.5),
+                  backgroundColor: AppTheme.bgSurface.withOpacity(0.5),
                   child: Icon(icon, color: AppTheme.primaryBlue, size: 18),
                 ),
                 const SizedBox(width: 14),
@@ -293,11 +489,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     );
   }
 
-  String _getNotificationSummary() {
+  String _getNotificationSummary(bool matchStart, bool wickets, bool commentary) {
     int count = 0;
-    if (_notifMatchStart) count++;
-    if (_notifWickets) count++;
-    if (_notifCommentary) count++;
+    if (matchStart) count++;
+    if (wickets) count++;
+    if (commentary) count++;
     return '$count of 3 active';
   }
 }

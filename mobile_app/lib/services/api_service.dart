@@ -66,12 +66,12 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> register(String email, String password) async {
+  static Future<Map<String, dynamic>?> register(String email, String password, String name) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'email': email, 'password': password, 'name': name}),
       );
 
       if (res.statusCode == 201) {
@@ -101,6 +101,77 @@ class ApiService {
     } catch (e) {
       debugPrint('ApiService getMe error: $e');
       return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> updateProfile({String? name, String? email}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (email != null) body['email'] = email;
+
+      final res = await http.put(
+        Uri.parse('$baseUrl/auth/profile'),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['token'] != null) {
+          await _saveToken(data['token']);
+        }
+        return data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService updateProfile error: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> requestPasswordOtp() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/password-otp'),
+        headers: _headers,
+      );
+
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService requestPasswordOtp error: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> updatePassword(String otp, String newPassword) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/auth/password'),
+        headers: _headers,
+        body: jsonEncode({'otp': otp, 'newPassword': newPassword}),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService updatePassword error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> broadcastNotification(String title, String message) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/broadcast'),
+        headers: _headers,
+        body: jsonEncode({'title': title, 'message': message}),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService broadcastNotification error: $e');
+      return false;
     }
   }
 

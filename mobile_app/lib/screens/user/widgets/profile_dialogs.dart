@@ -68,7 +68,8 @@ class ProfileDialogs {
                                   isFav ? Icons.favorite : Icons.favorite_border,
                                   color: isFav ? AppTheme.accentRed : AppTheme.textMuted,
                                 ),
-                                onPressed: () {
+                                onPressed: () async {
+                                  await storage.toggleFavoriteTeam(team.id);
                                   setDialogState(() {
                                     if (isFav) {
                                       favTeamIds.remove(team.id);

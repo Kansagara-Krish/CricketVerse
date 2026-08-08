@@ -73,5 +73,20 @@ class SocketService {
     });
   }
 
+  static void listenToGlobalNotifications(void Function(Map<String, dynamic> data) onNotification) {
+    if (_socket == null || !_socket!.connected) {
+      connect();
+    }
+    _socket!.off('global_notification'); // Clear previous listeners
+    _socket!.on('global_notification', (data) {
+      debugPrint('Received global_notification event from server.');
+      if (data is Map<String, dynamic>) {
+        onNotification(data);
+      } else if (data is Map) {
+        onNotification(Map<String, dynamic>.from(data));
+      }
+    });
+  }
+
   static bool get isConnected => _socket != null && _socket!.connected;
 }

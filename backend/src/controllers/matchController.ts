@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { getCachedMatch, setCachedMatch, invalidateCachedMatch } from '../config/redis';
+import { broadcastNotification } from '../sockets/socketHandler';
 
 // Helper to construct nested CricketMatch object from raw match row
 async function getFullMatchData(matchId: string) {
@@ -195,6 +196,21 @@ export async function scheduleMatch(req: Request, res: Response) {
         });
       }
     });
+
+    try {
+      const teamA = await prisma.team.findUnique({ where: { id: teamAId } });
+      const teamB = await prisma.team.findUnique({ where: { id: teamBId } });
+      const teamAName = teamA ? teamA.name : 'Team A';
+      const teamBName = teamB ? teamB.name : 'Team B';
+
+      broadcastNotification({
+        title: 'New Match Scheduled',
+        message: `${teamAName} vs ${teamBName} is scheduled on ${date} at ${time}.`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (broadcastErr) {
+      console.error('Error broadcasting schedule match notification:', broadcastErr);
+    }
 
     return res.status(201).json({ message: 'Match scheduled successfully.', id: matchId });
   } catch (err) {

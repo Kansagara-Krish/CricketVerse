@@ -29,11 +29,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Welcome Header
-          _buildHeaderSection(),
-          const SizedBox(height: 18),
-
-          // 2. Search Input Field
-          _buildSearchField(),
+          _buildHeaderSection(storage),
           const SizedBox(height: 18),
 
           // 3. Selection Filters Row
@@ -45,7 +41,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           const SizedBox(height: 24),
 
           // 5. Trending Players Section
-          _buildTrendingPlayersSection(),
+          _buildTrendingPlayersSection(storage),
           const SizedBox(height: 24),
 
           // 6. Latest Analytics Updates Card
@@ -55,15 +51,17 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(StorageService storage) {
+    final displayName = storage.currentUserName ?? 'Fan';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            const CircleAvatar(
-              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop'),
+            CircleAvatar(
+              backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
               radius: 20,
+              child: const Icon(Icons.person, color: AppTheme.primaryBlue),
             ),
             const SizedBox(width: 12),
             Column(
@@ -74,7 +72,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  'Hello, Alex',
+                  'Hello, $displayName',
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ],
@@ -86,45 +84,6 @@ class _HomeTabViewState extends State<HomeTabView> {
           onPressed: () {},
         ),
       ],
-    );
-  }
-
-  Widget _buildSearchField() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.bgSurface),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
-              decoration: InputDecoration(
-                hintText: 'Search teams, players, matches...',
-                hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13.5),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          const Icon(Icons.mic_none_rounded, color: AppTheme.textSecondary, size: 20),
-        ],
-      ),
     );
   }
 
@@ -205,7 +164,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         border: Border.all(color: AppTheme.bgSurface),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
+            color: Colors.black.withOpacity(0.015),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -219,13 +178,13 @@ class _HomeTabViewState extends State<HomeTabView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'ICC WORLD CUP 2024',
+                  'CRICKETVERSE CUP 2026',
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: match.status == 'Live' ? const Color(0xFFFEE2E2) : AppTheme.bgSurface.withValues(alpha: 0.5),
+                    color: match.status == 'Live' ? const Color(0xFFFEE2E2) : AppTheme.bgSurface.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -288,7 +247,9 @@ class _HomeTabViewState extends State<HomeTabView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${match.teamA.players.isNotEmpty ? match.teamA.players[0].name.split(" ").first : "Aarav"} 42*(28)',
+                  match.status == 'Upcoming' 
+                      ? 'Fixture starts at ${match.time}' 
+                      : '${match.teamA.players.isNotEmpty ? match.teamA.players[0].name.split(" ").first : "Player"} 42*(28)',
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.w600),
                 ),
                 Row(
@@ -296,7 +257,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                     const Icon(Icons.bolt, color: AppTheme.primaryGreen, size: 13),
                     const SizedBox(width: 2),
                     Text(
-                      'AI: ${match.teamA.shortName} ${winProb.toStringAsFixed(0)}%',
+                      'AI Win Prob: ${winProb.toStringAsFixed(0)}%',
                       style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontSize: 11.5, fontWeight: FontWeight.w800),
                     ),
                   ],
@@ -345,8 +306,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  Widget _buildTrendingPlayersSection() {
+  Widget _buildTrendingPlayersSection(StorageService storage) {
+    final allPlayers = storage.teams.expand((t) => t.players).toList();
+    allPlayers.sort((a, b) => b.runsScored.compareTo(a.runsScored));
+    final trendingPlayers = allPlayers.take(5).toList();
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -368,28 +334,60 @@ class _HomeTabViewState extends State<HomeTabView> {
           ],
         ),
         const SizedBox(height: 14),
-        SizedBox(
-          height: 125,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              CardEntranceAnimation(index: 0, child: _buildPlayerTrendCard('Aarav Patel', 'Batter • UVP-TT', 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop', Icons.sports_cricket, AppTheme.accentGold)),
-              CardEntranceAnimation(index: 1, child: _buildPlayerTrendCard('Advik Shah', 'Bowler • UVP-WR', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=120&auto=format&fit=crop', Icons.circle, AppTheme.primaryGreen)),
-              CardEntranceAnimation(index: 2, child: _buildPlayerTrendCard('Ishaan Mehta', 'All-rounder • UVP-LG', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&auto=format&fit=crop', Icons.trending_up, AppTheme.primaryBlue)),
-            ],
-          ),
-        ),
+        trendingPlayers.isEmpty
+            ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.bgSurface),
+                ),
+                child: Center(
+                  child: Text(
+                    'No player statistics available yet.',
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13),
+                  ),
+                ),
+              )
+            : SizedBox(
+                height: 125,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: trendingPlayers.length,
+                  itemBuilder: (context, index) {
+                    final p = trendingPlayers[index];
+                    String teamShort = 'IND';
+                    for (final t in storage.teams) {
+                      if (t.players.any((pl) => pl.id == p.id)) {
+                        teamShort = t.shortName;
+                        break;
+                      }
+                    }
+                    return CardEntranceAnimation(
+                      index: index,
+                      child: _buildPlayerTrendCard(
+                        p.name,
+                        '${p.role} • $teamShort',
+                        'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=120&auto=format&fit=crop',
+                        p.role == 'Batter' ? Icons.sports_cricket : Icons.circle,
+                        AppTheme.primaryBlue,
+                        p.runsScored,
+                      ),
+                    );
+                  },
+                ),
+              ),
       ],
     );
   }
 
-  Widget _buildPlayerTrendCard(String name, String role, String imgUrl, IconData badgeIcon, Color badgeColor) {
-    // Generate Initials Fallback
-    final initials = name.split(' ').map((n) => n[0]).join().toUpperCase();
+  Widget _buildPlayerTrendCard(String name, String role, String imgUrl, IconData badgeIcon, Color badgeColor, int runs) {
+    final initials = name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').join().toUpperCase();
 
     return Container(
       margin: const EdgeInsets.only(right: 14),
-      width: 90,
+      width: 95,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -400,28 +398,19 @@ class _HomeTabViewState extends State<HomeTabView> {
         children: [
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.network(
-                  imgUrl,
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [badgeColor.withValues(alpha: 0.8), badgeColor],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [badgeColor.withOpacity(0.12), badgeColor.withOpacity(0.2)],
                   ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: GoogleFonts.plusJakartaSans(color: badgeColor, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
               Positioned(
@@ -433,12 +422,12 @@ class _HomeTabViewState extends State<HomeTabView> {
                     color: AppTheme.textPrimary,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(badgeIcon, size: 8, color: badgeColor),
+                  child: Icon(badgeIcon, size: 8, color: Colors.white),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             name,
             style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 12),
@@ -447,11 +436,9 @@ class _HomeTabViewState extends State<HomeTabView> {
             overflow: TextOverflow.ellipsis,
           ),
           Text(
-            role.split(' • ').first,
-            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 9, fontWeight: FontWeight.w500),
+            '$runs Runs',
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
