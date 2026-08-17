@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMatches, getMatchById, scheduleMatch, adminActivateMatch, resetMatch } from '../controllers/matchController';
+import { getMatches, getMatchById, scheduleMatch, adminActivateMatch, resetMatch, getMatchPrediction } from '../controllers/matchController';
 import { authenticateJWT, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 // Public routes
 router.get('/', getMatches);
 router.get('/:id', getMatchById);
+router.get('/:id/prediction', getMatchPrediction);
 
 // Admin-only write routes
 router.post('/', authenticateJWT, requireRole(['Admin']), scheduleMatch);

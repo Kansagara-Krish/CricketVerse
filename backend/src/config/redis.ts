@@ -3,31 +3,35 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = process.env.REDIS_URL;
 
 let redis: Redis | null = null;
 
-try {
-  redis = new Redis(redisUrl, {
-    maxRetriesPerRequest: 3,
-    retryStrategy(times) {
-      console.warn(`Redis connection retry attempt ${times}`);
-      if (times > 3) {
-        return null; // Stop retrying and fallback
+if (redisUrl) {
+  try {
+    redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy(times) {
+        console.warn(`Redis connection retry attempt ${times}`);
+        if (times > 3) {
+          return null; // Stop retrying and fallback
+        }
+        return Math.min(times * 100, 2000);
       }
-      return Math.min(times * 100, 2000);
-    }
-  });
+    });
 
-  redis.on('connect', () => {
-    console.log('Connected to Redis successfully.');
-  });
+    redis.on('connect', () => {
+      console.log('Connected to Redis successfully.');
+    });
 
-  redis.on('error', (err) => {
-    console.error('Redis error occurred:', err);
-  });
-} catch (err) {
-  console.error('Failed to create Redis client:', err);
+    redis.on('error', (err) => {
+      console.error('Redis error occurred:', err);
+    });
+  } catch (err) {
+    console.error('Failed to create Redis client:', err);
+  }
+} else {
+  console.log('REDIS_URL environment variable is not set. Gracefully running without Redis caching / scaling.');
 }
 
 export { redis };

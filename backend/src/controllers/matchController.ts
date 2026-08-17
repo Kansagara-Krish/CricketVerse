@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { getCachedMatch, setCachedMatch, invalidateCachedMatch } from '../config/redis';
 import { broadcastNotification } from '../sockets/socketHandler';
+import { spawn } from 'child_process';
+import path from 'path';
 
 // Helper to construct nested CricketMatch object from raw match row
 async function getFullMatchData(matchId: string) {
@@ -324,5 +326,168 @@ export async function resetMatch(req: Request, res: Response) {
   } catch (err) {
     console.error('Error resetting match:', err);
     return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function getTeamWinRate(teamId: string): Promise<number> {
+  const matches = await prisma.match.findMany({
+    where: {
+      status: 'Completed',
+      OR: [
+        { teamAId: teamId },
+        { teamBId: teamId }
+      ]
+    }
+  });
+
+  if (matches.length === 0) {
+    return 0.5;
+  }
+
+  let wins = 0;
+  for (const m of matches) {
+    if (m.runsA > m.runsB && m.teamAId === teamId) {
+      wins++;
+    } else if (m.runsB > m.runsA && m.teamBId === teamId) {
+      wins++;
+    }
+  }
+
+  const winRate = wins / matches.length;
+  return 0.35 + winRate * 0.3; // map to [0.35, 0.65] range
+}
+
+function runMLPrediction(payload: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.resolve(__dirname, '..', '..', 'ml_model', 'predict.py');
+    const pythonProcess = spawn('python', [scriptPath]);
+
+    let outputData = '';
+    let errorData = '';
+
+    pythonProcess.stdin.write(JSON.stringify(payload));
+    pythonProcess.stdin.end();
+
+    pythonProcess.stdout.on('data', (data) => {
+      outputData += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      errorData += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(`Python process exited with code ${code}. Error: ${errorData}`));
+      }
+      try {
+        const parsed = JSON.parse(outputData.trim());
+        if (parsed.error) {
+          reject(new Error(parsed.error));
+        } else {
+          resolve(parsed);
+        }
+      } catch (err) {
+        reject(new Error(`Failed to parse output JSON from python script. Output: ${outputData}`));
+      }
+    });
+  });
+}
+
+export async function getMatchPrediction(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const match = await prisma.match.findUnique({ where: { id } });
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found.' });
+    }
+
+    const teamAStrength = await getTeamWinRate(match.teamAId);
+    const teamBStrength = await getTeamWinRate(match.teamBId);
+
+    const tossWinnerIsA = match.tossWinner === match.teamAId ? 1 : 0;
+    const tossDecisionBat = match.tossDecision === 'Bat' ? 1 : 0;
+    const battingTeamIsA = match.battingTeamId === match.teamAId ? 1 : 0;
+
+    const payload = {
+      team_a_strength: teamAStrength,
+      team_b_strength: teamBStrength,
+      toss_winner_is_a: tossWinnerIsA,
+      toss_decision_bat: tossDecisionBat,
+      is_first_innings: match.isFirstInnings ? 1 : 0,
+      batting_team_is_a: battingTeamIsA,
+      runs_a: match.runsA,
+      wickets_a: match.wicketsA,
+      overs_a: Number(match.oversA),
+      runs_b: match.runsB,
+      wickets_b: match.wicketsB,
+      overs_b: Number(match.oversB),
+      target: match.target,
+      status: match.status
+    };
+
+    let result;
+    try {
+      result = await runMLPrediction(payload);
+    } catch (mlErr) {
+      console.warn('ML Prediction failed, falling back to rule-based prediction:', mlErr);
+      
+      let probA = 50.0;
+      if (match.status === 'Upcoming') {
+        probA = 50.0;
+      } else if (match.status === 'Completed') {
+        probA = match.runsA > match.runsB ? 100.0 : 0.0;
+      } else {
+        if (match.isFirstInnings) {
+          const crr = match.runsA / (Number(match.oversA) > 0 ? Number(match.oversA) : 0.1);
+          probA = 50.0 + (crr - 7.5) * 5;
+          if (match.wicketsA > 5) {
+            probA -= (match.wicketsA - 5) * 8;
+          }
+        } else {
+          const target = match.target;
+          const currentScore = match.runsB;
+          const runsNeeded = target - currentScore;
+          const totalBalls = 120;
+          const oversInt = Math.floor(Number(match.oversB));
+          const ballsInt = Math.round((Number(match.oversB) - oversInt) * 10);
+          const ballsBowled = oversInt * 6 + ballsInt;
+          const ballsRemaining = totalBalls - ballsBowled;
+
+          if (runsNeeded <= 0) {
+            probA = 0.0;
+          } else if (ballsRemaining <= 0 || match.wicketsB >= 10) {
+            probA = 100.0;
+          } else {
+            const requiredRate = (runsNeeded / ballsRemaining) * 6;
+            const probB = 50.0 - (requiredRate - 7.5) * 7 + (10 - match.wicketsB) * 3;
+            probA = 100.0 - probB;
+          }
+        }
+      }
+      
+      probA = Math.max(1.0, Math.min(99.0, probA));
+      const probB = 100.0 - probA;
+
+      result = {
+        winProbabilityA: Number(probA.toFixed(1)),
+        winProbabilityB: Number(probB.toFixed(1)),
+        factors: [
+          { name: "Current Run Rate", weight: 50 },
+          { name: "Required Run Rate", weight: 50 },
+          { name: "Wickets in Hand", weight: 50 },
+          { name: "Powerplay Performance", weight: 50 },
+          { name: "Death Overs History", weight: 50 },
+          { name: "Head-to-Head Record", weight: 50 },
+          { name: "Pitch Conditions", weight: 50 },
+          { name: "Weather Impact", weight: 50 }
+        ]
+      };
+    }
+
+    return res.status(200).json(result);
+  } catch (err: any) {
+    console.error('Error calculating prediction:', err);
+    return res.status(500).json({ error: err.message || 'Failed to calculate match prediction.' });
   }
 }

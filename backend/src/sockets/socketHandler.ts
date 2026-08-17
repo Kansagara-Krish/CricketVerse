@@ -16,6 +16,9 @@ export function initSocketIO(server: any) {
   if (redis) {
     const pubClient = redis;
     const subClient = redis.duplicate();
+    subClient.on('error', (err) => {
+      console.error('Redis Socket.IO subClient error:', err);
+    });
     io.adapter(createAdapter(pubClient, subClient));
     console.log('Socket.IO Redis adapter enabled.');
   }
