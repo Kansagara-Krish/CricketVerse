@@ -6,7 +6,7 @@ class AppConstants {
   static const String appName      = 'CricketVerse AI';
   static const String appVersion   = '1.0.0';
   static const String appTagline   = 'Intelligence Meets Action';
-  static const String adminEmail   = 'admin@cricketverse.ai';
+  static const String adminEmail   = 'admin@gmail.com';
   static const String adminName    = 'Rajesh Kumar';
   static const String adminRole    = 'Tournament Administrator';
 

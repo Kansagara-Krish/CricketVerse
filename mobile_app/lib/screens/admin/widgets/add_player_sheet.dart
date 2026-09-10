@@ -30,6 +30,7 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
   final _nameCtrl = TextEditingController();
   String _selectedRole = 'Batter';
   late String _selectedTeamId;
+  String _selectedLeadership = 'None'; // 'None', 'Captain', 'Vice-Captain'
 
   @override
   void initState() {
@@ -45,6 +46,23 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    Team? selectedTeam;
+    try {
+      selectedTeam = widget.storage.teams.firstWhere((t) => t.id == _selectedTeamId);
+    } catch (_) {
+      selectedTeam = widget.storage.teams.isNotEmpty ? widget.storage.teams[0] : null;
+    }
+
+    final hasCaptain = selectedTeam?.players.any((p) => p.isCaptain) ?? false;
+    final hasViceCaptain = selectedTeam?.players.any((p) => p.isViceCaptain) ?? false;
+
+    // Reset selection if option becomes unavailable
+    if (_selectedLeadership == 'Captain' && hasCaptain) {
+      _selectedLeadership = 'None';
+    } else if (_selectedLeadership == 'Vice-Captain' && hasViceCaptain) {
+      _selectedLeadership = 'None';
+    }
+
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -105,8 +123,39 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
             items: widget.storage.teams
                 .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name)))
                 .toList(),
-            onChanged: (v) => setState(() => _selectedTeamId = v ?? _selectedTeamId),
+            onChanged: (v) => setState(() {
+              _selectedTeamId = v ?? _selectedTeamId;
+            }),
           ),
+          const SizedBox(height: 14),
+
+          // Dynamic Leadership Role Selection (Captain / Vice-Captain)
+          DropdownButtonFormField<String>(
+            dropdownColor: Colors.white,
+            value: _selectedLeadership,
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+            decoration: InputDecoration(
+              labelText: 'Team Role / Designation',
+              prefixIcon: const Icon(Icons.workspace_premium_rounded, color: AppTheme.accentGold),
+              helperText: hasCaptain && hasViceCaptain
+                  ? 'Team already has both Captain & Vice-Captain assigned.'
+                  : hasCaptain
+                      ? 'Team already has a Captain assigned.'
+                      : hasViceCaptain
+                          ? 'Team already has a Vice-Captain assigned.'
+                          : null,
+              helperStyle: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted),
+            ),
+            items: [
+              const DropdownMenuItem(value: 'None', child: Text('Player (No Leadership)')),
+              if (!hasCaptain)
+                const DropdownMenuItem(value: 'Captain', child: Text('⭐ Captain (C)')),
+              if (!hasViceCaptain)
+                const DropdownMenuItem(value: 'Vice-Captain', child: Text('🎗️ Vice-Captain (VC)')),
+            ],
+            onChanged: (v) => setState(() => _selectedLeadership = v ?? 'None'),
+          ),
+
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -121,20 +170,26 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
                   return;
                 }
 
+                final isCap = _selectedLeadership == 'Captain';
+                final isVC = _selectedLeadership == 'Vice-Captain';
+
                 final newPlayer = Player(
                   id: 'player_${DateTime.now().millisecondsSinceEpoch}',
                   name: _nameCtrl.text.trim(),
                   role: _selectedRole,
                   nationality: 'IND',
+                  isCaptain: isCap,
+                  isViceCaptain: isVC,
                 );
 
                 widget.storage.addPlayer(_selectedTeamId, newPlayer);
                 Navigator.pop(context);
 
                 final teamName = widget.storage.teams.firstWhere((t) => t.id == _selectedTeamId).name;
+                String designationStr = isCap ? ' as Captain' : isVC ? ' as Vice-Captain' : '';
                 CustomNotification.show(
                   context,
-                  'Player "${newPlayer.name}" successfully added to $teamName!',
+                  'Player "${newPlayer.name}" successfully added to $teamName$designationStr!',
                   type: NotificationType.success,
                 );
               },

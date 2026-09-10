@@ -67,9 +67,37 @@ class PlayerDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(player.name,
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(player.name,
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                        if (player.isCaptain) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('CAPTAIN (C)',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w900)),
+                          ),
+                        ] else if (player.isViceCaptain) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('VICE-CAPTAIN (VC)',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w900)),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -204,6 +232,11 @@ class PlayerDetailScreen extends StatelessWidget {
     final nameCtrl = TextEditingController(text: player.name);
     String selectedRole = player.role;
     String? selectedTeamId = currentTeam?.id;
+    String selectedLeadership = player.isCaptain
+        ? 'Captain'
+        : player.isViceCaptain
+            ? 'Vice-Captain'
+            : 'None';
 
     showModalBottomSheet(
       context: context,
@@ -211,92 +244,142 @@ class PlayerDetailScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => Padding(
-          padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-              const SizedBox(height: 16),
-              
-              // Name Field
-              TextField(
-                controller: nameCtrl, 
-                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Player Name',
-                  prefixIcon: Icon(Icons.person_outline),
+        builder: (ctx, setState) {
+          Team? targetTeam;
+          try {
+            targetTeam = storage.teams.firstWhere((t) => t.id == selectedTeamId);
+          } catch (_) {
+            targetTeam = currentTeam;
+          }
+
+          final teamHasCaptain = targetTeam?.players.any((p) => p.isCaptain && p.id != player.id) ?? false;
+          final teamHasVC = targetTeam?.players.any((p) => p.isViceCaptain && p.id != player.id) ?? false;
+
+          if (selectedLeadership == 'Captain' && teamHasCaptain) {
+            selectedLeadership = 'None';
+          } else if (selectedLeadership == 'Vice-Captain' && teamHasVC) {
+            selectedLeadership = 'None';
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                const SizedBox(height: 16),
+                
+                // Name Field
+                TextField(
+                  controller: nameCtrl, 
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Player Name',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Role Dropdown
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Player Role',
-                  prefixIcon: Icon(Icons.sports_cricket_outlined),
-                ),
-                items: ['Batter', 'Bowler', 'All-rounder'].map((role) {
-                  return DropdownMenuItem<String>(
-                    value: role,
-                    child: Text(role),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() => selectedRole = val);
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Team Dropdown
-              DropdownButtonFormField<String>(
-                value: selectedTeamId,
-                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Assign Team',
-                  prefixIcon: Icon(Icons.shield_outlined),
-                ),
-                items: storage.teams.map((t) {
-                  return DropdownMenuItem<String>(
-                    value: t.id,
-                    child: Text(t.name),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() => selectedTeamId = val);
-                  }
-                },
-              ),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final name = nameCtrl.text.trim();
-                    if (name.isEmpty) {
-                      CustomNotification.show(context, 'Player name cannot be empty', type: NotificationType.warning);
-                      return;
-                    }
-
-                    final updatedPlayer = Player(
-                      id: player.id,
-                      name: name,
-                      role: selectedRole,
-                      nationality: player.nationality,
-                      runsScored: player.runsScored,
-                      ballsFaced: player.ballsFaced,
-                      wicketsTaken: player.wicketsTaken,
-                      runsConceded: player.runsConceded,
-                      oversBowled: player.oversBowled,
-                      matchesPlayed: player.matchesPlayed,
+                // Role Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Player Role',
+                    prefixIcon: Icon(Icons.sports_cricket_outlined),
+                  ),
+                  items: ['Batter', 'Bowler', 'All-rounder'].map((role) {
+                    return DropdownMenuItem<String>(
+                      value: role,
+                      child: Text(role),
                     );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => selectedRole = val);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Team Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedTeamId,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Assign Team',
+                    prefixIcon: Icon(Icons.shield_outlined),
+                  ),
+                  items: storage.teams.map((t) {
+                    return DropdownMenuItem<String>(
+                      value: t.id,
+                      child: Text(t.name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => selectedTeamId = val);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Leadership Role Dropdown (Captain / Vice-Captain / None)
+                DropdownButtonFormField<String>(
+                  value: selectedLeadership,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Team Designation / Leadership',
+                    prefixIcon: const Icon(Icons.workspace_premium_outlined, color: AppTheme.accentGold),
+                    helperText: teamHasCaptain && teamHasVC
+                        ? 'Team already has both Captain & Vice-Captain assigned.'
+                        : teamHasCaptain
+                            ? 'Team already has a Captain assigned.'
+                            : teamHasVC
+                                ? 'Team already has a Vice-Captain assigned.'
+                                : null,
+                    helperStyle: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'None', child: Text('Player (No Leadership)')),
+                    if (!teamHasCaptain)
+                      const DropdownMenuItem(value: 'Captain', child: Text('⭐ Captain (C)')),
+                    if (!teamHasVC)
+                      const DropdownMenuItem(value: 'Vice-Captain', child: Text('🎗️ Vice-Captain (VC)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => selectedLeadership = val);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) {
+                        CustomNotification.show(context, 'Player name cannot be empty', type: NotificationType.warning);
+                        return;
+                      }
+
+                      final updatedPlayer = Player(
+                        id: player.id,
+                        name: name,
+                        role: selectedRole,
+                        nationality: player.nationality,
+                        isCaptain: selectedLeadership == 'Captain',
+                        isViceCaptain: selectedLeadership == 'Vice-Captain',
+                        runsScored: player.runsScored,
+                        ballsFaced: player.ballsFaced,
+                        wicketsTaken: player.wicketsTaken,
+                        runsConceded: player.runsConceded,
+                        oversBowled: player.oversBowled,
+                        matchesPlayed: player.matchesPlayed,
+                      );
 
                     if (selectedTeamId != currentTeam?.id) {
                       // Show confirmation dialog before changing team
@@ -341,10 +424,11 @@ class PlayerDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 }
 
 class _SectionHeader extends StatelessWidget {

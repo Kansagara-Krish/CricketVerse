@@ -7,6 +7,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/custom_notification.dart';
 
+import '../../services/notification_cache_service.dart';
+
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -15,53 +17,82 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late List<Map<String, dynamic>> _notifications;
+  List<Map<String, dynamic>> _notifications = [];
   int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _notifications = AppConstants.dummyNotifications
-        .map((n) => {...n, 'read': false})
-        .toList();
-    _unreadCount = _notifications.length;
+    _loadNotifications();
   }
 
-  void _markAllRead() {
-    setState(() {
-      for (final n in _notifications) {
-        n['read'] = true;
+  void _loadNotifications() {
+    final cached = NotificationCacheService.getCachedNotifications();
+    if (cached.isEmpty) {
+      // Seed default sample notifications into Hive on initial launch
+      final dummyList = AppConstants.dummyNotifications;
+      for (int i = 0; i < dummyList.length; i++) {
+        NotificationCacheService.saveOrUpdateNotification({
+          'id': 'notif_seed_$i',
+          ...dummyList[i],
+          'read': false,
+          'timestamp': DateTime.now().subtract(Duration(minutes: (i + 1) * 15)).toIso8601String(),
+        });
       }
-      _unreadCount = 0;
-    });
-    CustomNotification.show(
-      context,
-      'All notifications marked as read',
-      type: NotificationType.success,
-    );
+      setState(() {
+        _notifications = NotificationCacheService.getCachedNotifications();
+        _unreadCount = NotificationCacheService.getUnreadCount();
+      });
+    } else {
+      setState(() {
+        _notifications = cached;
+        _unreadCount = NotificationCacheService.getUnreadCount();
+      });
+    }
   }
 
-  void _markRead(int index) {
+  void _markAllRead() async {
+    await NotificationCacheService.markAllAsRead();
     setState(() {
-      if (_notifications[index]['read'] == false) {
-        _notifications[index]['read'] = true;
-        _unreadCount = (_unreadCount - 1).clamp(0, _notifications.length);
-      }
+      _notifications = NotificationCacheService.getCachedNotifications();
+      _unreadCount = NotificationCacheService.getUnreadCount();
     });
+    if (mounted) {
+      CustomNotification.show(
+        context,
+        'All notifications marked as read',
+        type: NotificationType.success,
+      );
+    }
   }
 
-  void _deleteNotification(int index) {
-    setState(() {
-      if (_notifications[index]['read'] == false) {
-        _unreadCount = (_unreadCount - 1).clamp(0, _notifications.length);
+  void _markRead(int index) async {
+    final id = _notifications[index]['id']?.toString();
+    if (id != null) {
+      await NotificationCacheService.markAsRead(id);
+      setState(() {
+        _notifications = NotificationCacheService.getCachedNotifications();
+        _unreadCount = NotificationCacheService.getUnreadCount();
+      });
+    }
+  }
+
+  void _deleteNotification(int index) async {
+    final id = _notifications[index]['id']?.toString();
+    if (id != null) {
+      await NotificationCacheService.deleteNotification(id);
+      setState(() {
+        _notifications = NotificationCacheService.getCachedNotifications();
+        _unreadCount = NotificationCacheService.getUnreadCount();
+      });
+      if (mounted) {
+        CustomNotification.show(
+          context,
+          'Notification deleted',
+          type: NotificationType.info,
+        );
       }
-      _notifications.removeAt(index);
-    });
-    CustomNotification.show(
-      context,
-      'Notification deleted',
-      type: NotificationType.info,
-    );
+    }
   }
 
   Color _typeColor(String type) {
@@ -161,7 +192,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 final icon = _typeIcon(n['type'] as String);
 
                 return Dismissible(
-                  key: Key('notif_${n['title']}_$i'),
+                  key: Key('notif_${n['id']}'),
                   direction: DismissDirection.endToStart,
                   onDismissed: (_) => _deleteNotification(i),
                   background: Container(

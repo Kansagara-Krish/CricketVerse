@@ -45,6 +45,8 @@ model Player {
   name          String
   role          String
   nationality   String           @default("IND")
+  isCaptain     Boolean          @default(false) @map("is_captain")
+  isViceCaptain Boolean          @default(false) @map("is_vice_captain")
   runsScored    Int              @default(0) @map("runs_scored")
   ballsFaced    Int              @default(0) @map("balls_faced")
   wicketsTaken  Int              @default(0) @map("wickets_taken")

@@ -121,7 +121,7 @@ class AppRoutes {
       case playerDetail:
         return _slideRoute(PlayerDetailScreen(player: settings.arguments as dynamic));
       case scheduleMatch:
-        return _slideRoute(const ScheduleMatchScreen());
+        return _slideRoute(ScheduleMatchScreen(matchToEdit: settings.arguments as CricketMatch?));
       case matchList:
         return _slideRoute(const MatchListScreen());
       case matchDetail:

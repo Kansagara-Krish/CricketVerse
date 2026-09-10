@@ -18,6 +18,8 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _isSignUp = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -134,7 +136,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       } else {
         CustomNotification.show(
           context,
-          'Invalid credentials! Use admin@cricketverse.ai / admin123',
+          'Invalid credentials! Please check your email and password.',
           type: NotificationType.error,
         );
       }
@@ -162,65 +164,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       type: NotificationType.info,
     );
     Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
-  }
-
-  Future<void> _quickLogin(String email, String password) async {
-    final storage = Provider.of<StorageService>(context, listen: false);
-    final success = await storage.login(email, password);
-    if (!mounted) return;
-    if (success) {
-      CustomNotification.show(
-        context,
-        'Logged in successfully as $email',
-        type: NotificationType.success,
-      );
-      _navigateByUserRole();
-    } else {
-      CustomNotification.show(
-        context,
-        'Quick login failed for $email',
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  Widget _buildQuickLoginButton({
-    required String label,
-    required Color color,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return SizedBox(
-      height: 40,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color.withValues(alpha: 0.12),
-          foregroundColor: color,
-          elevation: 0,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: color.withValues(alpha: 0.35), width: 1.2),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -481,7 +424,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     const SizedBox(height: 6),
                                     TextFormField(
                                       controller: _passwordController,
-                                      obscureText: true,
+                                      obscureText: _obscurePassword,
                                       style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                       decoration: InputDecoration(
                                         hintText: 'Enter password',
@@ -490,6 +433,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         filled: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         prefixIcon: const Icon(Icons.lock_outline, size: 16, color: Colors.white60),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: Colors.white60,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword = !_obscurePassword;
+                                            });
+                                          },
+                                        ),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
@@ -525,7 +480,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       const SizedBox(height: 6),
                                       TextFormField(
                                         controller: _confirmPasswordController,
-                                        obscureText: true,
+                                        obscureText: _obscureConfirmPassword,
                                         style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                         decoration: InputDecoration(
                                           hintText: 'Re-enter password',
@@ -534,6 +489,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                           filled: true,
                                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                           prefixIcon: const Icon(Icons.lock_outline, size: 16, color: Colors.white60),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                              size: 18,
+                                              color: Colors.white60,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                                              });
+                                            },
+                                          ),
                                           border: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(10),
                                             borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
@@ -626,54 +593,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 18),
-              
-                                    // Quick Role Login Buttons
-                                    Row(
-                                      children: [
-                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          child: Text(
-                                            'QUICK LOGIN',
-                                            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 0.8),
-                                          ),
-                                        ),
-                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: _buildQuickLoginButton(
-                                            label: 'Admin',
-                                            color: AppTheme.accentRed,
-                                            icon: Icons.admin_panel_settings_rounded,
-                                            onTap: () => _quickLogin('admin@cricketverse.ai', 'admin123'),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: _buildQuickLoginButton(
-                                            label: 'Manager',
-                                            color: const Color(0xFFD97706),
-                                            icon: Icons.manage_accounts_rounded,
-                                            onTap: () => _quickLogin('scorer1', '123'),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: _buildQuickLoginButton(
-                                            label: 'User',
-                                            color: const Color(0xFF059669),
-                                            icon: Icons.person_rounded,
-                                            onTap: () => _quickLogin('user@gmail.com', 'user123'),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                     const SizedBox(height: 20),
               
                                     // Sign In/Up Toggle
@@ -704,21 +623,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                   ],
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-          
-                        // Continue as Guest link
-                        TextButton(
-                          onPressed: _continueAsGuest,
-                          child: Text(
-                            'CONTINUE AS GUEST',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              letterSpacing: 1.5,
-                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),

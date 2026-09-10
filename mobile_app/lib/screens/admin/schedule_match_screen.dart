@@ -9,8 +9,11 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 
+import '../../models/models.dart';
+
 class ScheduleMatchScreen extends StatefulWidget {
-  const ScheduleMatchScreen({super.key});
+  final CricketMatch? matchToEdit;
+  const ScheduleMatchScreen({super.key, this.matchToEdit});
 
   @override
   State<ScheduleMatchScreen> createState() => _ScheduleMatchScreenState();
@@ -24,12 +27,46 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   final _timeCtrl = TextEditingController();
   final _scorerUserCtrl = TextEditingController();
   final _scorerPassCtrl = TextEditingController();
+  CricketMatch? _editingMatch;
+
+  @override
+  void initState() {
+    super.initState();
+    _editingMatch = widget.matchToEdit;
+    if (_editingMatch != null) {
+      _teamAId = _editingMatch!.teamA.id;
+      _teamBId = _editingMatch!.teamB.id;
+      _matchType = _editingMatch!.matchType;
+      _dateCtrl.text = _editingMatch!.date;
+      _timeCtrl.text = _editingMatch!.time;
+      _scorerUserCtrl.text = _editingMatch!.scorerUsername;
+      _scorerPassCtrl.text = _editingMatch!.scorerPassword;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_editingMatch == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is CricketMatch) {
+        _editingMatch = args;
+        _teamAId = _editingMatch!.teamA.id;
+        _teamBId = _editingMatch!.teamB.id;
+        _matchType = _editingMatch!.matchType;
+        _dateCtrl.text = _editingMatch!.date;
+        _timeCtrl.text = _editingMatch!.time;
+        _scorerUserCtrl.text = _editingMatch!.scorerUsername;
+        _scorerPassCtrl.text = _editingMatch!.scorerPassword;
+      }
+    }
+  }
 
   void _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
+      firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (_, child) => Theme(
         data: Theme.of(context).copyWith(
@@ -78,22 +115,44 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
       return;
     }
 
-    Provider.of<StorageService>(context, listen: false).scheduleMatch(
-      teamAId: _teamAId!,
-      teamBId: _teamBId!,
-      matchType: _matchType,
-      venue: 'Main Stadium', // defaulted internally
-      date: _dateCtrl.text,
-      time: _timeCtrl.text,
-      scorerUser: _scorerUserCtrl.text.trim(),
-      scorerPass: _scorerPassCtrl.text.trim(),
-    );
+    final storage = Provider.of<StorageService>(context, listen: false);
 
-    CustomNotification.show(
-      context,
-      'Match Scheduled Successfully! Scorer credentials assigned.',
-      type: NotificationType.success,
-    );
+    if (_editingMatch != null) {
+      storage.updateMatch(
+        matchId: _editingMatch!.id,
+        teamAId: _teamAId!,
+        teamBId: _teamBId!,
+        matchType: _matchType,
+        venue: _editingMatch!.venue.isNotEmpty ? _editingMatch!.venue : 'Main Stadium',
+        date: _dateCtrl.text,
+        time: _timeCtrl.text,
+        scorerUser: _scorerUserCtrl.text.trim(),
+        scorerPass: _scorerPassCtrl.text.trim(),
+      );
+
+      CustomNotification.show(
+        context,
+        'Match details updated successfully!',
+        type: NotificationType.success,
+      );
+    } else {
+      storage.scheduleMatch(
+        teamAId: _teamAId!,
+        teamBId: _teamBId!,
+        matchType: _matchType,
+        venue: 'Main Stadium',
+        date: _dateCtrl.text,
+        time: _timeCtrl.text,
+        scorerUser: _scorerUserCtrl.text.trim(),
+        scorerPass: _scorerPassCtrl.text.trim(),
+      );
+
+      CustomNotification.show(
+        context,
+        'Match Scheduled Successfully! Scorer credentials assigned.',
+        type: NotificationType.success,
+      );
+    }
     Navigator.pop(context);
   }
 
@@ -125,6 +184,8 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
       hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13),
     );
 
+    final isEdit = _editingMatch != null;
+
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
@@ -135,7 +196,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Schedule Match', 
+          isEdit ? 'Edit Match Details' : 'Schedule Match', 
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 18),
         ),
       ),
@@ -171,15 +232,17 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                           color: const Color(0xFFE0F2FE),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.sports_cricket, color: AppTheme.primaryBlue),
+                        child: Icon(isEdit ? Icons.edit_note_rounded : Icons.sports_cricket, color: AppTheme.primaryBlue),
                       ),
                       const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('New Match', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                          Text('Fill in the match details below', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(isEdit ? 'Edit Match' : 'New Match', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                            Text(isEdit ? 'Update team, schedule & manager credentials' : 'Fill in the match details below', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -195,7 +258,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                initialValue: _teamAId,
+                value: _teamAId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team A'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamAId = v),
@@ -205,7 +268,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                initialValue: _teamBId,
+                value: _teamBId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team B'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamBId = v),
@@ -289,10 +352,10 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               ),
 
               const SizedBox(height: 20),
-              const _Label('SCORER CREDENTIALS'),
+              const _Label('MANAGER / SCORER CREDENTIALS'),
               const SizedBox(height: 4),
               Text(
-                'The scorer will use these to log in and update the score',
+                'The match manager will use these to log in and score the match',
                 style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 10),
@@ -303,7 +366,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                       controller: _scorerUserCtrl,
                       style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                       decoration: inputDecorationTheme.copyWith(
-                        labelText: 'Scorer Username',
+                        labelText: 'Manager Username/Email',
                         prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textMuted, size: 18),
                       ),
                       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -331,8 +394,8 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _submit,
-                  icon: const Icon(Icons.check_circle_rounded),
-                  label: const Text('Schedule Match'),
+                  icon: Icon(isEdit ? Icons.save_rounded : Icons.check_circle_rounded),
+                  label: Text(isEdit ? 'Update Match Details' : 'Schedule Match'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlue,
                     foregroundColor: Colors.white,

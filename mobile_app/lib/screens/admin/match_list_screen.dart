@@ -164,6 +164,13 @@ class _MatchTile extends StatelessWidget {
                   Text(match.matchType,
                       style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
                   const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.edit_note_rounded, size: 20, color: AppTheme.primaryBlue),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Edit Match Details',
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.scheduleMatch, arguments: match),
+                  ),
                 ],
               ),
             ),
@@ -188,17 +195,20 @@ class _MatchTile extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                               Text(
-                                match.teamA.shortName,
+                              Text(
+                                match.teamA.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                               ),
-                              Text(match.teamA.name,
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                              Text(
+                                match.teamA.shortName,
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               if (match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0) ...[
                                 const SizedBox(height: 4),
                                 Text('${match.runsA}/${match.wicketsA}',
@@ -214,23 +224,26 @@ class _MatchTile extends StatelessWidget {
                     ),
                   ),
                   // VS Center
-                  Column(
-                    children: [
-                      Text('VS',
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14, fontWeight: FontWeight.w900, color: const Color(0x2D0F172A))),
-                      if (match.target > 0 && !match.isFirstInnings)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentGold.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      children: [
+                        Text('VS',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0x3D0F172A))),
+                        if (match.target > 0 && !match.isFirstInnings)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentGold.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('T: ${match.target}',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.accentGold, fontWeight: FontWeight.w700)),
                           ),
-                          child: Text('T: ${match.target}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.accentGold, fontWeight: FontWeight.w700)),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                   // Team B
                   Expanded(
@@ -241,17 +254,22 @@ class _MatchTile extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                               Text(
-                                match.teamB.shortName,
+                              Text(
+                                match.teamB.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
                                 style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                                    fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                               ),
-                              Text(match.teamB.name,
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                              Text(
+                                match.teamB.shortName,
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                              ),
                               if (match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0) ...[
                                 const SizedBox(height: 4),
                                 Text('${match.runsB}/${match.wicketsB}',

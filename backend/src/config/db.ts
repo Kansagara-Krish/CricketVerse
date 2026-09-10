@@ -78,7 +78,7 @@ export async function initDatabase() {
 
       await prisma.user.createMany({
         data: [
-          { id: 'admin_user', email: 'admin@cricketverse.ai', passwordHash: adminPassHash, role: 'Admin', name: 'Rajesh Kumar' },
+          { id: 'admin_user', email: 'admin@gmail.com', passwordHash: adminPassHash, role: 'Admin', name: 'Rajesh Kumar' },
           { id: 'user_gmail', email: 'user@gmail.com', passwordHash: userPassHash, role: 'User', name: 'User' },
           { id: 'user_alex', email: 'alex@gmail.com', passwordHash: alexPassHash, role: 'User', name: 'Alex' },
         ],

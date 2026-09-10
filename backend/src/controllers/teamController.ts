@@ -24,6 +24,8 @@ async function fetchTeamsWithPlayersFromDB() {
       name: tp.player.name,
       role: tp.player.role,
       nationality: tp.player.nationality,
+      isCaptain: (tp.player as any).isCaptain ?? false,
+      isViceCaptain: (tp.player as any).isViceCaptain ?? false,
       runsScored: tp.player.runsScored,
       ballsFaced: tp.player.ballsFaced,
       wicketsTaken: tp.player.wicketsTaken,
@@ -169,19 +171,51 @@ export async function deleteTeam(req: Request, res: Response) {
 
 export async function addPlayer(req: Request, res: Response) {
   const { teamId } = req.params;
-  const { id, name, role, nationality } = req.body;
+  const { id, name, role, nationality, isCaptain, isViceCaptain } = req.body;
 
   if (!id || !name || !role) {
     return res.status(400).json({ error: 'Player ID, name, and role are required.' });
   }
 
+  if (isCaptain && isViceCaptain) {
+    return res.status(400).json({ error: 'A player cannot simultaneously be assigned as both Captain and Vice-Captain.' });
+  }
+
   try {
-    await prisma.player.create({
+    if (isCaptain) {
+      const existingCaptain = await (prisma.player as any).findFirst({
+        where: {
+          teams: { some: { teamId } },
+          isCaptain: true,
+          id: { not: id },
+        },
+      });
+      if (existingCaptain) {
+        return res.status(400).json({ error: 'This team already has a Captain assigned.' });
+      }
+    }
+
+    if (isViceCaptain) {
+      const existingVC = await (prisma.player as any).findFirst({
+        where: {
+          teams: { some: { teamId } },
+          isViceCaptain: true,
+          id: { not: id },
+        },
+      });
+      if (existingVC) {
+        return res.status(400).json({ error: 'This team already has a Vice-Captain assigned.' });
+      }
+    }
+
+    await (prisma.player as any).create({
       data: {
         id,
         name,
         role,
         nationality: nationality || 'IND',
+        isCaptain: Boolean(isCaptain),
+        isViceCaptain: Boolean(isViceCaptain),
         runsScored: 0,
         ballsFaced: 0,
         wicketsTaken: 0,
@@ -210,21 +244,59 @@ export async function addPlayer(req: Request, res: Response) {
 
 export async function updatePlayer(req: Request, res: Response) {
   const { id } = req.params;
-  const { name, role, nationality, runsScored, ballsFaced, wicketsTaken, runsConceded, oversBowled, matchesPlayed } = req.body;
+  const { name, role, nationality, isCaptain, isViceCaptain, runsScored, ballsFaced, wicketsTaken, runsConceded, oversBowled, matchesPlayed } = req.body;
+
+  if (isCaptain && isViceCaptain) {
+    return res.status(400).json({ error: 'A player cannot simultaneously be assigned as both Captain and Vice-Captain.' });
+  }
 
   try {
-    await prisma.player.update({
+    // Find team for this player
+    const teamPlayer = await prisma.teamPlayer.findFirst({ where: { playerId: id } });
+    if (teamPlayer) {
+      const teamId = teamPlayer.teamId;
+
+      if (isCaptain) {
+        const existingCaptain = await (prisma.player as any).findFirst({
+          where: {
+            teams: { some: { teamId } },
+            isCaptain: true,
+            id: { not: id },
+          },
+        });
+        if (existingCaptain) {
+          return res.status(400).json({ error: 'This team already has a Captain assigned.' });
+        }
+      }
+
+      if (isViceCaptain) {
+        const existingVC = await (prisma.player as any).findFirst({
+          where: {
+            teams: { some: { teamId } },
+            isViceCaptain: true,
+            id: { not: id },
+          },
+        });
+        if (existingVC) {
+          return res.status(400).json({ error: 'This team already has a Vice-Captain assigned.' });
+        }
+      }
+    }
+
+    await (prisma.player as any).update({
       where: { id },
       data: {
-        name,
-        role,
-        nationality,
-        runsScored,
-        ballsFaced,
-        wicketsTaken,
-        runsConceded,
-        oversBowled,
-        matchesPlayed,
+        ...(name !== undefined && { name }),
+        ...(role !== undefined && { role }),
+        ...(nationality !== undefined && { nationality }),
+        ...(isCaptain !== undefined && { isCaptain: Boolean(isCaptain) }),
+        ...(isViceCaptain !== undefined && { isViceCaptain: Boolean(isViceCaptain) }),
+        ...(runsScored !== undefined && { runsScored }),
+        ...(ballsFaced !== undefined && { ballsFaced }),
+        ...(wicketsTaken !== undefined && { wicketsTaken }),
+        ...(runsConceded !== undefined && { runsConceded }),
+        ...(oversBowled !== undefined && { oversBowled }),
+        ...(matchesPlayed !== undefined && { matchesPlayed }),
       },
     });
 

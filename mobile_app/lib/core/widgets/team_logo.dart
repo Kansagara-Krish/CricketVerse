@@ -48,8 +48,13 @@ class TeamLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int intColor = int.tryParse(logoColorHex) ?? 0xFF028A6B;
-    final Color primaryColor = Color(intColor);
+    int? intColor = int.tryParse(logoColorHex);
+    if (intColor == null) {
+      String clean = logoColorHex.replaceAll('#', '').replaceAll('0x', '');
+      if (clean.length == 6) clean = 'FF$clean';
+      intColor = int.tryParse(clean, radix: 16);
+    }
+    final Color primaryColor = Color(intColor ?? 0xFF028A6B);
     
     // Calculate secondary contrasting shade for stripes/patterns
     final HSLColor hsl = HSLColor.fromColor(primaryColor);

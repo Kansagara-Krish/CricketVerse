@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import 'api_service.dart';
 import 'socket_service.dart';
+import 'auth_storage_service.dart';
+import 'notification_cache_service.dart';
 
 class StorageService with ChangeNotifier {
   SharedPreferences? _prefs;
@@ -28,6 +30,7 @@ class StorageService with ChangeNotifier {
   String? get currentUserName => _currentUserName;
   String? get activeScorerMatchId => _activeScorerMatchId;
   bool get isOnlineMode => _isOnlineMode;
+  int get unreadNotificationCount => NotificationCacheService.getUnreadCount();
 
   StorageService() {
     _initStorage();
@@ -86,12 +89,6 @@ class StorageService with ChangeNotifier {
       _users = decoded.map((key, value) => MapEntry(key, value.toString()));
     }
     
-    if (!_users.containsKey('user@gmail.com')) {
-      _users['user@gmail.com'] = 'user123';
-    }
-    if (!_users.containsKey('alex@gmail.com')) {
-      _users['alex@gmail.com'] = 'alex123';
-    }
     _saveUsers();
 
     final isUvpceLoaded = _prefs?.getBool('data_version_uvpce_2026_v2') ?? false;
@@ -165,31 +162,46 @@ class StorageService with ChangeNotifier {
 
   // --- Authentications ---
   Future<bool> tryTokenAuth() async {
-    if (!_isOnlineMode) return false;
-    try {
-      final res = await ApiService.getMe();
-      if (res != null && res['user'] != null) {
-        _currentUserEmail = res['user']['email'];
-        _currentRole = res['user']['role'];
-        _currentUserName = res['user']['name'];
-        if (_currentRole == 'Scorer') {
-          _activeScorerMatchId = res['activeScorerMatchId'];
-          if (_activeScorerMatchId == null && res['user']['id'] != null) {
-            final String userId = res['user']['id'];
-            if (userId.startsWith('scorer_')) {
-              _activeScorerMatchId = userId.substring(7);
+    final hasSession = await AuthStorageService.hasValidSession();
+    if (!hasSession) return false;
+
+    if (_isOnlineMode) {
+      try {
+        final res = await ApiService.getMe();
+        if (res != null && res['user'] != null) {
+          _currentUserEmail = res['user']['email'];
+          _currentRole = res['user']['role'];
+          _currentUserName = res['user']['name'];
+          if (_currentRole == 'Scorer') {
+            _activeScorerMatchId = res['activeScorerMatchId'];
+            if (_activeScorerMatchId == null && res['user']['id'] != null) {
+              final String userId = res['user']['id'];
+              if (userId.startsWith('scorer_')) {
+                _activeScorerMatchId = userId.substring(7);
+              }
             }
+          } else {
+            _activeScorerMatchId = null;
           }
-        } else {
-          _activeScorerMatchId = null;
+          await loadData();
+          notifyListeners();
+          return true;
         }
-        await loadData();
-        notifyListeners();
-        return true;
+      } catch (e) {
+        debugPrint('tryTokenAuth online error: $e');
       }
-    } catch (e) {
-      debugPrint('tryTokenAuth error: $e');
     }
+
+    // Restore stored user session from secure storage (works offline as well)
+    final userData = await AuthStorageService.getUserData();
+    if (userData['email'] != null && userData['email']!.isNotEmpty) {
+      _currentUserEmail = userData['email'];
+      _currentRole = userData['role'] ?? 'User';
+      _currentUserName = userData['name'] ?? 'User';
+      notifyListeners();
+      return true;
+    }
+
     return false;
   }
 
@@ -208,11 +220,18 @@ class StorageService with ChangeNotifier {
     }
 
     // --- Offline Auth ---
-    if (usernameOrEmail == 'admin@cricketverse.ai' && password == 'admin123') {
-      _currentUserEmail = 'admin@cricketverse.ai';
+    if (usernameOrEmail == 'admin@gmail.com' && password == 'admin123') {
+      _currentUserEmail = 'admin@gmail.com';
       _currentRole = 'Admin';
       _currentUserName = 'Rajesh Kumar';
       _activeScorerMatchId = null;
+      await AuthStorageService.saveAuthData(
+        accessToken: 'offline_token_admin',
+        userId: 'admin_1',
+        userEmail: 'admin@gmail.com',
+        userRole: 'Admin',
+        userName: 'Rajesh Kumar',
+      );
       notifyListeners();
       return true;
     }
@@ -228,7 +247,14 @@ class StorageService with ChangeNotifier {
       _currentUserEmail = usernameOrEmail;
       _currentRole = 'Scorer';
       _currentUserName = 'Official Scorer';
-      _activeScorerMatchId = matchScoring.id; // Scorer matches immediately to their match ID
+      _activeScorerMatchId = null; // Land on Official Score Portal showing all assigned matches first
+      await AuthStorageService.saveAuthData(
+        accessToken: 'offline_token_scorer',
+        userId: 'scorer_1',
+        userEmail: usernameOrEmail,
+        userRole: 'Scorer',
+        userName: 'Official Scorer',
+      );
       notifyListeners();
       return true;
     }
@@ -238,6 +264,13 @@ class StorageService with ChangeNotifier {
       _currentRole = 'User';
       _currentUserName = _prefs?.getString('name_$usernameOrEmail') ?? usernameOrEmail.split('@')[0];
       _activeScorerMatchId = null;
+      await AuthStorageService.saveAuthData(
+        accessToken: 'offline_token_user',
+        userId: 'user_1',
+        userEmail: usernameOrEmail,
+        userRole: 'User',
+        userName: _currentUserName!,
+      );
       notifyListeners();
       return true;
     }
@@ -269,6 +302,13 @@ class StorageService with ChangeNotifier {
     _currentUserEmail = email;
     _currentRole = 'User';
     _currentUserName = name;
+    await AuthStorageService.saveAuthData(
+      accessToken: 'offline_token_user',
+      userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      userEmail: email,
+      userRole: 'User',
+      userName: name,
+    );
     notifyListeners();
     return true;
   }
@@ -285,6 +325,10 @@ class StorageService with ChangeNotifier {
     _currentRole = null;
     _currentUserName = null;
     _activeScorerMatchId = null;
+    
+    await AuthStorageService.clearAuthData();
+    await NotificationCacheService.clearCache();
+
     if (_isOnlineMode) {
       await ApiService.clearToken();
       SocketService.disconnect();
@@ -462,34 +506,95 @@ class StorageService with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateMatch({
+    required String matchId,
+    required String teamAId,
+    required String teamBId,
+    required String matchType,
+    required String venue,
+    required String date,
+    required String time,
+    required String scorerUser,
+    required String scorerPass,
+  }) async {
+    if (_isOnlineMode) {
+      final ok = await ApiService.updateMatch(
+        matchId: matchId,
+        teamAId: teamAId,
+        teamBId: teamBId,
+        matchType: matchType,
+        venue: venue,
+        date: date,
+        time: time,
+        scorerUser: scorerUser,
+        scorerPass: scorerPass,
+      );
+      if (ok) await loadData();
+      return;
+    }
+
+    final idx = _matches.indexWhere((m) => m.id == matchId);
+    if (idx != -1) {
+      final teamA = _teams.firstWhere((t) => t.id == teamAId, orElse: () => _matches[idx].teamA);
+      final teamB = _teams.firstWhere((t) => t.id == teamBId, orElse: () => _matches[idx].teamB);
+
+      final match = _matches[idx];
+      match.teamA = teamA;
+      match.teamB = teamB;
+      match.matchType = matchType;
+      match.venue = venue;
+      match.date = date;
+      match.time = time;
+      match.scorerUsername = scorerUser;
+      match.scorerPassword = scorerPass;
+      match.playingXI_A = teamA.players;
+      match.playingXI_B = teamB.players;
+
+      _saveMatches();
+      notifyListeners();
+    }
+  }
+
   // --- Scorer / Live Scoring Methods ---
-  void startMatchSetup(String matchId, String tossWinnerTeam, String decision, String firstBattingTeamId) async {
+  Future<bool> startMatchSetup(String matchId, String tossWinnerTeam, String decision, String firstBattingTeamId) async {
     if (_isOnlineMode) {
       final updated = await ApiService.startMatchSetup(matchId, tossWinnerTeam, decision, firstBattingTeamId);
       if (updated != null) {
         final idx = _matches.indexWhere((m) => m.id == matchId);
         if (idx != -1) _matches[idx] = updated;
+        _activeScorerMatchId = matchId;
         notifyListeners();
+        return true;
       }
-      return;
+      return false;
     }
 
     // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == matchId);
-    match.tossWinner = tossWinnerTeam;
-    match.tossDecision = decision;
-    match.battingTeamId = firstBattingTeamId;
-    match.status = 'Live';
-    
-    final batTeam = firstBattingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final bowlTeam = firstBattingTeamId == match.teamA.id ? match.teamB : match.teamA;
+    final idx = _matches.indexWhere((m) => m.id == matchId);
+    if (idx != -1) {
+      final match = _matches[idx];
+      match.tossWinner = tossWinnerTeam;
+      match.tossDecision = decision;
+      match.battingTeamId = firstBattingTeamId;
+      match.status = 'Live';
+      
+      final batTeam = firstBattingTeamId == match.teamA.id ? match.teamA : match.teamB;
+      final bowlTeam = firstBattingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
-    match.currentStrikerId = batTeam.players[0].id;
-    match.currentNonStrikerId = batTeam.players[1].id;
-    match.currentBowlerId = bowlTeam.players[bowlTeam.players.length - 1].id;
+      if (batTeam.players.isNotEmpty) {
+        match.currentStrikerId = batTeam.players[0].id;
+        match.currentNonStrikerId = batTeam.players.length > 1 ? batTeam.players[1].id : batTeam.players[0].id;
+      }
+      if (bowlTeam.players.isNotEmpty) {
+        match.currentBowlerId = bowlTeam.players[bowlTeam.players.length - 1].id;
+      }
 
-    _saveMatches();
-    notifyListeners();
+      _activeScorerMatchId = matchId;
+      _saveMatches();
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   void setActiveScorerMatchId(String? matchId) {

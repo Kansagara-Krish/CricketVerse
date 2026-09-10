@@ -5,125 +5,296 @@ import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/team_logo.dart';
 
+
 class MatchDetailScreen extends StatelessWidget {
   final CricketMatch match;
   const MatchDetailScreen({super.key, required this.match});
 
+  Color _parseTeamColor(String hex, Color fallback) {
+    if (hex.isEmpty) return fallback;
+    String clean = hex.replaceAll('#', '').replaceAll('0x', '');
+    if (clean.length == 6) clean = 'FF$clean';
+    final val = int.tryParse(clean, radix: 16);
+    return val != null ? Color(val) : fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLive = match.status == 'Live';
-    final statusColor = AppTheme.statusColor(match.status);
+
+    // Score / number display
+    final String scoreA;
+    if (isLive || match.status == 'Completed') {
+      scoreA = '${match.runsA}/${match.wicketsA}';
+    } else {
+      if (match.runsA > 0 || match.wicketsA > 0) {
+        scoreA = '${match.runsA}/${match.wicketsA}';
+      } else if (match.teamA.name.isNotEmpty &&
+          match.teamA.name != match.teamA.shortName &&
+          match.teamA.name.length <= 6) {
+        scoreA = match.teamA.name;
+      } else {
+        scoreA = '${match.runsA}/${match.wicketsA}';
+      }
+    }
+
+    final String scoreB;
+    if (isLive || match.status == 'Completed') {
+      scoreB = '${match.runsB}/${match.wicketsB}';
+    } else {
+      if (match.runsB > 0 || match.wicketsB > 0) {
+        scoreB = '${match.runsB}/${match.wicketsB}';
+      } else if (match.teamB.name.isNotEmpty &&
+          match.teamB.name != match.teamB.shortName &&
+          match.teamB.name.length <= 6) {
+        scoreB = match.teamB.name;
+      } else {
+        scoreB = '${match.runsB}/${match.wicketsB}';
+      }
+    }
+
+    final teamAColor = _parseTeamColor(match.teamA.logoColorHex, const Color(0xFFDC2626));
+    final teamBColor = _parseTeamColor(match.teamB.logoColorHex, const Color(0xFFD97706));
+
+    final venueText = match.venue.isNotEmpty ? match.venue.toUpperCase() : 'MAIN STADIUM';
+    final dateTimeText = '${match.date.isNotEmpty ? match.date : "06-09-2026"} at ${match.time.isNotEmpty ? match.time : "6:00 PM"}';
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       body: CustomScrollView(
         slivers: [
-          // Hero Scoreboard App Bar
+          // Hero Stadium Scoreboard Banner
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 310,
             pinned: true,
             backgroundColor: AppTheme.bgDark,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isLive
-                        ? [const Color(0xFF064E3B), AppTheme.bgDeep]
-                        : [const Color(0xFF1E293B), AppTheme.bgDeep],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Pristine Stadium Background Image
+                  Image.asset(
+                    'assets/images/stadium_board.jpg',
+                    fit: BoxFit.cover,
                   ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+
+                  // Dynamic Content aligned onto billboard & pitch
+                  SafeArea(
                     child: Column(
                       children: [
-                        // Status + Match Type
+                        // Top Sky: Status Badge + Match Format
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF00E5FF),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: isLive
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+                                            blurRadius: 8,
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                child: Text(
+                                  isLive ? '● LIVE' : match.status.toUpperCase(),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11.5,
+                                    color: const Color(0xFF00E5FF),
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                match.matchType,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const Spacer(flex: 3),
+
+                        // Center Billboard Screen: Team A | VS | Team B
+                        // Rendered directly on the blank billboard screen with no box wrapper
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Team A
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TeamLogo(
+                                      teamName: match.teamA.name,
+                                      shortName: match.teamA.shortName,
+                                      logoColorHex: match.teamA.logoColorHex,
+                                      size: 50,
+                                    ),
+                                    const SizedBox(height: 5),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        scoreA,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF0F172A),
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      height: 2.5,
+                                      width: 32,
+                                      decoration: BoxDecoration(
+                                        color: teamAColor,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      match.teamA.shortName.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF334155),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // VS
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'VS',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF0F172A),
+                                    letterSpacing: -1.0,
+                                  ),
+                                ),
+                              ),
+
+                              // Team B
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TeamLogo(
+                                      teamName: match.teamB.name,
+                                      shortName: match.teamB.shortName,
+                                      logoColorHex: match.teamB.logoColorHex,
+                                      size: 50,
+                                    ),
+                                    const SizedBox(height: 5),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        scoreB,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF0F172A),
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      height: 2.5,
+                                      width: 32,
+                                      decoration: BoxDecoration(
+                                        color: teamBColor,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      match.teamB.shortName.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF334155),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const Spacer(flex: 4),
+
+                        // Grass Pitch Area: Venue + Date & Time
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: statusColor.withValues(alpha: 0.5)),
-                              ),
-                              child: Text(
-                                isLive ? '● LIVE' : match.status.toUpperCase(),
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: statusColor, fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(match.matchType,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted)),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Main Score Display
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: _TeamScore(
-                                shortName: match.teamA.shortName,
-                                fullName: match.teamA.name,
-                                runs: match.runsA,
-                                wickets: match.wicketsA,
-                                overs: match.oversA,
-                                isBatting: match.isFirstInnings && match.status == 'Live',
-                                logoColorHex: match.teamA.logoColorHex,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('VS',
-                                    style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 18, fontWeight: FontWeight.w900,
-                                        color: AppTheme.textMuted)),
-                                if (match.target > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text('Target: ${match.target}',
-                                        style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 10, color: AppTheme.accentGold)),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _TeamScore(
-                                shortName: match.teamB.shortName,
-                                fullName: match.teamB.name,
-                                runs: match.runsB,
-                                wickets: match.wicketsB,
-                                overs: match.oversB,
-                                isBatting: !match.isFirstInnings && match.status == 'Live',
-                                logoColorHex: match.teamB.logoColorHex,
-                                alignRight: true,
+                            const Icon(Icons.location_on, color: Color(0xFFEF4444), size: 15),
+                            const SizedBox(width: 4),
+                            Text(
+                              venueText,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.white,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 3),
                         Text(
-                          '📍 ${match.venue}',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted),
-                          textAlign: TextAlign.center,
+                          dateTimeText,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            color: Colors.white.withValues(alpha: 0.95),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                          ),
                         ),
-                        Text(
-                          '${match.date} at ${match.time}',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -194,13 +365,26 @@ class MatchDetailScreen extends StatelessWidget {
                   ],
 
                   // Match Info
-                  const _SectionLabel('MATCH INFO'),
-                  const SizedBox(height: 12),
-                  _InfoRow(Icons.emoji_events_outlined, 'Toss', '${match.tossWinner} — ${match.tossDecision}'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const _SectionLabel('MATCH INFO'),
+                      IconButton(
+                        icon: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryBlue, size: 22),
+                        tooltip: 'Edit Match Details',
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.scheduleMatch, arguments: match);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _InfoRow(Icons.emoji_events_outlined, 'Toss', match.tossWinner.isNotEmpty ? '${match.tossWinner} — ${match.tossDecision}' : 'Not done yet'),
                   _InfoRow(Icons.location_on_outlined, 'Venue', match.venue),
                   _InfoRow(Icons.calendar_today_outlined, 'Date & Time', '${match.date} at ${match.time}'),
                   _InfoRow(Icons.sports_cricket, 'Format', match.matchType),
-                  _InfoRow(Icons.person_pin_rounded, 'Scorer', match.scorerUsername.isNotEmpty ? match.scorerUsername : 'Not assigned'),
+                  _InfoRow(Icons.person_pin_rounded, 'Manager Username', match.scorerUsername.isNotEmpty ? match.scorerUsername : 'Not assigned'),
+                  _InfoRow(Icons.lock_outline_rounded, 'Manager Password', match.scorerPassword.isNotEmpty ? match.scorerPassword : 'Not set'),
                   const SizedBox(height: 20),
 
                   // Playing XI
@@ -272,70 +456,6 @@ class MatchDetailScreen extends StatelessWidget {
   }
 }
 
-class _TeamScore extends StatelessWidget {
-  final String shortName, fullName;
-  final int runs, wickets;
-  final double overs;
-  final bool isBatting;
-  final bool alignRight;
-  final String logoColorHex;
-
-  const _TeamScore({
-    required this.shortName,
-    required this.fullName,
-    required this.runs,
-    required this.wickets,
-    required this.overs,
-    required this.isBatting,
-    required this.logoColorHex,
-    this.alignRight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        if (isBatting)
-          Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text('BATTING', style: GoogleFonts.plusJakartaSans(fontSize: 8, color: AppTheme.primaryGreen, fontWeight: FontWeight.w800)),
-          ),
-        TeamLogo(
-          teamName: fullName,
-          shortName: shortName,
-          logoColorHex: logoColorHex,
-          size: 40,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          shortName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
-        ),
-        Text(
-          fullName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted),
-        ),
-        if (runs > 0 || overs > 0) ...[
-          const SizedBox(height: 6),
-          Text('$runs/$wickets',
-              style: GoogleFonts.plusJakartaSans(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-          Text('($overs overs)',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
-        ],
-      ],
-    );
-  }
-}
 
 class _SectionLabel extends StatelessWidget {
   final String label;

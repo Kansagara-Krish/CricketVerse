@@ -491,3 +491,53 @@ export async function getMatchPrediction(req: Request, res: Response) {
     return res.status(500).json({ error: err.message || 'Failed to calculate match prediction.' });
   }
 }
+
+export async function updateMatch(req: Request, res: Response) {
+  const { id } = req.params;
+  const { teamAId, teamBId, matchType, venue, date, time, scorerUser, scorerPass } = req.body;
+
+  try {
+    const existing = await prisma.match.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Match not found.' });
+    }
+
+    const updateData: any = {};
+    if (teamAId) updateData.teamAId = teamAId;
+    if (teamBId) updateData.teamBId = teamBId;
+    if (matchType) updateData.matchType = matchType;
+    if (venue) updateData.venue = venue;
+    if (date) updateData.date = date;
+    if (time) updateData.time = time;
+    if (scorerUser !== undefined) updateData.scorerUsername = scorerUser;
+    if (scorerPass !== undefined) updateData.scorerPassword = scorerPass;
+
+    await prisma.match.update({
+      where: { id },
+      data: updateData,
+    });
+
+    if (teamAId && teamAId !== existing.teamAId) {
+      await prisma.matchPlayingXI.deleteMany({ where: { matchId: id, teamId: existing.teamAId } });
+      const teamAPlayers = await prisma.teamPlayer.findMany({ where: { teamId: teamAId } });
+      for (const p of teamAPlayers) {
+        await prisma.matchPlayingXI.create({ data: { matchId: id, teamId: teamAId, playerId: p.playerId } });
+      }
+    }
+
+    if (teamBId && teamBId !== existing.teamBId) {
+      await prisma.matchPlayingXI.deleteMany({ where: { matchId: id, teamId: existing.teamBId } });
+      const teamBPlayers = await prisma.teamPlayer.findMany({ where: { teamId: teamBId } });
+      for (const p of teamBPlayers) {
+        await prisma.matchPlayingXI.create({ data: { matchId: id, teamId: teamBId, playerId: p.playerId } });
+      }
+    }
+
+    await invalidateCachedMatch(id);
+    const fullMatch = await getFullMatchData(id);
+    return res.status(200).json({ message: 'Match updated successfully.', match: fullMatch });
+  } catch (err) {
+    console.error('Error updating match:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}

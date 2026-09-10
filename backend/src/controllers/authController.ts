@@ -17,7 +17,7 @@ export async function login(req: Request, res: Response) {
 
   try {
     // 1. Admin login check
-    if (email === 'admin@cricketverse.ai' && password === 'admin123') {
+    if (email === 'admin@gmail.com' && password === 'admin123') {
       const token = jwt.sign({ id: 'admin_user', email, role: 'Admin' }, JWT_SECRET, { expiresIn: '7d' });
       // Fetch or seed Rajesh Kumar's admin details if not in DB
       let adminName = 'Rajesh Kumar';

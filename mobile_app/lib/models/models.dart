@@ -5,6 +5,8 @@ class Player {
   final String name;
   final String role; // "Batter", "Bowler", "All-rounder"
   final String nationality;
+  bool isCaptain;
+  bool isViceCaptain;
   int runsScored;
   int ballsFaced;
   int wicketsTaken;
@@ -17,6 +19,8 @@ class Player {
     required this.name,
     required this.role,
     required this.nationality,
+    this.isCaptain = false,
+    this.isViceCaptain = false,
     this.runsScored = 0,
     this.ballsFaced = 0,
     this.wicketsTaken = 0,
@@ -30,6 +34,8 @@ class Player {
         'name': name,
         'role': role,
         'nationality': nationality,
+        'isCaptain': isCaptain,
+        'isViceCaptain': isViceCaptain,
         'runsScored': runsScored,
         'ballsFaced': ballsFaced,
         'wicketsTaken': wicketsTaken,
@@ -43,6 +49,8 @@ class Player {
         name: json['name'],
         role: json['role'],
         nationality: json['nationality'],
+        isCaptain: json['isCaptain'] ?? json['is_captain'] ?? false,
+        isViceCaptain: json['isViceCaptain'] ?? json['is_vice_captain'] ?? false,
         runsScored: json['runsScored'] ?? 0,
         ballsFaced: json['ballsFaced'] ?? 0,
         wicketsTaken: json['wicketsTaken'] ?? 0,
@@ -149,12 +157,12 @@ class BallRecord {
 
 class CricketMatch {
   final String id;
-  final Team teamA;
-  final Team teamB;
-  final String matchType; // "T20" or "ODI"
-  final String venue;
-  final String date;
-  final String time;
+  Team teamA;
+  Team teamB;
+  String matchType; // "T20" or "ODI"
+  String venue;
+  String date;
+  String time;
   String status; // "Upcoming", "Live", "Completed"
   String tossWinner; // "Team A" or "Team B" or ""
   String tossDecision; // "Bat" or "Bowl" or ""

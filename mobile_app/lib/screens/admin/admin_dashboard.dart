@@ -20,7 +20,6 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 0: Home view, 1: Profile view
-  final int _notificationCount = 5;
 
   late AnimationController _drawerAnimationController;
   bool _isDrawerOpen = false;
@@ -333,31 +332,37 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       showSearch(context: context, delegate: _CricketSearchDelegate());
                     },
                   ),
-                  Stack(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
-                        onPressed: () {
-                          Navigator.pushNamed(context, AppRoutes.notifications);
-                        },
-                      ),
-                      if (_notificationCount > 0)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.accentRed,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '$_notificationCount',
-                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                            ),
+                  Consumer<StorageService>(
+                    builder: (_, storage, __) {
+                      final count = storage.unreadNotificationCount;
+                      return Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
+                            onPressed: () async {
+                              await Navigator.pushNamed(context, AppRoutes.notifications);
+                              if (mounted) setState(() {});
+                            },
                           ),
-                        ),
-                    ],
+                          if (count > 0)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.accentRed,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(width: 4),
                 ],
@@ -841,16 +846,19 @@ class _MatchCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              match.teamA.shortName,
+                              match.teamA.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                   fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                             ),
-                            Text(match.teamA.name,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textSecondary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              match.teamA.shortName,
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             if (match.runsA > 0)
                               Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
                                   style: GoogleFonts.plusJakartaSans(
@@ -862,7 +870,7 @@ class _MatchCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text('VS',
                       style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
@@ -876,16 +884,21 @@ class _MatchCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              match.teamB.shortName,
+                              match.teamB.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
                               style: GoogleFonts.plusJakartaSans(
                                   fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                             ),
-                            Text(match.teamB.name,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textSecondary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              match.teamB.shortName,
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                            ),
                             if (match.runsB > 0)
                               Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
                                   style: GoogleFonts.plusJakartaSans(

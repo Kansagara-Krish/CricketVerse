@@ -79,9 +79,36 @@ class _HomeTabViewState extends State<HomeTabView> {
             ),
           ],
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.textPrimary, size: 22),
-          onPressed: () {},
+        Consumer<StorageService>(
+          builder: (_, storage, __) {
+            final count = storage.unreadNotificationCount;
+            return Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.textPrimary, size: 22),
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.notifications);
+                  },
+                ),
+                if (count > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.accentRed,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ],
     );

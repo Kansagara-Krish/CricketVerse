@@ -368,7 +368,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           ),
           const SizedBox(height: 4),
           Text(
-            storage.currentUserEmail ?? 'user@gmail.com',
+            storage.currentUserEmail ?? 'Guest User',
             style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
           ),
         ],

@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+
+import 'auth_storage_service.dart';
 
 class ApiService {
   static String get baseUrl {
@@ -16,8 +17,7 @@ class ApiService {
   static String? _token;
 
   static Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
+    _token = await AuthStorageService.getAccessToken();
   }
 
   static Map<String, String> get _headers {
@@ -25,22 +25,38 @@ class ApiService {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-    if (_token != null) {
+    if (_token != null && _token!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $_token';
     }
     return headers;
   }
 
-  static Future<void> _saveToken(String token) async {
+  static Future<void> _saveToken(String token, {Map<String, dynamic>? userData}) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    if (userData != null) {
+      final user = userData['user'] ?? {};
+      await AuthStorageService.saveAuthData(
+        accessToken: token,
+        refreshToken: userData['refreshToken'],
+        userId: user['id']?.toString() ?? '',
+        userEmail: user['email']?.toString() ?? '',
+        userRole: user['role']?.toString() ?? 'User',
+        userName: user['name']?.toString() ?? '',
+      );
+    } else {
+      await AuthStorageService.saveAuthData(
+        accessToken: token,
+        userId: '',
+        userEmail: '',
+        userRole: 'User',
+        userName: '',
+      );
+    }
   }
 
   static Future<void> clearToken() async {
     _token = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    await AuthStorageService.clearAuthData();
   }
 
   // --- Auth API ---
@@ -55,7 +71,7 @@ class ApiService {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['token'] != null) {
-          await _saveToken(data['token']);
+          await _saveToken(data['token'], userData: data);
         }
         return data;
       }
@@ -77,7 +93,7 @@ class ApiService {
       if (res.statusCode == 201) {
         final data = jsonDecode(res.body);
         if (data['token'] != null) {
-          await _saveToken(data['token']);
+          await _saveToken(data['token'], userData: data);
         }
         return data;
       }
@@ -331,6 +347,39 @@ class ApiService {
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService scheduleMatch error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> updateMatch({
+    required String matchId,
+    required String teamAId,
+    required String teamBId,
+    required String matchType,
+    required String venue,
+    required String date,
+    required String time,
+    required String scorerUser,
+    required String scorerPass,
+  }) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/matches/$matchId'),
+        headers: _headers,
+        body: jsonEncode({
+          'teamAId': teamAId,
+          'teamBId': teamBId,
+          'matchType': matchType,
+          'venue': venue,
+          'date': date,
+          'time': time,
+          'scorerUser': scorerUser,
+          'scorerPass': scorerPass,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService updateMatch error: $e');
       return false;
     }
   }

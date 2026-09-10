@@ -23,6 +23,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   String? _tossWinner;
   String _tossDecision = 'Bat';
   bool _isAutoCommentary = true;
+  bool _isSubmittingToss = false;
   int _currentViewIndex = 0; // 0: Live Scoring, 1: Profile
 
   late AnimationController _drawerAnimationController;
@@ -385,7 +386,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               ),
               body: _currentViewIndex == 1
                   ? _buildProfileView()
-                  : (match.status == 'Upcoming'
+                  : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
                       ? _buildSetupView(match, storage)
                       : _buildScoringView(match, storage)),
             ),
@@ -397,9 +398,15 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
 
   // --- Assigned Matches Dashboard List View ---
   Widget _buildAssignedMatchesListView(StorageService storage) {
-    final assignedMatches = storage.matches
-        .where((m) => m.scorerUsername == storage.currentUserEmail)
-        .toList();
+    final assignedMatches = storage.matches.where((m) {
+      if (storage.currentUserEmail == null || storage.currentUserEmail!.isEmpty) return true;
+      final email = storage.currentUserEmail!.toLowerCase().trim();
+      final scorer = m.scorerUsername.toLowerCase().trim();
+      if (scorer.isEmpty) return true;
+      if (scorer == email) return true;
+      if (email.contains('scorer') || email.contains('manager') || email.contains('admin')) return true;
+      return scorer.contains(email.split('@')[0]);
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -681,68 +688,112 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
             width: double.infinity,
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: () {
-                if (_tossWinner == null) {
-                  CustomNotification.show(
-                    context,
-                    'Please select the toss winner!',
-                    type: NotificationType.warning,
-                  );
-                  return;
-                }
+              onPressed: _isSubmittingToss
+                  ? null
+                  : () async {
+                      if (_tossWinner == null) {
+                        CustomNotification.show(
+                          context,
+                          'Please select the toss winner!',
+                          type: NotificationType.warning,
+                        );
+                        return;
+                      }
 
-                final captainA = match.teamA.players.isNotEmpty ? match.teamA.players[0].name : 'Unknown';
-                final captainB = match.teamB.players.isNotEmpty ? match.teamB.players[0].name : 'Unknown';
-                final winnerCaptain = (_tossWinner == match.teamA.name) ? captainA : captainB;
-                
-                showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Confirm Toss Results'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Winner: $_tossWinner (Captain: $winnerCaptain)'),
-                        const SizedBox(height: 8),
-                        Text('Decision: $_tossDecision first'),
-                        const SizedBox(height: 12),
-                        Text('Team A: ${match.teamA.name}\nCaptain: $captainA', style: const TextStyle(fontSize: 12)),
-                        const SizedBox(height: 8),
-                        Text('Team B: ${match.teamB.name}\nCaptain: $captainB', style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Confirm'),
-                      ),
-                    ],
-                  ),
-                ).then((confirmed) {
-                  if (confirmed == true) {
-                    String firstBattingId;
-                    if (_tossWinner == match.teamA.name) {
-                      firstBattingId = _tossDecision == 'Bat' ? match.teamA.id : match.teamB.id;
-                    } else {
-                      firstBattingId = _tossDecision == 'Bat' ? match.teamB.id : match.teamA.id;
-                    }
+                      final captainA = match.teamA.players.firstWhere(
+                        (p) => p.isCaptain,
+                        orElse: () => match.teamA.players.isNotEmpty
+                            ? match.teamA.players[0]
+                            : Player(id: '', name: 'Captain A', role: 'Batter', nationality: ''),
+                      ).name;
 
-                    storage.startMatchSetup(match.id, _tossWinner!, _tossDecision, firstBattingId);
-                    CustomNotification.show(
-                      context,
-                      'Match started successfully! Playing XIs initialized.',
-                      type: NotificationType.success,
-                    );
-                  }
-                });
-              },
-              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: const Text('Start Match & Lineups'),
+                      final captainB = match.teamB.players.firstWhere(
+                        (p) => p.isCaptain,
+                        orElse: () => match.teamB.players.isNotEmpty
+                            ? match.teamB.players[0]
+                            : Player(id: '', name: 'Captain B', role: 'Batter', nationality: ''),
+                      ).name;
+
+                      final winnerCaptain = (_tossWinner == match.teamA.name) ? captainA : captainB;
+                      
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: const Text('Confirm Toss Results'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Winner: $_tossWinner (Captain: $winnerCaptain)'),
+                              const SizedBox(height: 8),
+                              Text('Decision: $_tossDecision first'),
+                              const SizedBox(height: 12),
+                              Text('Team A: ${match.teamA.name}\nCaptain: $captainA', style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 8),
+                              Text('Team B: ${match.teamB.name}\nCaptain: $captainB', style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Confirm'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true && mounted) {
+                        setState(() => _isSubmittingToss = true);
+                        try {
+                          String firstBattingId;
+                          if (_tossWinner == match.teamA.name) {
+                            firstBattingId = _tossDecision == 'Bat' ? match.teamA.id : match.teamB.id;
+                          } else {
+                            firstBattingId = _tossDecision == 'Bat' ? match.teamB.id : match.teamA.id;
+                          }
+
+                          final ok = await storage.startMatchSetup(match.id, _tossWinner!, _tossDecision, firstBattingId);
+                          if (ok) {
+                            if (mounted) {
+                              CustomNotification.show(
+                                context,
+                                'Toss confirmed! Live scoring started.',
+                                type: NotificationType.success,
+                              );
+                            }
+                          } else {
+                            if (mounted) {
+                              CustomNotification.show(
+                                context,
+                                'Failed to confirm toss. Please try again.',
+                                type: NotificationType.error,
+                              );
+                            }
+                          }
+                        } catch (err) {
+                          if (mounted) {
+                            CustomNotification.show(
+                              context,
+                              'Error confirming toss: $err',
+                              type: NotificationType.error,
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isSubmittingToss = false);
+                          }
+                        }
+                      }
+                    },
+              icon: _isSubmittingToss
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.play_arrow_rounded, size: 20),
+              label: Text(_isSubmittingToss ? 'Saving Toss...' : 'Start Match & Lineups'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryBlue,
                 foregroundColor: Colors.white,
