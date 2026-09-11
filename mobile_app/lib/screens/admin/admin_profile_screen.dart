@@ -19,7 +19,6 @@ class AdminProfileScreen extends StatefulWidget {
 }
 
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
-  bool _darkMode = true;
   bool _notifications = true;
   bool _liveUpdates = true;
 
@@ -292,8 +291,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
             const SizedBox(height: 20),
             const _SectionHeader('PREFERENCES'),
-            _SwitchTile(Icons.dark_mode_outlined, 'Dark Mode', 'App theme preference', _darkMode,
-                (v) => setState(() => _darkMode = v)),
             _SwitchTile(Icons.notifications_outlined, 'Push Notifications', 'Match alerts and updates', _notifications,
                 (v) => setState(() => _notifications = v)),
             _SwitchTile(Icons.live_tv_outlined, 'Live Score Updates', 'Real-time score notifications', _liveUpdates,

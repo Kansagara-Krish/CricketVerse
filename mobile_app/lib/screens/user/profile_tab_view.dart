@@ -16,8 +16,6 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
-  String _themeMode = 'Light';
-
   void _editProfile(StorageService storage) {
     final nameCtrl = TextEditingController(text: storage.currentUserName);
     final emailCtrl = TextEditingController(text: storage.currentUserEmail);
@@ -265,12 +263,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               },
             ),
           ),
-          _buildProfileTile(
-            icon: Icons.palette_outlined,
-            title: 'Theme Settings',
-            subtitle: _themeMode,
-            onTap: () => ProfileDialogs.showThemeChooser(context, _themeMode, (theme) => setState(() => _themeMode = theme)),
-          ),
 
           const SizedBox(height: 20),
 
@@ -341,32 +333,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop'),
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                displayName,
-                style: GoogleFonts.plusJakartaSans(fontSize: 19, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.goldGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.star, size: 10, color: Colors.white),
-                    const SizedBox(width: 2),
-                    Text(
-                      'PRO',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 8.5, color: Colors.white, fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            displayName,
+            style: GoogleFonts.plusJakartaSans(fontSize: 19, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 4),
           Text(
@@ -384,8 +353,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         Expanded(child: _buildStatItem('32', 'Predictions', Icons.online_prediction, AppTheme.primaryBlue)),
         const SizedBox(width: 12),
         Expanded(child: _buildStatItem('78%', 'Accuracy', Icons.insights, AppTheme.primaryGreen)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildStatItem('Gold', 'Tier Rank', Icons.emoji_events, AppTheme.accentGold)),
       ],
     );
   }
@@ -460,10 +427,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppTheme.bgSurface.withOpacity(0.5),
-                  child: Icon(icon, color: AppTheme.primaryBlue, size: 18),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE6F4EA),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Icon(icon, color: const Color(0xFF047857), size: 19),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -472,17 +445,27 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          color: const Color(0xFF0F172A),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary),
-                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 20),
               ],
             ),
           ),

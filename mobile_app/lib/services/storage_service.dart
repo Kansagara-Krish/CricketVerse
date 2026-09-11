@@ -1463,4 +1463,70 @@ class StorageService with ChangeNotifier {
     await _prefs?.setBool(key, value);
     notifyListeners();
   }
+
+  // ─── Search History Methods (1 Week Retention Policy) ───────────────────────
+  List<SearchHistoryItem> getSearchHistory() {
+    if (_prefs == null) return [];
+    final rawList = _prefs!.getStringList('admin_search_history_v2') ?? [];
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+
+    List<SearchHistoryItem> validItems = [];
+    bool needsSave = false;
+
+    for (var str in rawList) {
+      try {
+        final item = SearchHistoryItem.fromJson(json.decode(str));
+        // Enforce 1-week retention window
+        if (item.timestamp.isAfter(sevenDaysAgo)) {
+          validItems.add(item);
+        } else {
+          needsSave = true; // Auto-purged expired entry older than 7 days
+        }
+      } catch (_) {}
+    }
+
+    if (needsSave) {
+      _saveSearchHistory(validItems);
+    }
+    return validItems;
+  }
+
+  Future<void> addSearchHistoryItem(SearchHistoryItem newItem) async {
+    List<SearchHistoryItem> currentList = getSearchHistory();
+    // Remove any duplicate matching title & category
+    currentList.removeWhere((item) =>
+        item.title.toLowerCase() == newItem.title.toLowerCase() &&
+        item.category == newItem.category);
+    
+    // Insert newest search item at beginning
+    currentList.insert(0, newItem);
+
+    // Limit to max 30 recent entries
+    if (currentList.length > 30) {
+      currentList = currentList.sublist(0, 30);
+    }
+
+    await _saveSearchHistory(currentList);
+    notifyListeners();
+  }
+
+  Future<void> removeSearchHistoryItem(String id) async {
+    List<SearchHistoryItem> currentList = getSearchHistory();
+    currentList.removeWhere((item) => item.id == id);
+    await _saveSearchHistory(currentList);
+    notifyListeners();
+  }
+
+  Future<void> clearSearchHistory() async {
+    if (_prefs != null) {
+      await _prefs!.remove('admin_search_history_v2');
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveSearchHistory(List<SearchHistoryItem> list) async {
+    if (_prefs == null) return;
+    final jsonStrings = list.map((item) => json.encode(item.toJson())).toList();
+    await _prefs!.setStringList('admin_search_history_v2', jsonStrings);
+  }
 }

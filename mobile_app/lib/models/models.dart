@@ -343,3 +343,43 @@ class Tournament {
       );
 }
 
+class SearchHistoryItem {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String category; // 'Tournament', 'Team', 'Player', 'Match', 'Query'
+  final DateTime timestamp;
+  final String? targetId;
+
+  SearchHistoryItem({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.category,
+    required this.timestamp,
+    this.targetId,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'subtitle': subtitle,
+        'category': category,
+        'timestamp': timestamp.millisecondsSinceEpoch,
+        'targetId': targetId,
+      };
+
+  factory SearchHistoryItem.fromJson(Map<String, dynamic> json) => SearchHistoryItem(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        subtitle: json['subtitle']?.toString() ?? '',
+        category: json['category']?.toString() ?? 'Query',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(
+          json['timestamp'] is int
+              ? json['timestamp']
+              : int.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
+        ),
+        targetId: json['targetId']?.toString(),
+      );
+}
+
