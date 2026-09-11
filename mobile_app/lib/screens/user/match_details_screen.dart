@@ -174,9 +174,26 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTick
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
-    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
-    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
+    );
+    final nonStriker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentNonStrikerId,
+      orElse: () => battingTeam.players.length > 1
+          ? battingTeam.players[1]
+          : (battingTeam.players.isNotEmpty
+              ? battingTeam.players[0]
+              : Player(id: '', name: 'Batsman', role: 'Batter', nationality: '')),
+    );
+    final bowler = bowlingTeam.players.firstWhere(
+      (p) => p.id == match.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty
+          ? bowlingTeam.players.last
+          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+    );
 
     final runs = match.isFirstInnings ? match.runsA : match.runsB;
     final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;

@@ -9,6 +9,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
+import 'package:flutter/services.dart';
+import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../services/socket_service.dart';
 
@@ -303,96 +305,128 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
     final matchId = storage.activeScorerMatchId;
-    
-    if (matchId == null) {
-      return _buildAssignedMatchesListView(storage);
-    }
 
-    final match = storage.matches.firstWhere((m) => m.id == matchId);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: Stack(
-        children: [
-          // Drawer menu
-          _buildMenuDrawer(context, match),
-          
-          // Dashboard Body Zoom animation
-          AnimatedBuilder(
-            animation: _drawerAnimationController,
-            builder: (context, child) {
-              final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
-              final double slide = _drawerAnimationController.value * 230.0;
-              final double radius = _drawerAnimationController.value * 20.0;
-              return Transform(
-                transform: Matrix4.translationValues(slide, 0.0, 0.0)
-                  * Matrix4.diagonal3Values(scale, scale, 1.0),
-                alignment: Alignment.centerLeft,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 16,
-                          spreadRadius: 2,
+        // 1. If currently scoring a match, exit back to assigned matches list
+        if (storage.activeScorerMatchId != null) {
+          storage.setActiveScorerMatchId(null);
+          return;
+        }
+
+        // 2. If drawer is open, close drawer
+        if (_isDrawerOpen) {
+          _toggleDrawer();
+          return;
+        }
+
+        // 3. If on Profile view, switch back to Scoring view
+        if (_currentViewIndex != 0) {
+          setState(() => _currentViewIndex = 0);
+          return;
+        }
+
+        // 4. On the LAST page -> confirm exit
+        final shouldExit = await ExitAppDialog.show(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: matchId == null
+          ? _buildAssignedMatchesListView(storage)
+          : Builder(
+              builder: (context) {
+                final match = storage.matches.firstWhere((m) => m.id == matchId);
+
+                return Scaffold(
+                  backgroundColor: const Color(0xFF0F172A),
+                  body: Stack(
+                    children: [
+                      // Drawer menu
+                      _buildMenuDrawer(context, match),
+
+                      // Dashboard Body Zoom animation
+                      AnimatedBuilder(
+                        animation: _drawerAnimationController,
+                        builder: (context, child) {
+                          final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
+                          final double slide = _drawerAnimationController.value * 230.0;
+                          final double radius = _drawerAnimationController.value * 20.0;
+                          return Transform(
+                            transform: Matrix4.translationValues(slide, 0.0, 0.0)
+                              * Matrix4.diagonal3Values(scale, scale, 1.0),
+                            alignment: Alignment.centerLeft,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(radius),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 16,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Scaffold(
+                          backgroundColor: AppTheme.bgDark,
+                          appBar: AppBar(
+                            backgroundColor: Colors.white,
+                            elevation: 0,
+                            leading: IconButton(
+                              icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                              onPressed: () {
+                                storage.setActiveScorerMatchId(null);
+                              },
+                            ),
+                            title: Text(
+                              _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            actions: [
+                              if (_currentViewIndex == 0 && match.status == 'Live') ...[
+                                IconButton(
+                                  icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
+                                  tooltip: 'Reset Score to 0/0',
+                                  onPressed: () => _showResetConfirmation(context, storage, match.id),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_note, color: AppTheme.accentGold),
+                                  onPressed: () {
+                                    Navigator.pushNamed(context, AppRoutes.editBall);
+                                  },
+                                ),
+                              ],
+                              IconButton(
+                                icon: const Icon(Icons.logout, color: AppTheme.accentRed),
+                                onPressed: _logout,
+                              ),
+                            ],
+                          ),
+                          body: _currentViewIndex == 1
+                              ? _buildProfileView()
+                              : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
+                                  ? _buildSetupView(match, storage)
+                                  : _buildScoringView(match, storage)),
                         ),
-                      ],
-                    ),
-                    child: child,
+                      ),
+                    ],
                   ),
-                ),
-              );
-            },
-            child: Scaffold(
-              backgroundColor: AppTheme.bgDark,
-              appBar: AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
-                  onPressed: () {
-                    storage.setActiveScorerMatchId(null);
-                  },
-                ),
-                title: Text(
-                  _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                actions: [
-                  if (_currentViewIndex == 0 && match.status == 'Live') ...[
-                    IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
-                      tooltip: 'Reset Score to 0/0',
-                      onPressed: () => _showResetConfirmation(context, storage, match.id),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_note, color: AppTheme.accentGold),
-                      onPressed: () {
-                        Navigator.pushNamed(context, AppRoutes.editBall);
-                      },
-                    ),
-                  ],
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: AppTheme.accentRed),
-                    onPressed: _logout,
-                  ),
-                ],
-              ),
-              body: _currentViewIndex == 1
-                  ? _buildProfileView()
-                  : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
-                      ? _buildSetupView(match, storage)
-                      : _buildScoringView(match, storage)),
+                );
+              },
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -812,9 +846,26 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
-    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
-    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: 'striker_fallback', name: '${battingTeam.shortName} Striker', role: 'Batter', nationality: ''),
+    );
+    final nonStriker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentNonStrikerId,
+      orElse: () => battingTeam.players.length > 1
+          ? battingTeam.players[1]
+          : (battingTeam.players.isNotEmpty
+              ? battingTeam.players[0]
+              : Player(id: 'non_striker_fallback', name: '${battingTeam.shortName} Non-Striker', role: 'Batter', nationality: '')),
+    );
+    final bowler = bowlingTeam.players.firstWhere(
+      (p) => p.id == match.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty
+          ? bowlingTeam.players.last
+          : Player(id: 'bowler_fallback', name: '${bowlingTeam.shortName} Bowler', role: 'Bowler', nationality: ''),
+    );
 
     final runs = match.isFirstInnings ? match.runsA : match.runsB;
     final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
@@ -1337,33 +1388,45 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 12),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: players.length,
-                  itemBuilder: (context, i) {
-                    final p = players[i];
-                    return ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                        radius: 14,
-                        child: Text(p.name.substring(0, 1), style: const TextStyle(fontSize: 11, color: AppTheme.primaryBlue)),
-                      ),
-                      title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
-                      subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
-                      onTap: () {
-                        if (isStriker) {
-                          storage.setStriker(p.id);
-                        } else {
-                          storage.setNonStriker(p.id);
-                        }
-                        Navigator.pop(ctx);
-                        CustomNotification.show(context, '${p.name} set as ${isStriker ? "Striker" : "Non-Striker"}', type: NotificationType.info);
-                      },
-                    );
-                  },
+              if (players.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No players found in this team.\nYou can manage players in Team Management.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: players.length,
+                    itemBuilder: (context, i) {
+                      final p = players[i];
+                      final initial = p.name.trim().isNotEmpty ? p.name.trim().substring(0, 1).toUpperCase() : '?';
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                          radius: 14,
+                          child: Text(initial, style: const TextStyle(fontSize: 11, color: AppTheme.primaryBlue)),
+                        ),
+                        title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
+                        subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
+                        onTap: () {
+                          if (isStriker) {
+                            storage.setStriker(p.id);
+                          } else {
+                            storage.setNonStriker(p.id);
+                          }
+                          Navigator.pop(ctx);
+                          CustomNotification.show(context, '${p.name} set as ${isStriker ? "Striker" : "Non-Striker"}', type: NotificationType.info);
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
             ],
           ),
         );
@@ -1392,29 +1455,41 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 12),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: players.length,
-                  itemBuilder: (context, i) {
-                    final p = players[i];
-                    return ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.accentRed.withValues(alpha: 0.1),
-                        radius: 14,
-                        child: Text(p.name.substring(0, 1), style: const TextStyle(fontSize: 11, color: AppTheme.accentRed)),
-                      ),
-                      title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
-                      subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
-                      onTap: () {
-                        storage.switchBowler(p.id);
-                        Navigator.pop(ctx);
-                        CustomNotification.show(context, 'Bowler switched to ${p.name}', type: NotificationType.info);
-                      },
-                    );
-                  },
+              if (players.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No bowlers found in this team.\nYou can manage players in Team Management.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: players.length,
+                    itemBuilder: (context, i) {
+                      final p = players[i];
+                      final initial = p.name.trim().isNotEmpty ? p.name.trim().substring(0, 1).toUpperCase() : '?';
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.accentRed.withValues(alpha: 0.1),
+                          radius: 14,
+                          child: Text(initial, style: const TextStyle(fontSize: 11, color: AppTheme.accentRed)),
+                        ),
+                        title: Text(p.name, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
+                        subtitle: Text(p.role, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
+                        onTap: () {
+                          storage.switchBowler(p.id);
+                          Navigator.pop(ctx);
+                          CustomNotification.show(context, 'Bowler switched to ${p.name}', type: NotificationType.info);
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
             ],
           ),
         );
@@ -1426,8 +1501,20 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     if (storage.activeScorerMatchId == null) return;
     final match = storage.matches.firstWhere((m) => m.id == storage.activeScorerMatchId);
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final nonStriker = battingTeam.players.firstWhere((p) => p.id == match.currentNonStrikerId, orElse: () => battingTeam.players[1]);
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: '', name: 'Striker', role: 'Batter', nationality: ''),
+    );
+    final nonStriker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentNonStrikerId,
+      orElse: () => battingTeam.players.length > 1
+          ? battingTeam.players[1]
+          : (battingTeam.players.isNotEmpty
+              ? battingTeam.players[0]
+              : Player(id: '', name: 'Non-Striker', role: 'Batter', nationality: '')),
+    );
 
     String dismissedId = striker.id;
     String wicketType = 'Bowled';
@@ -1770,7 +1857,10 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               newBatsmanId: selectedIncomingId,
                               newBatsmanPosition: selectedPosition,
                             );
-                            final nextPlayerName = battingTeam.players.firstWhere((p) => p.id == selectedIncomingId).name;
+                            final nextPlayerName = battingTeam.players.firstWhere(
+                              (p) => p.id == selectedIncomingId,
+                              orElse: () => Player(id: '', name: 'Next Batter', role: 'Batter', nationality: ''),
+                            ).name;
                             CustomNotification.show(
                               context,
                               'Wicket recorded. Incoming batsman: $nextPlayerName ($selectedPosition)',
@@ -1955,7 +2045,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
 
     if (overs > 0 && (overs * 10).round() % 10 == 0) {
       final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-      _showOverCompletedDialog(context, bowlingTeam.players, storage, (overs).round());
+      if (bowlingTeam.players.isNotEmpty) {
+        _showOverCompletedDialog(context, bowlingTeam.players, storage, (overs).round());
+      }
     }
   }
 
@@ -1969,7 +2061,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
 
     showGeneralDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       barrierLabel: 'OverCompletedDialog',
       barrierColor: Colors.black.withValues(alpha: 0.6),
       transitionDuration: const Duration(milliseconds: 400),
@@ -2030,6 +2122,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               itemBuilder: (ctx, idx) {
                                 final player = players[idx];
                                 final isSel = selectedBowlerId == player.id;
+                                final initial = player.name.trim().isNotEmpty ? player.name.trim().substring(0, 1).toUpperCase() : '?';
                                 return ListTile(
                                   dense: true,
                                   selected: isSel,
@@ -2037,7 +2130,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                   leading: CircleAvatar(
                                     backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                                     radius: 12,
-                                    child: Text(player.name.substring(0, 1), style: const TextStyle(fontSize: 10, color: AppTheme.primaryBlue)),
+                                    child: Text(initial, style: const TextStyle(fontSize: 10, color: AppTheme.primaryBlue)),
                                   ),
                                   title: Text(
                                     player.name,
@@ -2065,13 +2158,20 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                       ),
                     ),
                     actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text('Skip', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
+                      ),
                       ElevatedButton(
                         onPressed: selectedBowlerId == null
                             ? null
                             : () {
                                 Navigator.pop(ctx);
                                 storage.switchBowler(selectedBowlerId!);
-                                final bowlerName = players.firstWhere((p) => p.id == selectedBowlerId).name;
+                                final bowlerName = players.firstWhere(
+                                  (p) => p.id == selectedBowlerId,
+                                  orElse: () => Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+                                ).name;
                                 CustomNotification.show(
                                   context,
                                   'Over $overNumber finished. New bowler: $bowlerName',

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
+import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/custom_notification.dart';
@@ -345,6 +346,37 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                         );
                         return;
                       }
+
+                      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                      if (_isEdit) {
+                        final tournId = args?['id']?.toString() ?? 'tourn_${DateTime.now().millisecondsSinceEpoch}';
+                        final updated = Tournament(
+                          id: tournId,
+                          name: _nameCtrl.text.trim(),
+                          format: _format,
+                          status: args?['status']?.toString() ?? 'Upcoming',
+                          teamsCount: _selectedTeams.length,
+                          matchesCount: int.tryParse(args?['matches']?.toString() ?? '0') ?? 0,
+                          startDate: _startCtrl.text.trim(),
+                          endDate: _endCtrl.text.trim(),
+                          participatingTeamIds: List.from(_selectedTeams),
+                        );
+                        storage.updateTournament(updated);
+                      } else {
+                        final newTourn = Tournament(
+                          id: 'tourn_${DateTime.now().millisecondsSinceEpoch}',
+                          name: _nameCtrl.text.trim(),
+                          format: _format,
+                          status: 'Upcoming',
+                          teamsCount: _selectedTeams.length,
+                          matchesCount: 0,
+                          startDate: _startCtrl.text.trim(),
+                          endDate: _endCtrl.text.trim(),
+                          participatingTeamIds: List.from(_selectedTeams),
+                        );
+                        storage.addTournament(newTourn);
+                      }
+
                       CustomNotification.show(
                         context,
                         _isEdit

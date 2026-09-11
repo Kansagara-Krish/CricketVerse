@@ -541,3 +541,34 @@ export async function updateMatch(req: Request, res: Response) {
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
+
+export async function deleteMatch(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const existing = await prisma.match.findUnique({
+      where: { id },
+      include: { teamA: true, teamB: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Match not found.' });
+    }
+
+    await prisma.ballRecord.deleteMany({ where: { matchId: id } });
+    await prisma.matchPlayingXI.deleteMany({ where: { matchId: id } });
+    await prisma.match.delete({ where: { id } });
+
+    await invalidateCachedMatch(id);
+
+    broadcastNotification({
+      title: 'Match Removed',
+      message: `Match between ${existing.teamA?.shortName || existing.teamA?.name} and ${existing.teamB?.shortName || existing.teamB?.name} was deleted.`,
+    });
+
+    return res.status(200).json({ message: 'Match deleted successfully.', matchId: id });
+  } catch (err: any) {
+    console.error('Error deleting match:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error.' });
+  }
+}
+

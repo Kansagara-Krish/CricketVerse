@@ -8,6 +8,8 @@ import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
+import 'package:flutter/services.dart';
+import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../core/widgets/custom_notification.dart';
 
@@ -269,108 +271,132 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: Stack(
-        children: [
-          // Drawer menu
-          _buildMenuDrawer(context),
-          
-          // Dashboard Body Zoom animation
-          AnimatedBuilder(
-            animation: _drawerAnimationController,
-            builder: (context, child) {
-              final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
-              final double slide = _drawerAnimationController.value * 230.0;
-              final double radius = _drawerAnimationController.value * 20.0;
-              return Transform(
-                transform: Matrix4.translationValues(slide, 0.0, 0.0)
-                  * Matrix4.diagonal3Values(scale, scale, 1.0),
-                alignment: Alignment.centerLeft,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: child,
-                  ),
-                ),
-              );
-            },
-            child: Scaffold(
-              backgroundColor: AppTheme.bgDark,
-              appBar: AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                leading: IconButton(
-                  icon: AnimatedIcon(
-                    icon: AnimatedIcons.menu_close,
-                    progress: _drawerAnimationController,
-                    color: AppTheme.textPrimary,
-                  ),
-                  onPressed: _toggleDrawer,
-                ),
-                title: Text(
-                  'CricketVerse AI',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.search, color: AppTheme.textPrimary),
-                    onPressed: () {
-                      showSearch(context: context, delegate: _CricketSearchDelegate());
-                    },
-                  ),
-                  Consumer<StorageService>(
-                    builder: (_, storage, __) {
-                      final count = storage.unreadNotificationCount;
-                      return Stack(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
-                            onPressed: () async {
-                              await Navigator.pushNamed(context, AppRoutes.notifications);
-                              if (mounted) setState(() {});
-                            },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // 1. If drawer is open, close drawer first
+        if (_isDrawerOpen) {
+          _toggleDrawer();
+          return;
+        }
+
+        // 2. If on Profile view (or another view), return to Home (index 0)
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+          return;
+        }
+
+        // 3. We are on the LAST page (Dashboard Home) -> ask for exit confirmation
+        final shouldExit = await ExitAppDialog.show(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: Stack(
+          children: [
+            // Drawer menu
+            _buildMenuDrawer(context),
+            
+            // Dashboard Body Zoom animation
+            AnimatedBuilder(
+              animation: _drawerAnimationController,
+              builder: (context, child) {
+                final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
+                final double slide = _drawerAnimationController.value * 230.0;
+                final double radius = _drawerAnimationController.value * 20.0;
+                return Transform(
+                  transform: Matrix4.translationValues(slide, 0.0, 0.0)
+                    * Matrix4.diagonal3Values(scale, scale, 1.0),
+                  alignment: Alignment.centerLeft,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(radius),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 16,
+                            spreadRadius: 2,
                           ),
-                          if (count > 0)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.accentRed,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  '$count',
-                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                        ],
+                      ),
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+              child: Scaffold(
+                backgroundColor: AppTheme.bgDark,
+                appBar: AppBar(
+                  backgroundColor: Colors.white,
+                  elevation: 0,
+                  leading: IconButton(
+                    icon: AnimatedIcon(
+                      icon: AnimatedIcons.menu_close,
+                      progress: _drawerAnimationController,
+                      color: AppTheme.textPrimary,
+                    ),
+                    onPressed: _toggleDrawer,
+                  ),
+                  title: Text(
+                    _currentIndex == 0 ? 'Admin Dashboard' : 'Admin Profile',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.search, color: AppTheme.textPrimary),
+                      onPressed: () {
+                        showSearch(context: context, delegate: _CricketSearchDelegate());
+                      },
+                    ),
+                    Consumer<StorageService>(
+                      builder: (_, storage, __) {
+                        final count = storage.unreadNotificationCount;
+                        return Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
+                              onPressed: () async {
+                                await Navigator.pushNamed(context, AppRoutes.notifications);
+                                if (mounted) setState(() {});
+                              },
+                            ),
+                            if (count > 0)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.accentRed,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '$count',
+                                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                ],
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                ),
+                body: _views[_currentIndex],
               ),
-              body: _views[_currentIndex],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

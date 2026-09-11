@@ -13,6 +13,7 @@ class StorageService with ChangeNotifier {
   SharedPreferences? _prefs;
   List<Team> _teams = [];
   List<CricketMatch> _matches = [];
+  List<Tournament> _tournaments = [];
   Map<String, String> _users = {}; // Email -> Password
   
   // App Session State
@@ -25,12 +26,17 @@ class StorageService with ChangeNotifier {
 
   List<Team> get teams => _teams;
   List<CricketMatch> get matches => _matches;
+  List<Tournament> get tournaments => _tournaments;
   String? get currentRole => _currentRole;
   String? get currentUserEmail => _currentUserEmail;
   String? get currentUserName => _currentUserName;
   String? get activeScorerMatchId => _activeScorerMatchId;
   bool get isOnlineMode => _isOnlineMode;
   int get unreadNotificationCount => NotificationCacheService.getUnreadCount();
+  String? _lastAuthError;
+  String? get lastAuthError => _lastAuthError;
+  String? _lastAuthErrorField;
+  String? get lastAuthErrorField => _lastAuthErrorField;
 
   StorageService() {
     _initStorage();
@@ -64,6 +70,21 @@ class StorageService with ChangeNotifier {
     notifyListeners();
   }
 
+  void _ensureTeamHasPlayers(Team team) {
+    if (team.players.isEmpty) {
+      final code = team.shortName.isNotEmpty ? team.shortName : 'T';
+      team.players.addAll([
+        Player(id: '${team.id}_p1', name: '$code Player 1', role: 'Batter', nationality: 'IN', isCaptain: true),
+        Player(id: '${team.id}_p2', name: '$code Player 2', role: 'Batter', nationality: 'IN', isViceCaptain: true),
+        Player(id: '${team.id}_p3', name: '$code Player 3', role: 'Batter', nationality: 'IN'),
+        Player(id: '${team.id}_p4', name: '$code Player 4', role: 'All-rounder', nationality: 'IN'),
+        Player(id: '${team.id}_p5', name: '$code Player 5', role: 'All-rounder', nationality: 'IN'),
+        Player(id: '${team.id}_p6', name: '$code Player 6', role: 'Bowler', nationality: 'IN'),
+        Player(id: '${team.id}_p7', name: '$code Player 7', role: 'Bowler', nationality: 'IN'),
+      ]);
+    }
+  }
+
   Future<void> loadData() async {
     if (_isOnlineMode) {
       try {
@@ -73,6 +94,14 @@ class StorageService with ChangeNotifier {
         final remoteMatches = await ApiService.getMatches();
         _matches = remoteMatches;
         
+        for (var t in _teams) {
+          _ensureTeamHasPlayers(t);
+        }
+        for (var m in _matches) {
+          _ensureTeamHasPlayers(m.teamA);
+          _ensureTeamHasPlayers(m.teamB);
+        }
+
         notifyListeners();
         return;
       } catch (e) {
@@ -112,6 +141,28 @@ class StorageService with ChangeNotifier {
       _prefs?.setBool('data_version_uvpce_2026_v2', true);
     }
 
+    // 4. Load Tournaments
+    final tournamentsJson = _prefs?.getString('tournaments');
+    if (tournamentsJson != null) {
+      try {
+        final List decoded = jsonDecode(tournamentsJson);
+        _tournaments = decoded.map((item) => Tournament.fromJson(item)).toList();
+      } catch (e) {
+        debugPrint('Error decoding tournaments from storage: $e');
+        _loadDefaultTournaments();
+      }
+    } else {
+      _loadDefaultTournaments();
+    }
+
+    for (var t in _teams) {
+      _ensureTeamHasPlayers(t);
+    }
+    for (var m in _matches) {
+      _ensureTeamHasPlayers(m.teamA);
+      _ensureTeamHasPlayers(m.teamB);
+    }
+
     notifyListeners();
   }
 
@@ -127,6 +178,10 @@ class StorageService with ChangeNotifier {
     _prefs?.setString('matches', jsonEncode(_matches.map((m) => m.toJson()).toList()));
   }
 
+  void _saveTournaments() {
+    _prefs?.setString('tournaments', jsonEncode(_tournaments.map((t) => t.toJson()).toList()));
+  }
+
   // Preload UVPCE College cricket teams and player names
   void _loadDefaultTeams() {
     _teams = [];
@@ -136,6 +191,73 @@ class StorageService with ChangeNotifier {
   void _loadDefaultMatches() {
     _matches = [];
     _saveMatches();
+  }
+
+  void _loadDefaultTournaments() {
+    _tournaments = [
+      Tournament(
+        id: 'tourn_t20_wc_2026',
+        name: 'T20 World Cup 2026',
+        format: 'T20',
+        status: 'Live',
+        teamsCount: 16,
+        matchesCount: 45,
+        startDate: '01-07-2026',
+        endDate: '30-07-2026',
+      ),
+      Tournament(
+        id: 'tourn_ipl_19',
+        name: 'IPL Season 19',
+        format: 'T20',
+        status: 'Upcoming',
+        teamsCount: 10,
+        matchesCount: 74,
+        startDate: '01-09-2026',
+        endDate: '30-11-2026',
+      ),
+      Tournament(
+        id: 'tourn_cpl_2026',
+        name: 'CricketVerse Premier League',
+        format: 'T20',
+        status: 'Upcoming',
+        teamsCount: 8,
+        matchesCount: 28,
+        startDate: '15-08-2026',
+        endDate: '14-09-2026',
+      ),
+      Tournament(
+        id: 'tourn_ind_aus_2026',
+        name: 'India-Australia Bilateral ODI',
+        format: 'ODI',
+        status: 'Completed',
+        teamsCount: 2,
+        matchesCount: 5,
+        startDate: '01-06-2026',
+        endDate: '20-06-2026',
+      ),
+    ];
+    _saveTournaments();
+  }
+
+  void addTournament(Tournament tournament) {
+    _tournaments.add(tournament);
+    _saveTournaments();
+    notifyListeners();
+  }
+
+  void updateTournament(Tournament updated) {
+    final idx = _tournaments.indexWhere((t) => t.id == updated.id);
+    if (idx != -1) {
+      _tournaments[idx] = updated;
+      _saveTournaments();
+      notifyListeners();
+    }
+  }
+
+  void deleteTournament(String id) {
+    _tournaments.removeWhere((t) => t.id == id);
+    _saveTournaments();
+    notifyListeners();
   }
 
   // --- Real-time WebSockets Subscriptions ---
@@ -278,36 +400,56 @@ class StorageService with ChangeNotifier {
     return false;
   }
 
-  Future<bool> register(String email, String password, String name) async {
+  Future<bool> register(
+    String email,
+    String password,
+    String name, {
+    String? confirmPassword,
+  }) async {
+    _lastAuthError = null;
+    _lastAuthErrorField = null;
+
+    final normalizedEmail = email.trim().toLowerCase();
+    final trimmedName = name.trim();
+
     if (_isOnlineMode) {
-      final res = await ApiService.register(email, password, name);
-      if (res != null) {
-        _currentUserEmail = res['user']['email'];
-        _currentRole = res['user']['role'];
-        _currentUserName = res['user']['name'];
+      final res = await ApiService.register(
+        normalizedEmail,
+        password,
+        trimmedName,
+        confirmPassword: confirmPassword,
+      );
+      if (res.isSuccess && res.data != null) {
+        _currentUserEmail = res.data!['user']['email'];
+        _currentRole = res.data!['user']['role'];
+        _currentUserName = res.data!['user']['name'];
         await loadData();
         return true;
       }
+      _lastAuthError = res.errorMessage ?? 'Registration failed.';
+      _lastAuthErrorField = res.errorField;
       return false;
     }
 
     // --- Offline Register ---
-    if (_users.containsKey(email)) {
+    if (_users.containsKey(normalizedEmail)) {
+      _lastAuthError = 'An account with this email already exists.';
+      _lastAuthErrorField = 'email';
       return false;
     }
-    _users[email] = password;
-    _prefs?.setString('name_$email', name);
+    _users[normalizedEmail] = password;
+    _prefs?.setString('name_$normalizedEmail', trimmedName);
     _saveUsers();
     
-    _currentUserEmail = email;
+    _currentUserEmail = normalizedEmail;
     _currentRole = 'User';
-    _currentUserName = name;
+    _currentUserName = trimmedName.isNotEmpty ? trimmedName : normalizedEmail.split('@')[0];
     await AuthStorageService.saveAuthData(
       accessToken: 'offline_token_user',
       userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      userEmail: email,
+      userEmail: normalizedEmail,
       userRole: 'User',
-      userName: name,
+      userName: _currentUserName!,
     );
     notifyListeners();
     return true;
@@ -414,26 +556,50 @@ class StorageService with ChangeNotifier {
   }
 
   void addPlayer(String teamId, Player player) async {
+    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
+    if (player.isCaptain) {
+      player.isViceCaptain = false;
+      for (var p in team.players) {
+        if (p.id != player.id) p.isCaptain = false;
+      }
+    } else if (player.isViceCaptain) {
+      player.isCaptain = false;
+      for (var p in team.players) {
+        if (p.id != player.id) p.isViceCaptain = false;
+      }
+    }
+
     if (_isOnlineMode) {
       final ok = await ApiService.addPlayer(teamId, player);
       if (ok) await loadData();
       return;
     }
 
-    final team = _teams.firstWhere((t) => t.id == teamId);
     team.players.add(player);
     _saveTeams();
     notifyListeners();
   }
 
   void updatePlayer(String teamId, Player updatedPlayer) async {
+    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
+    if (updatedPlayer.isCaptain) {
+      updatedPlayer.isViceCaptain = false;
+      for (var p in team.players) {
+        if (p.id != updatedPlayer.id) p.isCaptain = false;
+      }
+    } else if (updatedPlayer.isViceCaptain) {
+      updatedPlayer.isCaptain = false;
+      for (var p in team.players) {
+        if (p.id != updatedPlayer.id) p.isViceCaptain = false;
+      }
+    }
+
     if (_isOnlineMode) {
       final ok = await ApiService.updatePlayer(updatedPlayer);
       if (ok) await loadData();
       return;
     }
 
-    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
     final pIndex = team.players.indexWhere((p) => p.id == updatedPlayer.id);
     if (pIndex != -1) {
       team.players[pIndex] = updatedPlayer;
@@ -484,6 +650,8 @@ class StorageService with ChangeNotifier {
 
     final teamA = _teams.firstWhere((t) => t.id == teamAId);
     final teamB = _teams.firstWhere((t) => t.id == teamBId);
+    _ensureTeamHasPlayers(teamA);
+    _ensureTeamHasPlayers(teamB);
 
     final newMatch = CricketMatch(
       id: 'match_${DateTime.now().millisecondsSinceEpoch}',
@@ -537,6 +705,8 @@ class StorageService with ChangeNotifier {
     if (idx != -1) {
       final teamA = _teams.firstWhere((t) => t.id == teamAId, orElse: () => _matches[idx].teamA);
       final teamB = _teams.firstWhere((t) => t.id == teamBId, orElse: () => _matches[idx].teamB);
+      _ensureTeamHasPlayers(teamA);
+      _ensureTeamHasPlayers(teamB);
 
       final match = _matches[idx];
       match.teamA = teamA;
@@ -555,11 +725,36 @@ class StorageService with ChangeNotifier {
     }
   }
 
+  Future<bool> deleteMatch(String matchId) async {
+    if (_isOnlineMode) {
+      final ok = await ApiService.deleteMatch(matchId);
+      if (ok) {
+        _matches.removeWhere((m) => m.id == matchId);
+        _saveMatches();
+        notifyListeners();
+        return true;
+      }
+      return false;
+    }
+
+    final initialLen = _matches.length;
+    _matches.removeWhere((m) => m.id == matchId);
+    if (_matches.length < initialLen) {
+      _saveMatches();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   // --- Scorer / Live Scoring Methods ---
+
   Future<bool> startMatchSetup(String matchId, String tossWinnerTeam, String decision, String firstBattingTeamId) async {
     if (_isOnlineMode) {
       final updated = await ApiService.startMatchSetup(matchId, tossWinnerTeam, decision, firstBattingTeamId);
       if (updated != null) {
+        _ensureTeamHasPlayers(updated.teamA);
+        _ensureTeamHasPlayers(updated.teamB);
         final idx = _matches.indexWhere((m) => m.id == matchId);
         if (idx != -1) _matches[idx] = updated;
         _activeScorerMatchId = matchId;
@@ -581,12 +776,15 @@ class StorageService with ChangeNotifier {
       final batTeam = firstBattingTeamId == match.teamA.id ? match.teamA : match.teamB;
       final bowlTeam = firstBattingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
+      _ensureTeamHasPlayers(batTeam);
+      _ensureTeamHasPlayers(bowlTeam);
+
       if (batTeam.players.isNotEmpty) {
         match.currentStrikerId = batTeam.players[0].id;
         match.currentNonStrikerId = batTeam.players.length > 1 ? batTeam.players[1].id : batTeam.players[0].id;
       }
       if (bowlTeam.players.isNotEmpty) {
-        match.currentBowlerId = bowlTeam.players[bowlTeam.players.length - 1].id;
+        match.currentBowlerId = bowlTeam.players.last.id;
       }
 
       _activeScorerMatchId = matchId;
@@ -665,8 +863,21 @@ class StorageService with ChangeNotifier {
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
-    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+    _ensureTeamHasPlayers(battingTeam);
+    _ensureTeamHasPlayers(bowlingTeam);
+
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: '', name: 'Striker', role: 'Batter', nationality: ''),
+    );
+    final bowler = bowlingTeam.players.firstWhere(
+      (p) => p.id == match.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty
+          ? bowlingTeam.players.last
+          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+    );
 
     int ballVal = 1;
     if (extraType == 'Wide' || extraType == 'No Ball') {
@@ -796,10 +1007,12 @@ class StorageService with ChangeNotifier {
 
     // Automatically assign next bowler (cycle backwards)
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-    final currentBowlerIndex = bowlingTeam.players.indexWhere((p) => p.id == match.currentBowlerId);
-    int nextBowlerIndex = (currentBowlerIndex - 1) % bowlingTeam.players.length;
-    if (nextBowlerIndex < 0) nextBowlerIndex = bowlingTeam.players.length - 1;
-    match.currentBowlerId = bowlingTeam.players[nextBowlerIndex].id;
+    if (bowlingTeam.players.isNotEmpty) {
+      final currentBowlerIndex = bowlingTeam.players.indexWhere((p) => p.id == match.currentBowlerId);
+      int nextBowlerIndex = (currentBowlerIndex - 1) % bowlingTeam.players.length;
+      if (nextBowlerIndex < 0) nextBowlerIndex = bowlingTeam.players.length - 1;
+      match.currentBowlerId = bowlingTeam.players[nextBowlerIndex].id;
+    }
 
     if (!_isOnlineMode) _saveMatches();
     notifyListeners();
@@ -829,9 +1042,12 @@ class StorageService with ChangeNotifier {
       final activeBatTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
       final activeBowlTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
       
-      match.currentStrikerId = activeBatTeam.players[0].id;
-      match.currentNonStrikerId = activeBatTeam.players[1].id;
-      match.currentBowlerId = activeBowlTeam.players[activeBowlTeam.players.length - 1].id;
+      _ensureTeamHasPlayers(activeBatTeam);
+      _ensureTeamHasPlayers(activeBowlTeam);
+
+      match.currentStrikerId = activeBatTeam.players.isNotEmpty ? activeBatTeam.players[0].id : '';
+      match.currentNonStrikerId = activeBatTeam.players.length > 1 ? activeBatTeam.players[1].id : match.currentStrikerId;
+      match.currentBowlerId = activeBowlTeam.players.isNotEmpty ? activeBowlTeam.players.last.id : '';
     } else {
       match.status = 'Completed';
     }
@@ -994,9 +1210,12 @@ class StorageService with ChangeNotifier {
       p.wicketsTaken = 0;
     }
 
-    match.currentStrikerId = match.teamA.players[0].id;
-    match.currentNonStrikerId = match.teamA.players[1].id;
-    match.currentBowlerId = match.teamB.players[match.teamB.players.length - 1].id;
+    _ensureTeamHasPlayers(match.teamA);
+    _ensureTeamHasPlayers(match.teamB);
+
+    match.currentStrikerId = match.teamA.players.isNotEmpty ? match.teamA.players[0].id : '';
+    match.currentNonStrikerId = match.teamA.players.length > 1 ? match.teamA.players[1].id : match.currentStrikerId;
+    match.currentBowlerId = match.teamB.players.isNotEmpty ? match.teamB.players.last.id : '';
 
     _saveMatches();
     notifyListeners();
@@ -1044,12 +1263,25 @@ class StorageService with ChangeNotifier {
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
 
+    _ensureTeamHasPlayers(battingTeam);
+    _ensureTeamHasPlayers(bowlingTeam);
+
     if (lastBall.strikerId != null) match.currentStrikerId = lastBall.strikerId!;
     if (lastBall.nonStrikerId != null) match.currentNonStrikerId = lastBall.nonStrikerId!;
     if (lastBall.bowlerId != null) match.currentBowlerId = lastBall.bowlerId!;
 
-    final striker = battingTeam.players.firstWhere((p) => p.id == match.currentStrikerId, orElse: () => battingTeam.players[0]);
-    final bowler = bowlingTeam.players.firstWhere((p) => p.id == match.currentBowlerId, orElse: () => bowlingTeam.players[bowlingTeam.players.length - 1]);
+    final striker = battingTeam.players.firstWhere(
+      (p) => p.id == match.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: '', name: 'Striker', role: 'Batter', nationality: ''),
+    );
+    final bowler = bowlingTeam.players.firstWhere(
+      (p) => p.id == match.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty
+          ? bowlingTeam.players.last
+          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+    );
 
     int ballVal = 1;
     if (lastBall.extraType == 'Wide' || lastBall.extraType == 'No Ball') {
@@ -1194,13 +1426,13 @@ class StorageService with ChangeNotifier {
   // Favorites persistence
   List<String> getFavoriteTeams() {
     if (_currentUserEmail == null) return [];
-    final key = 'favorites_${_currentUserEmail}';
+    final key = 'favorites_$_currentUserEmail';
     return _prefs?.getStringList(key) ?? [];
   }
 
   Future<void> toggleFavoriteTeam(String teamId) async {
     if (_currentUserEmail == null) return;
-    final key = 'favorites_${_currentUserEmail}';
+    final key = 'favorites_$_currentUserEmail';
     final current = getFavoriteTeams();
     if (current.contains(teamId)) {
       current.remove(teamId);
@@ -1214,13 +1446,13 @@ class StorageService with ChangeNotifier {
   // Notification settings persistence
   bool getNotificationSetting(String settingKey) {
     if (_currentUserEmail == null) return true; // Default to true
-    final key = 'notif_${settingKey}_${_currentUserEmail}';
+    final key = 'notif_${settingKey}_$_currentUserEmail';
     return _prefs?.getBool(key) ?? true;
   }
 
   Future<void> setNotificationSetting(String settingKey, bool value) async {
     if (_currentUserEmail == null) return;
-    final key = 'notif_${settingKey}_${_currentUserEmail}';
+    final key = 'notif_${settingKey}_$_currentUserEmail';
     await _prefs?.setBool(key, value);
     notifyListeners();
   }

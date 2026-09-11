@@ -12,9 +12,11 @@ import 'profile_tab_view.dart';
 import 'home_tab_view.dart';
 import 'schedules_tab_view.dart';
 
+import 'package:flutter/services.dart';
+import '../../core/widgets/exit_app_dialog.dart';
+
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
-
 
   @override
   State<UserDashboard> createState() => _UserDashboardState();
@@ -22,6 +24,7 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   int _currentIndex = 0; // Default to Home
+  final List<int> _tabHistory = [0];
 
   @override
   void initState() {
@@ -51,52 +54,84 @@ class _UserDashboardState extends State<UserDashboard> {
       _buildProfileView(storage),
     ];
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgDark,
-      body: SafeArea(
-        child: views[_currentIndex],
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppTheme.bgSurface, width: 1)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // 1. If user has navigated through tabs, pop to the previous tab
+        if (_tabHistory.length > 1) {
+          setState(() {
+            _tabHistory.removeLast();
+            _currentIndex = _tabHistory.last;
+          });
+          return;
+        } else if (_currentIndex != 0) {
+          setState(() {
+            _currentIndex = 0;
+            _tabHistory.clear();
+            _tabHistory.add(0);
+          });
+          return;
+        }
+
+        // 2. Already on Home tab (last page) -> Ask for exit confirmation
+        final shouldExit = await ExitAppDialog.show(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.bgDark,
+        body: SafeArea(
+          child: views[_currentIndex],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            if (index == 3) {
-              final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
-              if (liveMatches.isNotEmpty) {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.userMatchDetails,
-                  arguments: liveMatches.first.id,
-                );
-              } else {
-                CustomNotification.show(
-                  context,
-                  'No active Live match right now.',
-                  type: NotificationType.warning,
-                );
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppTheme.bgSurface, width: 1)),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              if (index == 3) {
+                final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
+                if (liveMatches.isNotEmpty) {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.userMatchDetails,
+                    arguments: liveMatches.first.id,
+                  );
+                } else {
+                  CustomNotification.show(
+                    context,
+                    'No active Live match right now.',
+                    type: NotificationType.warning,
+                  );
+                }
+                return;
               }
-              return;
-            }
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF854D0E), // Gold-brown selection matching screenshot
-          unselectedItemColor: AppTheme.textSecondary,
-          selectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
-          unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.sports_cricket_outlined), activeIcon: Icon(Icons.sports_cricket), label: 'Matches'),
-            BottomNavigationBarItem(icon: Icon(Icons.online_prediction_outlined), activeIcon: Icon(Icons.online_prediction), label: 'Prediction'),
-            BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-          ],
+              if (_currentIndex != index) {
+                setState(() {
+                  _tabHistory.remove(index);
+                  _tabHistory.add(index);
+                  _currentIndex = index;
+                });
+              }
+            },
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(0xFF854D0E), // Gold-brown selection matching screenshot
+            unselectedItemColor: AppTheme.textSecondary,
+            selectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11),
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.sports_cricket_outlined), activeIcon: Icon(Icons.sports_cricket), label: 'Matches'),
+              BottomNavigationBarItem(icon: Icon(Icons.online_prediction_outlined), activeIcon: Icon(Icons.online_prediction), label: 'Prediction'),
+              BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+            ],
+          ),
         ),
       ),
     );

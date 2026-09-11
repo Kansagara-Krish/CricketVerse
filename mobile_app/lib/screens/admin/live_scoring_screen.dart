@@ -194,9 +194,17 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     final battingTeam = m.battingTeamId == m.teamA.id ? m.teamA : m.teamB;
     final bowlingTeam = m.battingTeamId == m.teamA.id ? m.teamB : m.teamA;
     final striker = battingTeam.players.firstWhere(
-      (p) => p.id == m.currentStrikerId, orElse: () => battingTeam.players[0]);
+      (p) => p.id == m.currentStrikerId,
+      orElse: () => battingTeam.players.isNotEmpty
+          ? battingTeam.players[0]
+          : Player(id: '', name: 'Batter', role: 'Batter', nationality: ''),
+    );
     final bowler = bowlingTeam.players.firstWhere(
-      (p) => p.id == m.currentBowlerId, orElse: () => bowlingTeam.players.last);
+      (p) => p.id == m.currentBowlerId,
+      orElse: () => bowlingTeam.players.isNotEmpty
+          ? bowlingTeam.players.last
+          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
+    );
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,

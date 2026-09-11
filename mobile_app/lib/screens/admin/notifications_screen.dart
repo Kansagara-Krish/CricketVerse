@@ -30,7 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final cached = NotificationCacheService.getCachedNotifications();
     if (cached.isEmpty) {
       // Seed default sample notifications into Hive on initial launch
-      final dummyList = AppConstants.dummyNotifications;
+      const dummyList = AppConstants.dummyNotifications;
       for (int i = 0; i < dummyList.length; i++) {
         NotificationCacheService.saveOrUpdateNotification({
           'id': 'notif_seed_$i',
@@ -77,21 +77,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _deleteNotification(int index) async {
-    final id = _notifications[index]['id']?.toString();
-    if (id != null) {
-      await NotificationCacheService.deleteNotification(id);
+  void _deleteNotification(String id) async {
+    setState(() {
+      _notifications.removeWhere((n) => n['id']?.toString() == id);
+      _unreadCount = _notifications.where((n) => (n['read'] ?? false) == false).length;
+    });
+    await NotificationCacheService.deleteNotification(id);
+    if (mounted) {
       setState(() {
         _notifications = NotificationCacheService.getCachedNotifications();
         _unreadCount = NotificationCacheService.getUnreadCount();
       });
-      if (mounted) {
-        CustomNotification.show(
-          context,
-          'Notification deleted',
-          type: NotificationType.info,
-        );
-      }
     }
   }
 
@@ -190,12 +186,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 final isRead = n['read'] as bool;
                 final color = _typeColor(n['type'] as String);
                 final icon = _typeIcon(n['type'] as String);
+                final id = n['id']?.toString() ?? '$i';
 
                 return Dismissible(
-                  key: Key('notif_${n['id']}'),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (_) => _deleteNotification(i),
+                  key: Key('notif_$id'),
+                  direction: DismissDirection.horizontal,
+                  onDismissed: (_) => _deleteNotification(id),
                   background: Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.only(left: 20),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentRed.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed),
+                  ),
+                  secondaryBackground: Container(
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 20),
                     margin: const EdgeInsets.only(bottom: 12),

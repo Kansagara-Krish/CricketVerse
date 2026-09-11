@@ -65,13 +65,88 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
     );
   }
 
+  Widget _buildLeadershipOption({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          decoration: BoxDecoration(
+            color: selected ? color.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? color : Colors.black.withValues(alpha: 0.1),
+              width: selected ? 1.6 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: selected ? color : AppTheme.textMuted),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                  color: selected ? color : AppTheme.textSecondary,
+                ),
+              ),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? color : AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddOrEditPlayerModal({Player? player}) {
     final storage = Provider.of<StorageService>(context, listen: false);
+    final currentTeam = storage.teams.firstWhere(
+      (t) => t.id == widget.team.id,
+      orElse: () => widget.team,
+    );
+
     final nameCtrl = TextEditingController(text: player?.name ?? '');
     final nationalityCtrl = TextEditingController(text: player?.nationality ?? widget.team.shortName);
     final runsCtrl = TextEditingController(text: player != null ? '${player.runsScored}' : '0');
     final wicketsCtrl = TextEditingController(text: player != null ? '${player.wicketsTaken}' : '0');
     String selectedRole = player?.role ?? 'Batter';
+
+    // Leadership role state: 'Member', 'Captain', 'Vice-Captain'
+    String leadershipRole = 'Member';
+    if (player?.isCaptain == true) {
+      leadershipRole = 'Captain';
+    } else if (player?.isViceCaptain == true) {
+      leadershipRole = 'Vice-Captain';
+    }
+
+    // Identify if another player already holds Captain or Vice-Captain
+    Player? existingCaptain;
+    Player? existingVC;
+    for (final p in currentTeam.players) {
+      if (p.id != player?.id) {
+        if (p.isCaptain) existingCaptain = p;
+        if (p.isViceCaptain) existingVC = p;
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -157,6 +232,116 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 14),
+
+                // Leadership Selector (Member, Captain, Vice-Captain)
+                Row(
+                  children: [
+                    Text(
+                      'TEAM LEADERSHIP',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Max 1 C & 1 VC',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildLeadershipOption(
+                      title: 'Member',
+                      subtitle: 'Squad',
+                      icon: Icons.person_outline_rounded,
+                      color: AppTheme.textSecondary,
+                      selected: leadershipRole == 'Member',
+                      onTap: () => setModalState(() => leadershipRole = 'Member'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildLeadershipOption(
+                      title: 'Captain',
+                      subtitle: '(C)',
+                      icon: Icons.workspace_premium_rounded,
+                      color: const Color(0xFFD97706),
+                      selected: leadershipRole == 'Captain',
+                      onTap: () => setModalState(() => leadershipRole = 'Captain'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildLeadershipOption(
+                      title: 'Vice-Captain',
+                      subtitle: '(VC)',
+                      icon: Icons.shield_outlined,
+                      color: const Color(0xFF0284C7),
+                      selected: leadershipRole == 'Vice-Captain',
+                      onTap: () => setModalState(() => leadershipRole = 'Vice-Captain'),
+                    ),
+                  ],
+                ),
+
+                // Replacement Notice Banner
+                if (leadershipRole == 'Captain' && existingCaptain != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFFD97706)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Only 1 Captain allowed. "${existingCaptain.name}" will be replaced as Captain.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (leadershipRole == 'Vice-Captain' && existingVC != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Only 1 Vice-Captain allowed. "${existingVC.name}" will be replaced as Vice-Captain.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF075985),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 // Nationality & Stats
@@ -210,25 +395,38 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                         return;
                       }
 
+                      final isCap = leadershipRole == 'Captain';
+                      final isVc = leadershipRole == 'Vice-Captain';
+
                       final pId = player?.id ?? '${widget.team.shortName.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
                       final updatedPlayer = Player(
                         id: pId,
                         name: name,
                         role: selectedRole,
                         nationality: nationalityCtrl.text.trim(),
+                        isCaptain: isCap,
+                        isViceCaptain: isVc,
                         runsScored: int.tryParse(runsCtrl.text) ?? 0,
                         wicketsTaken: int.tryParse(wicketsCtrl.text) ?? 0,
                         matchesPlayed: player?.matchesPlayed ?? 1,
                         ballsFaced: player?.ballsFaced ?? 0,
                       );
 
-                      storage.updatePlayer(widget.team.id, updatedPlayer);
+                      if (player == null) {
+                        storage.addPlayer(widget.team.id, updatedPlayer);
+                      } else {
+                        storage.updatePlayer(widget.team.id, updatedPlayer);
+                      }
                       Navigator.pop(ctx);
                       setState(() {});
 
+                      String roleMsg = '';
+                      if (isCap) roleMsg = ' as Captain';
+                      if (isVc) roleMsg = ' as Vice-Captain';
+
                       CustomNotification.show(
                         context,
-                        player == null ? 'Player "$name" added to squad!' : 'Player "$name" updated!',
+                        player == null ? 'Player "$name" added to squad$roleMsg!' : 'Player "$name" updated$roleMsg!',
                         type: NotificationType.success,
                       );
                     },
@@ -463,17 +661,75 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
               const SizedBox(height: 24),
 
               // Squad Roster Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('SQUAD PLAYERS',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2)),
-                  TextButton.icon(
-                    onPressed: () => _showAddOrEditPlayerModal(),
-                    icon: const Icon(Icons.person_add_rounded, size: 16, color: AppTheme.primaryBlue),
-                    label: Text('Add Player', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
-                  ),
-                ],
+              Builder(
+                builder: (context) {
+                  Player? cap;
+                  Player? vc;
+                  for (final p in currentTeam.players) {
+                    if (p.isCaptain) cap = p;
+                    if (p.isViceCaptain) vc = p;
+                  }
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SQUAD PLAYERS (${currentTeam.players.length})',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textMuted,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          if (cap != null || vc != null) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                if (cap != null) ...[
+                                  const Icon(Icons.workspace_premium_rounded, size: 13, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'C: ${cap.name}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ],
+                                if (cap != null && vc != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle)),
+                                  const SizedBox(width: 8),
+                                ],
+                                if (vc != null) ...[
+                                  const Icon(Icons.shield_outlined, size: 13, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'VC: ${vc.name}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF0369A1),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showAddOrEditPlayerModal(),
+                        icon: const Icon(Icons.person_add_rounded, size: 16, color: AppTheme.primaryBlue),
+                        label: Text('Add Player', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
 
@@ -492,7 +748,14 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(
+                        color: player.isCaptain
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+                            : player.isViceCaptain
+                                ? const Color(0xFF0284C7).withValues(alpha: 0.5)
+                                : const Color(0xFFE2E8F0),
+                        width: (player.isCaptain || player.isViceCaptain) ? 1.5 : 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.015),
@@ -516,9 +779,67 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                player.name,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      player.name,
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (player.isCaptain) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFFF59E0B)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.workspace_premium_rounded, size: 12, color: Color(0xFFD97706)),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            'Captain (C)',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFFB45309),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ] else if (player.isViceCaptain) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE0F2FE),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFF0284C7)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.shield_outlined, size: 12, color: Color(0xFF0284C7)),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            'VC',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF0369A1),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               const SizedBox(height: 2),
                               Row(

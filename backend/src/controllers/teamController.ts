@@ -183,29 +183,25 @@ export async function addPlayer(req: Request, res: Response) {
 
   try {
     if (isCaptain) {
-      const existingCaptain = await (prisma.player as any).findFirst({
+      await (prisma.player as any).updateMany({
         where: {
           teams: { some: { teamId } },
           isCaptain: true,
           id: { not: id },
         },
+        data: { isCaptain: false },
       });
-      if (existingCaptain) {
-        return res.status(400).json({ error: 'This team already has a Captain assigned.' });
-      }
     }
 
     if (isViceCaptain) {
-      const existingVC = await (prisma.player as any).findFirst({
+      await (prisma.player as any).updateMany({
         where: {
           teams: { some: { teamId } },
           isViceCaptain: true,
           id: { not: id },
         },
+        data: { isViceCaptain: false },
       });
-      if (existingVC) {
-        return res.status(400).json({ error: 'This team already has a Vice-Captain assigned.' });
-      }
     }
 
     await (prisma.player as any).create({
@@ -257,29 +253,25 @@ export async function updatePlayer(req: Request, res: Response) {
       const teamId = teamPlayer.teamId;
 
       if (isCaptain) {
-        const existingCaptain = await (prisma.player as any).findFirst({
+        await (prisma.player as any).updateMany({
           where: {
             teams: { some: { teamId } },
             isCaptain: true,
             id: { not: id },
           },
+          data: { isCaptain: false },
         });
-        if (existingCaptain) {
-          return res.status(400).json({ error: 'This team already has a Captain assigned.' });
-        }
       }
 
       if (isViceCaptain) {
-        const existingVC = await (prisma.player as any).findFirst({
+        await (prisma.player as any).updateMany({
           where: {
             teams: { some: { teamId } },
             isViceCaptain: true,
             id: { not: id },
           },
+          data: { isViceCaptain: false },
         });
-        if (existingVC) {
-          return res.status(400).json({ error: 'This team already has a Vice-Captain assigned.' });
-        }
       }
     }
 

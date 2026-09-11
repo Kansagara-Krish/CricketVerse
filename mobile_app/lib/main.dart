@@ -10,6 +10,7 @@ import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
+import 'core/widgets/app_notification.dart' hide NotificationService;
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -39,6 +40,7 @@ class CricketVerseApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppNotification.navigatorKey,
       title: 'CricketVerse AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,

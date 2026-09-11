@@ -7,7 +7,10 @@ import '../services/storage_service.dart';
 import '../services/socket_service.dart';
 import '../core/routes/app_routes.dart';
 import '../core/theme/app_theme.dart';
+import 'package:flutter/services.dart';
+import '../core/widgets/exit_app_dialog.dart';
 import '../core/widgets/custom_notification.dart';
+import '../core/widgets/app_notification.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -20,6 +23,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
+  String? _emailServerError;
+
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -91,54 +97,89 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _submit() async {
+    if (_isLoading) return; // Prevent multiple requests
+
+    setState(() {
+      _emailServerError = null;
+    });
+
     if (!_formKey.currentState!.validate()) return;
 
-    final storage = Provider.of<StorageService>(context, listen: false);
-    final email = _emailController.text.trim();
-    final pass = _passwordController.text.trim();
-    final name = _nameController.text.trim();
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (_isSignUp) {
-      if (pass != _confirmPasswordController.text.trim()) {
-        CustomNotification.show(
-          context,
-          'Passwords do not match!',
-          type: NotificationType.error,
+    try {
+      final storage = Provider.of<StorageService>(context, listen: false);
+      final rawInput = _emailController.text.trim();
+      final loginIdentifier = rawInput.contains('@') ? rawInput.toLowerCase() : rawInput;
+      final pass = _passwordController.text;
+      final name = _nameController.text.trim();
+
+      if (_isSignUp) {
+        final email = rawInput.toLowerCase();
+        final confirmPass = _confirmPasswordController.text;
+        if (pass != confirmPass) {
+          AppNotification.error(
+            context,
+            title: 'Validation Error',
+            message: 'Passwords do not match.',
+          );
+          return;
+        }
+
+        final success = await storage.register(
+          email,
+          pass,
+          name,
+          confirmPassword: confirmPass,
         );
-        return;
-      }
-      final success = await storage.register(email, pass, name);
-      if (!mounted) return;
-      if (success) {
-        CustomNotification.show(
-          context,
-          'Account created successfully!',
-          type: NotificationType.success,
-        );
-        _navigateByUserRole();
+
+        if (!mounted) return;
+
+        if (success) {
+          AppNotification.success(
+            context,
+            title: 'Success',
+            message: 'Account created successfully.',
+          );
+          _navigateByUserRole();
+        } else {
+          final errorMsg = storage.lastAuthError ?? 'Registration failed. Please try again.';
+          if (storage.lastAuthErrorField == 'email' || errorMsg.toLowerCase().contains('email')) {
+            setState(() {
+              _emailServerError = errorMsg;
+            });
+            _formKey.currentState?.validate();
+          }
+          AppNotification.error(
+            context,
+            title: 'Registration Error',
+            message: errorMsg,
+          );
+        }
       } else {
-        CustomNotification.show(
-          context,
-          'User already exists!',
-          type: NotificationType.error,
-        );
+        final success = await storage.login(loginIdentifier, pass);
+        if (!mounted) return;
+        if (success) {
+          NotificationService.success(
+            context: context,
+            title: 'Welcome back',
+          );
+          _navigateByUserRole();
+        } else {
+          AppNotification.error(
+            context,
+            title: 'Authentication Failed',
+            message: 'Invalid credentials! Please check your email/username and password.',
+          );
+        }
       }
-    } else {
-      final success = await storage.login(email, pass);
-      if (!mounted) return;
-      if (success) {
-        CustomNotification.show(
-          context,
-          'Welcome back, ${storage.currentRole}!',
-          type: NotificationType.success,
-        );
-        _navigateByUserRole();
-      } else {
-        CustomNotification.show(
-          context,
-          'Invalid credentials! Please check your email and password.',
-          type: NotificationType.error,
-        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -166,15 +207,145 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
   }
 
+  Widget _buildPasswordRequirements() {
+    final pass = _passwordController.text;
+    if (pass.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    String? wrongCondition;
+    if (pass.contains(' ')) {
+      wrongCondition = 'Password cannot contain spaces';
+    } else if (pass.length < 8) {
+      wrongCondition = 'Must be at least 8 characters long';
+    } else if (!RegExp(r'[A-Z]').hasMatch(pass)) {
+      wrongCondition = 'Must contain at least one uppercase letter (A-Z)';
+    } else if (!RegExp(r'[a-z]').hasMatch(pass)) {
+      wrongCondition = 'Must contain at least one lowercase letter (a-z)';
+    } else if (!RegExp(r'[0-9]').hasMatch(pass)) {
+      wrongCondition = 'Must contain at least one number (0-9)';
+    } else if (!RegExp(r'[!@#$%^&*()_+\-=\[\]{};\x27:"\\|,.<>/?]').hasMatch(pass)) {
+      wrongCondition = 'Must contain at least one special symbol (!@#\$%^&*...)';
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            child: child,
+          ),
+        );
+      },
+      child: wrongCondition != null
+          ? Container(
+              key: ValueKey(wrongCondition),
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+              decoration: BoxDecoration(
+                color: AppTheme.accentRed.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.accentRed.withValues(alpha: 0.30),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 13.5,
+                    color: AppTheme.accentRed,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      wrongCondition,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11.5,
+                        color: const Color(0xFFFF6B81),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Container(
+              key: const ValueKey('password_valid'),
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 13.5,
+                    color: AppTheme.primaryGreen,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Strong password',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      color: AppTheme.primaryGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // 1. If currently in Sign Up mode, switch back to Sign In
+        if (_isSignUp) {
+          setState(() {
+            _isSignUp = false;
+          });
+          return;
+        }
+
+        // 2. If can pop (e.g. from onboarding), pop
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+          return;
+        }
+
+        // 3. On the LAST page (Login) -> confirm before closing app
+        final shouldExit = await ExitAppDialog.show(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
           // Auto-playing video player background (zoomed to crop/hide top-right watermark)
           _videoController.value.isInitialized
               ? SizedBox.expand(
@@ -227,7 +398,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
                             boxShadow: [
                               BoxShadow(
@@ -347,9 +518,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       const SizedBox(height: 14),
                                     ],
 
-                                    // Email Field
+                                    // Email / Username Field
                                     Text(
-                                      'Email Address',
+                                      _isSignUp ? 'Email Address' : 'Email or Username',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
@@ -359,14 +530,22 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     const SizedBox(height: 6),
                                     TextFormField(
                                       controller: _emailController,
+                                      keyboardType: _isSignUp ? TextInputType.emailAddress : TextInputType.text,
                                       style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+                                      onChanged: (val) {
+                                        if (_emailServerError != null) {
+                                          setState(() {
+                                            _emailServerError = null;
+                                          });
+                                        }
+                                      },
                                       decoration: InputDecoration(
-                                        hintText: 'Enter your email or username',
+                                        hintText: _isSignUp ? 'Enter your email address' : 'Enter your email or username',
                                         hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
                                         fillColor: Colors.white.withValues(alpha: 0.06),
                                         filled: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        prefixIcon: const Icon(Icons.email_outlined, size: 16, color: Colors.white60),
+                                        prefixIcon: Icon(_isSignUp ? Icons.email_outlined : Icons.person_outline, size: 16, color: Colors.white60),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
@@ -379,10 +558,61 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
                                         ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.2),
+                                        ),
+                                        focusedErrorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.5),
+                                        ),
                                       ),
                                       validator: (value) {
+                                        if (_emailServerError != null) {
+                                          return _emailServerError;
+                                        }
                                         if (value == null || value.trim().isEmpty) {
-                                            return 'Please enter email/username';
+                                          return _isSignUp ? 'Email is required.' : 'Please enter your email or username.';
+                                        }
+                                        final trimmed = value.trim();
+                                        if (trimmed.contains(' ')) {
+                                          return _isSignUp ? 'Email cannot contain spaces.' : 'Cannot contain spaces.';
+                                        }
+
+                                        if (_isSignUp) {
+                                          final atMatches = '@'.allMatches(trimmed);
+                                          if (atMatches.length != 1) {
+                                            return 'Please enter a valid email address.';
+                                          }
+                                          final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                                          if (!emailRegex.hasMatch(trimmed)) {
+                                            return 'Please enter a valid email address.';
+                                          }
+                                          final parts = trimmed.split('@');
+                                          if (parts.length != 2 ||
+                                              parts[0].isEmpty ||
+                                              parts[1].isEmpty ||
+                                              parts[1].startsWith('.') ||
+                                              parts[1].endsWith('.') ||
+                                              !parts[1].contains('.')) {
+                                            return 'Please enter a valid email address.';
+                                          }
+                                        } else {
+                                          // Login Mode: Allow both valid email AND manager/scorer username
+                                          if (trimmed.contains('@')) {
+                                            final atMatches = '@'.allMatches(trimmed);
+                                            if (atMatches.length != 1) {
+                                              return 'Please enter a valid email address.';
+                                            }
+                                            final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                                            if (!emailRegex.hasMatch(trimmed)) {
+                                              return 'Please enter a valid email address.';
+                                            }
+                                          } else {
+                                            if (trimmed.length < 2) {
+                                              return 'Please enter a valid username.';
+                                            }
+                                          }
                                         }
                                         return null;
                                       },
@@ -404,10 +634,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         if (!_isSignUp)
                                           GestureDetector(
                                             onTap: () {
-                                              CustomNotification.show(
+                                              AppNotification.info(
                                                 context,
-                                                'Password recovery link simulated!',
-                                                type: NotificationType.info,
+                                                title: 'Password Recovery',
+                                                message: 'Password recovery link simulated!',
                                               );
                                             },
                                             child: Text(
@@ -426,8 +656,13 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       controller: _passwordController,
                                       obscureText: _obscurePassword,
                                       style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+                                      onChanged: (_) {
+                                        if (_isSignUp) {
+                                          setState(() {});
+                                        }
+                                      },
                                       decoration: InputDecoration(
-                                        hintText: 'Enter password',
+                                        hintText: _isSignUp ? 'Create strong password' : 'Enter password',
                                         hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
                                         fillColor: Colors.white.withValues(alpha: 0.06),
                                         filled: true,
@@ -457,14 +692,46 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
                                         ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.2),
+                                        ),
+                                        focusedErrorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.5),
+                                        ),
                                       ),
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
-                                          return 'Please enter password';
+                                          return 'Password is required.';
+                                        }
+                                        if (!_isSignUp) return null;
+
+                                        if (value.contains(' ')) {
+                                          return 'Password cannot contain spaces.';
+                                        }
+                                        if (value.length < 8) {
+                                          return 'Password must be at least 8 characters long.';
+                                        }
+                                        if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                          return 'Password must contain at least one uppercase letter.';
+                                        }
+                                        if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                          return 'Password must contain at least one lowercase letter.';
+                                        }
+                                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                                          return 'Password must contain at least one number.';
+                                        }
+                                        if (!RegExp(r'[!@#$%^&*()_+\-=\[\]{};\x27:"\\|,.<>/?]').hasMatch(value)) {
+                                          return 'Password must contain at least one special symbol.';
                                         }
                                         return null;
                                       },
                                     ),
+
+                                    // Real-Time Password Requirements Checklist (Sign Up only)
+                                    if (_isSignUp)
+                                      _buildPasswordRequirements(),
                                     
                                     // Confirm Password Field (only for Sign Up)
                                     if (_isSignUp) ...[
@@ -482,6 +749,11 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         controller: _confirmPasswordController,
                                         obscureText: _obscureConfirmPassword,
                                         style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+                                        onChanged: (_) {
+                                          if (_confirmPasswordController.text.isNotEmpty) {
+                                            setState(() {});
+                                          }
+                                        },
                                         decoration: InputDecoration(
                                           hintText: 'Re-enter password',
                                           hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
@@ -513,10 +785,23 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                             borderRadius: BorderRadius.circular(10),
                                             borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
                                           ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.2),
+                                          ),
+                                          focusedErrorBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.5),
+                                          ),
                                         ),
                                         validator: (value) {
-                                          if (_isSignUp && (value == null || value.isEmpty)) {
-                                            return 'Please confirm password';
+                                          if (_isSignUp) {
+                                            if (value == null || value.isEmpty) {
+                                              return 'Confirm password is required.';
+                                            }
+                                            if (value != _passwordController.text) {
+                                              return 'Passwords do not match.';
+                                            }
                                           }
                                           return null;
                                         },
@@ -524,24 +809,34 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     ],
                                     const SizedBox(height: 20),
               
-                                    // Sign In/Up Button
+                                    // Sign In/Up Button with Loading State
                                     SizedBox(
                                       width: double.infinity,
-                                      height: 46,
+                                      height: 48,
                                       child: ElevatedButton(
-                                        onPressed: _submit,
+                                        onPressed: _isLoading ? null : _submit,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppTheme.primaryBlue,
+                                          disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.6),
                                           foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           elevation: 0,
                                         ),
-                                        child: Text(
-                                          _isSignUp ? 'Sign Up' : 'Sign In',
-                                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14.5),
-                                        ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                width: 22,
+                                                height: 22,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                ),
+                                              )
+                                            : Text(
+                                                _isSignUp ? 'Sign Up' : 'Sign In',
+                                                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14.5),
+                                              ),
                                       ),
                                     ),
                                     const SizedBox(height: 16),
@@ -636,6 +931,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

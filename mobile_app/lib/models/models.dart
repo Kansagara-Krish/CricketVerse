@@ -288,3 +288,58 @@ class CricketMatch {
         isFirstInnings: json['isFirstInnings'] ?? true,
       );
 }
+
+class Tournament {
+  final String id;
+  String name;
+  String format; // "T20", "ODI", "TEST"
+  String status; // "Live", "Upcoming", "Completed"
+  int teamsCount;
+  int matchesCount;
+  String startDate; // e.g. "01-07-2026"
+  String endDate;   // e.g. "30-07-2026"
+  List<String> participatingTeamIds;
+
+  Tournament({
+    required this.id,
+    required this.name,
+    this.format = 'T20',
+    this.status = 'Upcoming',
+    this.teamsCount = 0,
+    this.matchesCount = 0,
+    this.startDate = '',
+    this.endDate = '',
+    this.participatingTeamIds = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'format': format,
+        'status': status,
+        'teamsCount': teamsCount,
+        'matchesCount': matchesCount,
+        'startDate': startDate,
+        'endDate': endDate,
+        'participatingTeamIds': participatingTeamIds,
+      };
+
+  factory Tournament.fromJson(Map<String, dynamic> json) => Tournament(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        format: json['format']?.toString() ?? 'T20',
+        status: json['status']?.toString() ?? 'Upcoming',
+        teamsCount: json['teamsCount'] is int
+            ? json['teamsCount']
+            : int.tryParse('${json['teamsCount'] ?? json['teams'] ?? 0}') ?? 0,
+        matchesCount: json['matchesCount'] is int
+            ? json['matchesCount']
+            : int.tryParse('${json['matchesCount'] ?? json['matches'] ?? 0}') ?? 0,
+        startDate: json['startDate']?.toString() ?? json['start']?.toString() ?? '',
+        endDate: json['endDate']?.toString() ?? json['end']?.toString() ?? '',
+        participatingTeamIds: json['participatingTeamIds'] != null
+            ? List<String>.from(json['participatingTeamIds'])
+            : [],
+      );
+}
+

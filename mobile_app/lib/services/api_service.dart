@@ -5,6 +5,22 @@ import '../models/models.dart';
 
 import 'auth_storage_service.dart';
 
+class RegisterResponse {
+  final bool isSuccess;
+  final int statusCode;
+  final String? errorMessage;
+  final String? errorField;
+  final Map<String, dynamic>? data;
+
+  RegisterResponse({
+    required this.isSuccess,
+    required this.statusCode,
+    this.errorMessage,
+    this.errorField,
+    this.data,
+  });
+}
+
 class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
@@ -82,12 +98,27 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> register(String email, String password, String name) async {
+  static Future<RegisterResponse> register(
+    String email,
+    String password,
+    String name, {
+    String? confirmPassword,
+  }) async {
     try {
+      final normalizedEmail = email.trim().toLowerCase();
+      final body = <String, dynamic>{
+        'email': normalizedEmail,
+        'password': password,
+        'name': name.trim(),
+      };
+      if (confirmPassword != null) {
+        body['confirmPassword'] = confirmPassword;
+      }
+
       final res = await http.post(
         Uri.parse('$baseUrl/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password, 'name': name}),
+        body: jsonEncode(body),
       );
 
       if (res.statusCode == 201) {
@@ -95,12 +126,36 @@ class ApiService {
         if (data['token'] != null) {
           await _saveToken(data['token'], userData: data);
         }
-        return data;
+        return RegisterResponse(
+          isSuccess: true,
+          statusCode: 201,
+          data: data,
+        );
       }
-      return null;
+
+      String? errorMsg;
+      String? field;
+      try {
+        final errorData = jsonDecode(res.body);
+        errorMsg = errorData['error'];
+        field = errorData['field'];
+      } catch (_) {
+        errorMsg = 'Registration failed (${res.statusCode})';
+      }
+
+      return RegisterResponse(
+        isSuccess: false,
+        statusCode: res.statusCode,
+        errorMessage: errorMsg ?? 'Registration failed.',
+        errorField: field,
+      );
     } catch (e) {
       debugPrint('ApiService register error: $e');
-      return null;
+      return RegisterResponse(
+        isSuccess: false,
+        statusCode: 500,
+        errorMessage: 'Unable to connect to the server. Please check your network connection.',
+      );
     }
   }
 
@@ -403,6 +458,17 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<bool> deleteMatch(String id) async {
+    try {
+      final res = await http.delete(Uri.parse('$baseUrl/matches/$id'), headers: _headers);
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService deleteMatch error: $e');
+      return false;
+    }
+  }
+
 
   // --- Scoring API ---
   static Future<CricketMatch?> startMatchSetup(String matchId, String tossWinner, String decision, String firstBattingTeamId) async {

@@ -8,6 +8,93 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cricketverse_super_secret_key_123!
 
 const passwordOtpMap = new Map<string, { otp: string; expiresAt: number }>();
 
+export interface RegistrationValidationResult {
+  isValid: boolean;
+  error?: string;
+  field?: 'email' | 'password' | 'confirmPassword' | 'name';
+}
+
+export function validateRegistrationInput(
+  email: any,
+  password: any,
+  confirmPassword?: any,
+  name?: any
+): RegistrationValidationResult {
+  // 1. Email presence and validation
+  if (!email || typeof email !== 'string' || email.trim().length === 0) {
+    return { isValid: false, error: 'Email is required.', field: 'email' };
+  }
+
+  const trimmedEmail = email.trim();
+
+  // Disallow whitespace in email
+  if (/\s/.test(trimmedEmail)) {
+    return { isValid: false, error: 'Email cannot contain spaces.', field: 'email' };
+  }
+
+  // Must contain exactly one '@'
+  const atMatches = trimmedEmail.match(/@/g);
+  if (!atMatches || atMatches.length !== 1) {
+    return { isValid: false, error: 'Please enter a valid email address.', field: 'email' };
+  }
+
+  // Standard email regex ensuring valid local and domain parts
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmedEmail)) {
+    return { isValid: false, error: 'Please enter a valid email address.', field: 'email' };
+  }
+
+  const [localPart, domainPart] = trimmedEmail.split('@');
+  if (!localPart || !domainPart || domainPart.startsWith('.') || domainPart.endsWith('.') || domainPart.indexOf('.') === -1) {
+    return { isValid: false, error: 'Please enter a valid email address.', field: 'email' };
+  }
+
+  // 2. Password presence and validation
+  if (!password || typeof password !== 'string' || password.length === 0) {
+    return { isValid: false, error: 'Password is required.', field: 'password' };
+  }
+
+  // Disallow spaces in password
+  if (/\s/.test(password)) {
+    return { isValid: false, error: 'Password cannot contain spaces.', field: 'password' };
+  }
+
+  // Length requirement: at least 8 characters
+  if (password.length < 8) {
+    return { isValid: false, error: 'Password must be at least 8 characters long.', field: 'password' };
+  }
+
+  // At least 1 uppercase letter (A-Z)
+  if (!/[A-Z]/.test(password)) {
+    return { isValid: false, error: 'Password must contain at least one uppercase letter.', field: 'password' };
+  }
+
+  // At least 1 lowercase letter (a-z)
+  if (!/[a-z]/.test(password)) {
+    return { isValid: false, error: 'Password must contain at least one lowercase letter.', field: 'password' };
+  }
+
+  // At least 1 number (0-9)
+  if (!/[0-9]/.test(password)) {
+    return { isValid: false, error: 'Password must contain at least one number.', field: 'password' };
+  }
+
+  // At least 1 special character
+  const specialCharRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+  if (!specialCharRegex.test(password)) {
+    return { isValid: false, error: 'Password must contain at least one special symbol (!@#$%^&*...).', field: 'password' };
+  }
+
+  // 3. Confirm Password matching (if provided)
+  if (confirmPassword !== undefined && confirmPassword !== null) {
+    if (confirmPassword !== password) {
+      return { isValid: false, error: 'Passwords do not match.', field: 'confirmPassword' };
+    }
+  }
+
+  return { isValid: true };
+}
+
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
   
@@ -15,11 +102,13 @@ export async function login(req: Request, res: Response) {
     return res.status(400).json({ error: 'Email/username and password are required.' });
   }
 
+  const rawEmail = typeof email === 'string' ? email.trim() : '';
+  const normalizedEmail = rawEmail.toLowerCase();
+
   try {
     // 1. Admin login check
-    if (email === 'admin@gmail.com' && password === 'admin123') {
-      const token = jwt.sign({ id: 'admin_user', email, role: 'Admin' }, JWT_SECRET, { expiresIn: '7d' });
-      // Fetch or seed Rajesh Kumar's admin details if not in DB
+    if ((normalizedEmail === 'admin@gmail.com' || rawEmail === 'admin@gmail.com') && password === 'admin123') {
+      const token = jwt.sign({ id: 'admin_user', email: 'admin@gmail.com', role: 'Admin' }, JWT_SECRET, { expiresIn: '7d' });
       let adminName = 'Rajesh Kumar';
       const adminInDb = await prisma.user.findUnique({ where: { id: 'admin_user' } });
       if (adminInDb) {
@@ -27,14 +116,14 @@ export async function login(req: Request, res: Response) {
       }
       return res.status(200).json({
         token,
-        user: { email, role: 'Admin', name: adminName }
+        user: { email: 'admin@gmail.com', role: 'Admin', name: adminName }
       });
     }
 
     // 2. Scorer / Manager login check
-    const match = await prisma.match.findFirst({
+    let match = await prisma.match.findFirst({
       where: {
-        scorerUsername: email,
+        scorerUsername: rawEmail,
         scorerPassword: password,
       },
       select: {
@@ -45,17 +134,36 @@ export async function login(req: Request, res: Response) {
       },
     });
 
+    if (!match && rawEmail !== normalizedEmail) {
+      match = await prisma.match.findFirst({
+        where: {
+          scorerUsername: normalizedEmail,
+          scorerPassword: password,
+        },
+        select: {
+          id: true,
+          scorerUsername: true,
+          teamAId: true,
+          teamBId: true,
+        },
+      });
+    }
+
     if (match) {
-      const token = jwt.sign({ id: `scorer_${match.id}`, email, role: 'Scorer' }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ id: `scorer_${match.id}`, email: match.scorerUsername, role: 'Scorer' }, JWT_SECRET, { expiresIn: '7d' });
       return res.status(200).json({
         token,
-        user: { email, role: 'Scorer', name: `Official Scorer (${match.scorerUsername})` },
+        user: { email: match.scorerUsername, role: 'Scorer', name: `Official Scorer (${match.scorerUsername})` },
         activeScorerMatchId: match.id
       });
     }
 
-    // 3. User login check
-    const user = await prisma.user.findUnique({ where: { email } });
+    // 3. User login check (check normalized email, or raw email for legacy compatibility)
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user && rawEmail !== normalizedEmail) {
+      user = await prisma.user.findUnique({ where: { email: rawEmail } });
+    }
+
     if (user) {
       const isMatch = await bcrypt.compare(password, user.passwordHash);
       if (isMatch) {
@@ -75,40 +183,61 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function register(req: Request, res: Response) {
-  const { email, password, name } = req.body;
+  const { email, password, confirmPassword, name } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
+  // Server-side validation mirroring all security & complexity rules
+  const validation = validateRegistrationInput(email, password, confirmPassword, name);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      error: validation.error,
+      field: validation.field,
+    });
   }
 
+  const normalizedEmail = (email as string).trim().toLowerCase();
+  const trimmedName = typeof name === 'string' ? name.trim() : '';
+  const finalName = trimmedName || normalizedEmail.split('@')[0];
+
   try {
-    // Check if email already registered
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // 1. Check for existing account with the normalized email
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
-      return res.status(409).json({ error: 'Email is already registered.' });
+      return res.status(409).json({
+        error: 'An account with this email already exists.',
+        field: 'email',
+      });
     }
 
+    // 2. Hash password with bcrypt (10 rounds)
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = `user_${Date.now()}`;
     const role = 'User';
-    const finalName = name || email.split('@')[0];
 
+    // 3. Create user in database with normalized email
     await prisma.user.create({
       data: {
         id: userId,
-        email,
+        email: normalizedEmail,
         passwordHash,
         role,
         name: finalName,
       },
     });
 
-    const token = jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: userId, email: normalizedEmail, role }, JWT_SECRET, { expiresIn: '7d' });
     return res.status(201).json({
       token,
-      user: { email, role, name: finalName }
+      user: { email: normalizedEmail, role, name: finalName }
     });
-  } catch (err) {
+  } catch (err: any) {
+    // Handle concurrent registration race conditions (Prisma P2002 Unique Constraint Violation)
+    if (err && (err.code === 'P2002' || err.message?.includes('Unique constraint failed'))) {
+      return res.status(409).json({
+        error: 'An account with this email already exists.',
+        field: 'email',
+      });
+    }
+
     console.error('Registration error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }

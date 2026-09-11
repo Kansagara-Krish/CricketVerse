@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+import '../core/widgets/exit_app_dialog.dart';
 import '../core/theme/app_theme.dart';
 import 'auth_screen.dart';
 
@@ -64,10 +66,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final size = MediaQuery.of(context).size;
     final currentSlide = _slides[_currentPage];
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgDark,
-      body: Stack(
-        children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // 1. If on slide 2 or 3, go back to previous slide
+        if (_currentPage > 0) {
+          _pageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+          return;
+        }
+
+        // 2. On first slide -> confirm before closing
+        final shouldExit = await ExitAppDialog.show(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.bgDark,
+        body: Stack(
+          children: [
           // Background Gradient decoration (Subtle light mode circles)
           Positioned(
             top: -100,
@@ -327,8 +349,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class OnboardingData {
