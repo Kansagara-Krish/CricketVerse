@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -302,8 +301,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 final navigator = Navigator.of(context);
                 final confirm = await LogoutDialog.show(context);
                 if (confirm == true && mounted) {
-                  storage.logout();
-                  navigator.pushReplacementNamed(AppRoutes.auth);
+                  await storage.logout();
+                  if (context.mounted) {
+                    CustomNotification.show(context, 'Successfully logged out!', type: NotificationType.success);
+                    navigator.pushReplacementNamed(AppRoutes.auth);
+                  }
                 }
               },
               icon: const Icon(Icons.logout, color: AppTheme.accentRed),

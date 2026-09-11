@@ -463,6 +463,16 @@ class StorageService with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    final prevName = _currentUserName;
+    final prevEmail = _currentUserEmail;
+    final prevRole = _currentRole;
+
+    if (_isOnlineMode) {
+      await ApiService.logout(name: prevName, email: prevEmail, role: prevRole);
+      await ApiService.clearToken();
+      SocketService.disconnect();
+    }
+
     _currentUserEmail = null;
     _currentRole = null;
     _currentUserName = null;
@@ -471,12 +481,9 @@ class StorageService with ChangeNotifier {
     await AuthStorageService.clearAuthData();
     await NotificationCacheService.clearCache();
 
-    if (_isOnlineMode) {
-      await ApiService.clearToken();
-      SocketService.disconnect();
-    }
     notifyListeners();
   }
+
 
   // --- Admin / CRUD Methods ---
   void adminActivateMatch(String matchId) async {

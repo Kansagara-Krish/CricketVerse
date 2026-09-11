@@ -8,6 +8,7 @@ import '../../services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
+import '../../core/widgets/custom_date_time_pickers.dart';
 
 import '../../models/models.dart';
 
@@ -63,36 +64,53 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   }
 
   void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (_, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(primary: AppTheme.primaryBlue),
-        ),
-        child: child!,
-      ),
+    DateTime initial = DateTime.now();
+    if (_dateCtrl.text.isNotEmpty) {
+      try {
+        final parts = _dateCtrl.text.split('-');
+        if (parts.length == 3) {
+          initial = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        }
+      } catch (_) {}
+    }
+
+    final picked = await CustomDatePickerDialog.show(
+      context,
+      initialDate: initial,
+      title: 'Select Match Date',
     );
-    if (picked != null) {
-      _dateCtrl.text = '${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}';
+
+    if (picked != null && mounted) {
+      setState(() {
+        _dateCtrl.text = '${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}';
+      });
     }
   }
 
   void _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 19, minute: 30),
-      builder: (_, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(primary: AppTheme.primaryBlue),
-        ),
-        child: child!,
-      ),
+    TimeOfDay initial = const TimeOfDay(hour: 19, minute: 30);
+    if (_timeCtrl.text.isNotEmpty) {
+      try {
+        final parts = _timeCtrl.text.split(':');
+        if (parts.length >= 2) {
+          final hour = int.parse(parts[0]);
+          final minPart = parts[1].split(' ');
+          final minute = int.parse(minPart[0]);
+          initial = TimeOfDay(hour: hour, minute: minute);
+        }
+      } catch (_) {}
+    }
+
+    final picked = await CustomTimePickerDialog.show(
+      context,
+      initialTime: initial,
+      title: 'Select Match Time',
     );
+
     if (picked != null && mounted) {
-      _timeCtrl.text = picked.format(context);
+      setState(() {
+        _timeCtrl.text = picked.format(context);
+      });
     }
   }
 

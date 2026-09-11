@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/custom_drawer.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -49,7 +50,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
     _drawerAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
     );
   }
 
@@ -72,198 +73,171 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
 
   Widget _buildMenuDrawer(BuildContext context) {
     final storage = Provider.of<StorageService>(context, listen: false);
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(left: 20.0, top: 20.0, bottom: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // User Info
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                    radius: 22,
-                    child: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryBlue, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rajesh Kumar',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Tournament Admin',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white60,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              
-              // Menu Items
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildMenuItem(Icons.dashboard_rounded, 'Dashboard', () {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(left: 24.0, top: 24.0, bottom: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User Profile Header with green online dot indicator
+            const DrawerProfileHeader(
+              initials: 'RK',
+              name: 'Rajesh Kumar',
+              role: 'Tournament Admin',
+            ),
+            const SizedBox(height: 32),
+
+            // Menu Items List
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    AnimatedDrawerTile(
+                      icon: Icons.grid_view_rounded,
+                      title: 'Dashboard',
+                      isSelected: _currentIndex == 0,
+                      onTap: () {
                         setState(() => _currentIndex = 0);
                         _toggleDrawer();
-                      }, isSelected: _currentIndex == 0),
-                      _buildMenuItem(Icons.emoji_events_rounded, 'Tournament', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.emoji_events_rounded,
+                      title: 'Tournament',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.tournamentList);
-                      }),
-                      _buildMenuItem(Icons.groups_rounded, 'Teams', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.shield_outlined,
+                      title: 'Teams',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.teamManagement);
-                      }),
-                      _buildMenuItem(Icons.person_pin_rounded, 'Players', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Players',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.playerManagement);
-                      }),
-                      _buildMenuItem(Icons.sports_cricket_rounded, 'Matches', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.sports_cricket_rounded,
+                      title: 'Matches',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.matchList);
-                      }),
-                      _buildMenuItem(Icons.bar_chart_rounded, 'Statistics', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.bar_chart_rounded,
+                      title: 'Statistics',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.statistics);
-                      }),
-                      _buildMenuItem(Icons.notifications_rounded, 'Notifications', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.notifications_none_rounded,
+                      title: 'Notifications',
+                      badgeCount: storage.unreadNotificationCount > 0 ? storage.unreadNotificationCount : 3,
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.notifications);
-                      }),
-                      _buildMenuItem(Icons.manage_accounts_rounded, 'Profile', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.person_rounded,
+                      title: 'Profile',
+                      isSelected: _currentIndex == 1,
+                      onTap: () {
                         setState(() => _currentIndex = 1);
                         _toggleDrawer();
-                      }, isSelected: _currentIndex == 1),
-                      _buildMenuItem(Icons.settings_rounded, 'Settings', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.settings_outlined,
+                      title: 'Settings',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.aiSettings);
-                      }),
-                    ],
-                  ),
+                      },
+                    ),
+                  ],
                 ),
               ),
-              
-              // Online Mode Switcher
-              Consumer<StorageService>(
-                builder: (context, storage, _) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12, right: 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                              color: storage.isOnlineMode ? AppTheme.primaryGreen : AppTheme.textMuted,
-                              size: 18,
+            ),
+
+            // Online Mode Switcher
+            Consumer<StorageService>(
+              builder: (context, storage, _) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12, right: 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                            color: storage.isOnlineMode ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
-                            const SizedBox(width: 14),
-                            Text(
-                              storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: storage.isOnlineMode,
-                          activeThumbColor: AppTheme.primaryGreen,
-                          onChanged: (val) {
-                            storage.toggleOnlineMode(val);
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              ),
-              
-              // Logout
-              _buildMenuItem(Icons.logout_rounded, 'Logout', () async {
+                          ),
+                        ],
+                      ),
+                      Switch(
+                        value: storage.isOnlineMode,
+                        activeColor: const Color(0xFF10B981),
+                        activeTrackColor: const Color(0xFF028A6B).withValues(alpha: 0.4),
+                        onChanged: (val) {
+                          storage.toggleOnlineMode(val);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+            // Logout Button
+            AnimatedDrawerTile(
+              icon: Icons.logout_rounded,
+              title: 'Logout',
+              isLogout: true,
+              onTap: () async {
                 _toggleDrawer();
                 final confirm = await LogoutDialog.show(context);
                 if (confirm == true && context.mounted) {
-                  storage.logout();
-                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (route) => false);
+                  await storage.logout();
+                  if (context.mounted) {
+                    CustomNotification.show(context, 'Successfully logged out!', type: NotificationType.success);
+                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (route) => false);
+                  }
                 }
-              }, isLogout: true),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isSelected = false,
-    bool isLogout = false,
-  }) {
-    final color = isLogout
-        ? const Color(0xFFEF4444)
-        : (isSelected ? AppTheme.primaryBlue : Colors.white70);
-        
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6, right: 40),
-      child: Material(
-        color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 18),
-                const SizedBox(width: 14),
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ],
+              },
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );
@@ -276,126 +250,89 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        // 1. If drawer is open, close drawer first
         if (_isDrawerOpen) {
           _toggleDrawer();
           return;
         }
 
-        // 2. If on Profile view (or another view), return to Home (index 0)
         if (_currentIndex != 0) {
           setState(() => _currentIndex = 0);
           return;
         }
 
-        // 3. We are on the LAST page (Dashboard Home) -> ask for exit confirmation
         final shouldExit = await ExitAppDialog.show(context);
         if (shouldExit) {
           SystemNavigator.pop();
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
-        body: Stack(
-          children: [
-            // Drawer menu
-            _buildMenuDrawer(context),
-            
-            // Dashboard Body Zoom animation
-            AnimatedBuilder(
-              animation: _drawerAnimationController,
-              builder: (context, child) {
-                final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
-                final double slide = _drawerAnimationController.value * 230.0;
-                final double radius = _drawerAnimationController.value * 20.0;
-                return Transform(
-                  transform: Matrix4.translationValues(slide, 0.0, 0.0)
-                    * Matrix4.diagonal3Values(scale, scale, 1.0),
-                  alignment: Alignment.centerLeft,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(radius),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: child,
-                    ),
-                  ),
-                );
-              },
-              child: Scaffold(
-                backgroundColor: AppTheme.bgDark,
-                appBar: AppBar(
-                  backgroundColor: Colors.white,
-                  elevation: 0,
-                  leading: IconButton(
-                    icon: AnimatedIcon(
-                      icon: AnimatedIcons.menu_close,
-                      progress: _drawerAnimationController,
-                      color: AppTheme.textPrimary,
-                    ),
-                    onPressed: _toggleDrawer,
-                  ),
-                  title: Text(
-                    _currentIndex == 0 ? 'Admin Dashboard' : 'Admin Profile',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.search, color: AppTheme.textPrimary),
-                      onPressed: () {
-                        showSearch(context: context, delegate: _CricketSearchDelegate());
-                      },
-                    ),
-                    Consumer<StorageService>(
-                      builder: (_, storage, __) {
-                        final count = storage.unreadNotificationCount;
-                        return Stack(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
-                              onPressed: () async {
-                                await Navigator.pushNamed(context, AppRoutes.notifications);
-                                if (mounted) setState(() {});
-                              },
-                            ),
-                            if (count > 0)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: const BoxDecoration(
-                                    color: AppTheme.accentRed,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '$count',
-                                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                ),
-                body: _views[_currentIndex],
+      child: Drawer3DWrapper(
+        animationController: _drawerAnimationController,
+        drawerMenu: _buildMenuDrawer(context),
+        onTapOutsideToClose: _toggleDrawer,
+        child: Scaffold(
+          backgroundColor: AppTheme.bgDark,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: AnimatedIcon(
+                icon: AnimatedIcons.menu_close,
+                progress: _drawerAnimationController,
+                color: AppTheme.textPrimary,
+              ),
+              onPressed: _toggleDrawer,
+            ),
+            title: Text(
+              _currentIndex == 0 ? 'Admin Dashboard' : 'Admin Profile',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
             ),
-          ],
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search, color: AppTheme.textPrimary),
+                onPressed: () {
+                  showSearch(context: context, delegate: _CricketSearchDelegate());
+                },
+              ),
+              Consumer<StorageService>(
+                builder: (_, storage, __) {
+                  final count = storage.unreadNotificationCount;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
+                        onPressed: () async {
+                          await Navigator.pushNamed(context, AppRoutes.notifications);
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.accentRed,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$count',
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          body: _views[_currentIndex],
         ),
       ),
     );

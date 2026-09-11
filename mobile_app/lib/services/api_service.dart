@@ -76,6 +76,24 @@ class ApiService {
   }
 
   // --- Auth API ---
+  static Future<bool> logout({String? name, String? email, String? role}) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/logout'),
+        headers: _headers,
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'role': role,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService logout error: $e');
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
       final res = await http.post(

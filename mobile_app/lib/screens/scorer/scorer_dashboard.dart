@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../services/socket_service.dart';
+import '../../core/widgets/custom_drawer.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({super.key});
@@ -83,71 +84,49 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
   void _logout() async {
     final confirm = await LogoutDialog.show(context);
     if (confirm == true && mounted) {
-      Provider.of<StorageService>(context, listen: false).logout();
-      Navigator.pushReplacementNamed(context, AppRoutes.auth);
+      await Provider.of<StorageService>(context, listen: false).logout();
+      if (mounted) {
+        CustomNotification.show(context, 'Successfully logged out!', type: NotificationType.success);
+        Navigator.pushReplacementNamed(context, AppRoutes.auth);
+      }
     }
   }
 
   Widget _buildMenuDrawer(BuildContext context, CricketMatch? match) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(left: 20.0, top: 20.0, bottom: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // User Info
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
-                    radius: 22,
-                    child: const Icon(Icons.sports_cricket_rounded, color: AppTheme.primaryGreen, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Match Scorer',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Official Manager',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white60,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              
-              // Menu Items
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildMenuItem(Icons.dashboard_rounded, 'Dashboard', () {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(left: 24.0, top: 24.0, bottom: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User Profile Header
+            const DrawerProfileHeader(
+              initials: 'MS',
+              name: 'Match Scorer',
+              role: 'Official Manager',
+            ),
+            const SizedBox(height: 32),
+
+            // Menu Items
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    AnimatedDrawerTile(
+                      icon: Icons.grid_view_rounded,
+                      title: 'Dashboard',
+                      isSelected: _currentViewIndex == 0,
+                      onTap: () {
                         setState(() => _currentViewIndex = 0);
                         _toggleDrawer();
-                      }, isSelected: _currentViewIndex == 0),
-                      _buildMenuItem(Icons.assignment_turned_in_rounded, 'Assigned Matches', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.assignment_turned_in_rounded,
+                      title: 'Assigned Matches',
+                      onTap: () {
                         _toggleDrawer();
                         if (match != null) {
                           CustomNotification.show(
@@ -162,8 +141,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                             type: NotificationType.warning,
                           );
                         }
-                      }),
-                      _buildMenuItem(Icons.offline_bolt_rounded, 'Live Scoring', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.offline_bolt_rounded,
+                      title: 'Live Scoring',
+                      onTap: () {
                         setState(() => _currentViewIndex = 0);
                         _toggleDrawer();
                         if (match == null || match.status != 'Live') {
@@ -173,8 +156,12 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                             type: NotificationType.warning,
                           );
                         }
-                      }),
-                      _buildMenuItem(Icons.comment_bank_rounded, 'Commentary', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.comment_bank_rounded,
+                      title: 'Commentary',
+                      onTap: () {
                         _toggleDrawer();
                         if (match != null) {
                           Navigator.pushNamed(context, AppRoutes.aiCommentary, arguments: match);
@@ -185,117 +172,97 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                             type: NotificationType.warning,
                           );
                         }
-                      }),
-                      _buildMenuItem(Icons.bar_chart_rounded, 'Statistics', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.bar_chart_rounded,
+                      title: 'Statistics',
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.statistics);
-                      }),
-                      _buildMenuItem(Icons.notifications_rounded, 'Notifications', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.notifications_none_rounded,
+                      title: 'Notifications',
+                      badgeCount: storage.unreadNotificationCount > 0 ? storage.unreadNotificationCount : 3,
+                      onTap: () {
                         _toggleDrawer();
                         Navigator.pushNamed(context, AppRoutes.notifications);
-                      }),
-                      _buildMenuItem(Icons.person_rounded, 'Profile', () {
+                      },
+                    ),
+                    AnimatedDrawerTile(
+                      icon: Icons.person_rounded,
+                      title: 'Profile',
+                      isSelected: _currentViewIndex == 1,
+                      onTap: () {
                         setState(() => _currentViewIndex = 1);
                         _toggleDrawer();
-                      }, isSelected: _currentViewIndex == 1),
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Online Mode Switcher
+            Consumer<StorageService>(
+              builder: (context, storage, _) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12, right: 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                            color: storage.isOnlineMode ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Switch(
+                        value: storage.isOnlineMode,
+                        activeColor: const Color(0xFF10B981),
+                        activeTrackColor: const Color(0xFF028A6B).withValues(alpha: 0.4),
+                        onChanged: (val) {
+                          storage.toggleOnlineMode(val);
+                        },
+                      ),
                     ],
                   ),
-                ),
-              ),
-              
-              // Online Mode Switcher
-              Consumer<StorageService>(
-                builder: (context, storage, _) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12, right: 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                              color: storage.isOnlineMode ? AppTheme.primaryGreen : AppTheme.textMuted,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 14),
-                            Text(
-                              storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: storage.isOnlineMode,
-                          activeThumbColor: AppTheme.primaryGreen,
-                          onChanged: (val) {
-                            storage.toggleOnlineMode(val);
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              ),
+                );
+              },
+            ),
 
-              // Logout
-              _buildMenuItem(Icons.logout_rounded, 'Logout', () {
+            // Logout Button
+            AnimatedDrawerTile(
+              icon: Icons.logout_rounded,
+              title: 'Logout',
+              isLogout: true,
+              onTap: () {
                 _toggleDrawer();
                 _logout();
-              }, isLogout: true),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isSelected = false,
-    bool isLogout = false,
-  }) {
-    final color = isLogout
-        ? const Color(0xFFEF4444)
-        : (isSelected ? AppTheme.primaryBlue : Colors.white70);
-        
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6, right: 40),
-      child: Material(
-        color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 18),
-                const SizedBox(width: 14),
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ],
+              },
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );
@@ -341,52 +308,23 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               builder: (context) {
                 final match = storage.matches.firstWhere((m) => m.id == matchId);
 
-                return Scaffold(
-                  backgroundColor: const Color(0xFF0F172A),
-                  body: Stack(
-                    children: [
-                      // Drawer menu
-                      _buildMenuDrawer(context, match),
-
-                      // Dashboard Body Zoom animation
-                      AnimatedBuilder(
-                        animation: _drawerAnimationController,
-                        builder: (context, child) {
-                          final double scale = 1.0 - (_drawerAnimationController.value * 0.12);
-                          final double slide = _drawerAnimationController.value * 230.0;
-                          final double radius = _drawerAnimationController.value * 20.0;
-                          return Transform(
-                            transform: Matrix4.translationValues(slide, 0.0, 0.0)
-                              * Matrix4.diagonal3Values(scale, scale, 1.0),
-                            alignment: Alignment.centerLeft,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(radius),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.15),
-                                      blurRadius: 16,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: child,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Scaffold(
-                          backgroundColor: AppTheme.bgDark,
-                          appBar: AppBar(
-                            backgroundColor: Colors.white,
-                            elevation: 0,
-                            leading: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
-                              onPressed: () {
-                                storage.setActiveScorerMatchId(null);
-                              },
-                            ),
+                return Drawer3DWrapper(
+                  animationController: _drawerAnimationController,
+                  drawerMenu: _buildMenuDrawer(context, match),
+                  onTapOutsideToClose: _toggleDrawer,
+                  child: Scaffold(
+                    backgroundColor: AppTheme.bgDark,
+                    appBar: AppBar(
+                      backgroundColor: Colors.white,
+                      elevation: 0,
+                      leading: IconButton(
+                        icon: AnimatedIcon(
+                          icon: AnimatedIcons.menu_close,
+                          progress: _drawerAnimationController,
+                          color: AppTheme.textPrimary,
+                        ),
+                        onPressed: _toggleDrawer,
+                      ),
                             title: Text(
                               _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
                               style: GoogleFonts.plusJakartaSans(
@@ -421,9 +359,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                                   ? _buildSetupView(match, storage)
                                   : _buildScoringView(match, storage)),
                         ),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),

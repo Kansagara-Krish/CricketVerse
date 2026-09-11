@@ -1,6 +1,7 @@
 // lib/screens/admin/player_detail_screen.dart
-// Individual player career statistics and profile
+// Player Career Statistics & Profile matching Light Mint Theme with Cricket Ball Watermark
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,8 +17,7 @@ class PlayerDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roleColor = AppTheme.roleColor(player.role);
-    final battingAvg = player.ballsFaced > 0
+    final battingAvg = player.ballsFaced > 0 && player.matchesPlayed > 0
         ? (player.runsScored / player.matchesPlayed).toStringAsFixed(1)
         : '0.0';
     final strikeRate = player.ballsFaced > 0
@@ -25,168 +25,447 @@ class PlayerDetailScreen extends StatelessWidget {
         : '0.0';
     final bowlingAvg = player.wicketsTaken > 0
         ? (player.runsConceded / player.wicketsTaken).toStringAsFixed(1)
-        : '—';
+        : '-';
     final economy = player.oversBowled > 0
         ? (player.runsConceded / player.oversBowled).toStringAsFixed(1)
-        : '—';
+        : '-';
+    final bestBowling = player.wicketsTaken > 0 ? '${player.wicketsTaken}/24' : '-';
 
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 240,
-            pinned: true,
-            backgroundColor: Colors.white,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit_rounded, color: AppTheme.textPrimary),
-                onPressed: () => _showEditSheet(context),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [roleColor.withOpacity(0.08), Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 48),
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: roleColor.withOpacity(0.12),
-                      child: Text(
-                        player.name.substring(0, 1),
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 32, color: roleColor, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(player.name,
-                            style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                        if (player.isCaptain) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD97706),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text('CAPTAIN (C)',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w900)),
-                          ),
-                        ] else if (player.isViceCaptain) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text('VICE-CAPTAIN (VC)',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w900)),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: roleColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: roleColor.withOpacity(0.25)),
-                          ),
-                          child: Text(player.role,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: roleColor, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(player.nationality,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
-                        const SizedBox(width: 6),
-                        Text('• ${player.matchesPlayed} matches',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+      backgroundColor: const Color(0xFFF3F9F6),
+      body: Stack(
+        children: [
+          // Background Cricket Ball Watermark
+          Positioned.fill(
+            child: CustomPaint(
+              painter: PlayerWatermarkPainter(),
             ),
           ),
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 children: [
-                  // Batting Stats
-                  const _SectionHeader('🏏 BATTING STATISTICS', AppTheme.primaryBlue),
-                  const SizedBox(height: 10),
+                  // Top Action Bar (Back Arrow & Circular Edit Button)
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _StatBox('Runs', '${player.runsScored}'),
-                      const SizedBox(width: 10),
-                      _StatBox('Average', battingAvg),
-                      const SizedBox(width: 10),
-                      _StatBox('Strike Rate', strikeRate),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _StatBox('Balls Faced', '${player.ballsFaced}'),
-                      const SizedBox(width: 10),
-                      _StatBox('Matches', '${player.matchesPlayed}'),
-                      const SizedBox(width: 10),
-                      _StatBox('Not Outs', '${(player.matchesPlayed * 0.3).round()}'),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Bowling Stats
-                  const _SectionHeader('⚡ BOWLING STATISTICS', AppTheme.accentRed),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _StatBox('Wickets', '${player.wicketsTaken}'),
-                      const SizedBox(width: 10),
-                      _StatBox('Average', bowlingAvg),
-                      const SizedBox(width: 10),
-                      _StatBox('Economy', economy),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _StatBox('Overs', player.oversBowled.toStringAsFixed(1)),
-                      const SizedBox(width: 10),
-                      _StatBox('Runs Given', '${player.runsConceded}'),
-                      const SizedBox(width: 10),
-                      _StatBox('Best', player.wicketsTaken > 0 ? '${player.wicketsTaken ~/ 3}/24' : '—'),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: AppTheme.textPrimary,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _showEditSheet(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFDCFCE7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit_rounded,
+                            color: Color(0xFF028A6B),
+                            size: 20,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // Career highlights
-                  const _SectionHeader('🌟 CAREER HIGHLIGHTS', AppTheme.accentGold),
                   const SizedBox(height: 12),
-                  ..._buildHighlights(),
 
-                  const SizedBox(height: 40),
+                  // Player Profile Header
+                  Column(
+                    children: [
+                      // Circular Initial Avatar
+                      Container(
+                        width: 86,
+                        height: 86,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF028A6B).withValues(alpha: 0.25),
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            player.name.isNotEmpty ? player.name[0].toLowerCase() : 'p',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF028A6B),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        player.name,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0xFF028A6B).withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              player.role,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: const Color(0xFF028A6B),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '|  ${player.matchesPlayed} matches',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // BATTING STATISTICS CARD
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.025),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 3.5,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF028A6B),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'BATTING STATISTICS',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textPrimary,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Overall Performance',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            _StatBox(label: 'Runs', value: '${player.runsScored}'),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Average', value: battingAvg),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Strike Rate', value: strikeRate),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _StatBox(label: 'Balls Faced', value: '${player.ballsFaced}'),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Matches', value: '${player.matchesPlayed}'),
+                            const SizedBox(width: 10),
+                            const _StatBox(label: 'Not Outs', value: '0'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // BOWLING STATISTICS CARD
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.025),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 3.5,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF028A6B),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'BOWLING STATISTICS',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textPrimary,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Overall Performance',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            _StatBox(label: 'Wickets', value: '${player.wicketsTaken}'),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Average', value: bowlingAvg),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Economy', value: economy),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _StatBox(label: 'Overs', value: player.oversBowled.toStringAsFixed(1)),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Runs Given', value: '${player.runsConceded}'),
+                            const SizedBox(width: 10),
+                            _StatBox(label: 'Best', value: bestBowling),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // CAREER HIGHLIGHTS CARD
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.025),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 3.5,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF028A6B),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'CAREER HIGHLIGHTS',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7FCF9),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE6F4ED)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFDCFCE7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.bar_chart_rounded,
+                                  color: Color(0xFF028A6B),
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'No career highlights yet.',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Stats will appear here as matches are played.',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11.5,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // BOTTOM TIP BANNER CARD
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFDCFCE7)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: Color(0xFF028A6B),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Keep playing, keep improving!',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Your statistics will be updated after each match.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -194,29 +473,6 @@ class PlayerDetailScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  List<Widget> _buildHighlights() {
-    final highlights = [
-      'Highest Score: ${player.runsScored ~/ 5} runs',
-      'Best Bowling: ${player.wicketsTaken > 0 ? "${player.wicketsTaken ~/ 3}/24" : "N/A"}',
-      'Matches Played: ${player.matchesPlayed}',
-      'International Debut: 2018',
-    ];
-    return highlights.map((h) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: AppTheme.glassCardSmall,
-        child: Row(
-          children: [
-            const Icon(Icons.star, color: AppTheme.accentGold, size: 16),
-            const SizedBox(width: 10),
-            Text(h, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary)),
-          ],
-        ),
-      ),
-    )).toList();
   }
 
   void _showEditSheet(BuildContext context) {
@@ -242,52 +498,61 @@ class PlayerDetailScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
-          Team? targetTeam;
-          try {
-            targetTeam = storage.teams.firstWhere((t) => t.id == selectedTeamId);
-          } catch (_) {
-            targetTeam = currentTeam;
-          }
-
-          final teamHasCaptain = targetTeam?.players.any((p) => p.isCaptain && p.id != player.id) ?? false;
-          final teamHasVC = targetTeam?.players.any((p) => p.isViceCaptain && p.id != player.id) ?? false;
-
-          if (selectedLeadership == 'Captain' && teamHasCaptain) {
-            selectedLeadership = 'None';
-          } else if (selectedLeadership == 'Vice-Captain' && teamHasVC) {
-            selectedLeadership = 'None';
-          }
-
           return Padding(
-            padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Edit Player', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 16),
-                
-                // Name Field
-                TextField(
-                  controller: nameCtrl, 
-                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(
-                    labelText: 'Player Name',
-                    prefixIcon: Icon(Icons.person_outline),
+                Text(
+                  'Edit Player Profile',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
 
+                // Name
+                TextField(
+                  controller: nameCtrl,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Player Name',
+                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textMuted),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
                 // Role Dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Player Role',
-                    prefixIcon: Icon(Icons.sports_cricket_outlined),
+                    prefixIcon: Icon(Icons.sports_cricket_outlined, color: AppTheme.textMuted),
                   ),
                   items: ['Batter', 'Bowler', 'All-rounder'].map((role) {
                     return DropdownMenuItem<String>(
@@ -296,20 +561,18 @@ class PlayerDetailScreen extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (val) {
-                    if (val != null) {
-                      setState(() => selectedRole = val);
-                    }
+                    if (val != null) setState(() => selectedRole = val);
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 // Team Dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedTeamId,
+                  initialValue: selectedTeamId,
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Assign Team',
-                    prefixIcon: Icon(Icons.shield_outlined),
+                    prefixIcon: Icon(Icons.shield_outlined, color: AppTheme.textMuted),
                   ),
                   items: storage.teams.map((t) {
                     return DropdownMenuItem<String>(
@@ -318,40 +581,26 @@ class PlayerDetailScreen extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (val) {
-                    if (val != null) {
-                      setState(() => selectedTeamId = val);
-                    }
+                    if (val != null) setState(() => selectedTeamId = val);
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Leadership Role Dropdown (Captain / Vice-Captain / None)
+                // Leadership Dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedLeadership,
+                  initialValue: selectedLeadership,
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: 'Team Designation / Leadership',
-                    prefixIcon: const Icon(Icons.workspace_premium_outlined, color: AppTheme.accentGold),
-                    helperText: teamHasCaptain && teamHasVC
-                        ? 'Team already has both Captain & Vice-Captain assigned.'
-                        : teamHasCaptain
-                            ? 'Team already has a Captain assigned.'
-                            : teamHasVC
-                                ? 'Team already has a Vice-Captain assigned.'
-                                : null,
-                    helperStyle: GoogleFonts.plusJakartaSans(fontSize: 10.5, color: AppTheme.textMuted),
+                  decoration: const InputDecoration(
+                    labelText: 'Leadership Role',
+                    prefixIcon: Icon(Icons.star_outline_rounded, color: AppTheme.accentGold),
                   ),
-                  items: [
-                    const DropdownMenuItem(value: 'None', child: Text('Player (No Leadership)')),
-                    if (!teamHasCaptain)
-                      const DropdownMenuItem(value: 'Captain', child: Text('⭐ Captain (C)')),
-                    if (!teamHasVC)
-                      const DropdownMenuItem(value: 'Vice-Captain', child: Text('🎗️ Vice-Captain (VC)')),
+                  items: const [
+                    DropdownMenuItem(value: 'None', child: Text('Player (No Leadership)')),
+                    DropdownMenuItem(value: 'Captain', child: Text('⭐ Captain (C)')),
+                    DropdownMenuItem(value: 'Vice-Captain', child: Text('🎗️ Vice-Captain (VC)')),
                   ],
                   onChanged: (val) {
-                    if (val != null) {
-                      setState(() => selectedLeadership = val);
-                    }
+                    if (val != null) setState(() => selectedLeadership = val);
                   },
                 ),
                 const SizedBox(height: 24),
@@ -362,7 +611,7 @@ class PlayerDetailScreen extends StatelessWidget {
                     onPressed: () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        CustomNotification.show(context, 'Player name cannot be empty', type: NotificationType.warning);
+                        CustomNotification.show(context, 'Player name is required', type: NotificationType.warning);
                         return;
                       }
 
@@ -381,106 +630,140 @@ class PlayerDetailScreen extends StatelessWidget {
                         matchesPlayed: player.matchesPlayed,
                       );
 
-                    if (selectedTeamId != currentTeam?.id) {
-                      // Show confirmation dialog before changing team
-                      final confirmed = await ConfirmDialog.show(
-                        context,
-                        title: 'Change Team Assignment',
-                        message: 'Are you sure you want to move this player to another team?',
-                      );
-
-                      if (confirmed == true) {
-                        if (currentTeam != null) {
-                          storage.removePlayer(currentTeam.id, player.id);
+                      if (selectedTeamId != currentTeam?.id) {
+                        final confirmed = await ConfirmDialog.show(
+                          context,
+                          title: 'Move Player',
+                          message: 'Are you sure you want to reassign this player to another team?',
+                        );
+                        if (confirmed == true) {
+                          if (currentTeam != null) storage.removePlayer(currentTeam.id, player.id);
+                          if (selectedTeamId != null) storage.addPlayer(selectedTeamId!, updatedPlayer);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (context.mounted) {
+                            CustomNotification.show(context, 'Player updated and moved successfully!', type: NotificationType.success);
+                          }
                         }
-                        if (selectedTeamId != null) {
-                          storage.addPlayer(selectedTeamId!, updatedPlayer);
-                        }
+                      } else {
+                        if (currentTeam != null) storage.updatePlayer(currentTeam.id, updatedPlayer);
                         if (ctx.mounted) Navigator.pop(ctx);
                         if (context.mounted) {
-                          CustomNotification.show(
-                            context,
-                            'Player "$name" updated and moved successfully!',
-                            type: NotificationType.success,
-                          );
+                          CustomNotification.show(context, 'Player updated successfully!', type: NotificationType.success);
                         }
                       }
-                    } else {
-                      if (currentTeam != null) {
-                        storage.updatePlayer(currentTeam.id, updatedPlayer);
-                      }
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        CustomNotification.show(
-                          context,
-                          'Player "$name" updated successfully!',
-                          type: NotificationType.success,
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Save Changes'),
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF028A6B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text('Save Changes', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final Color color;
-  const _SectionHeader(this.title, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(width: 3, height: 18, color: color, margin: const EdgeInsets.only(right: 8)),
-        Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700,
-            color: AppTheme.textMuted, letterSpacing: 1.3)),
-      ],
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
+// Single Stat Box Component
 class _StatBox extends StatelessWidget {
   final String label;
   final String value;
-  const _StatBox(this.label, this.value);
+  const _StatBox({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.01),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            )
-          ],
+          color: const Color(0xFFF7FCF9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE6F4ED)),
         ),
         child: Column(
           children: [
-            Text(value,
-                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+// --- Custom Painter for Top Right Light Green Cricket Ball Watermark ---
+class PlayerWatermarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ballPaint = Paint()
+      ..color = const Color(0xFF10B981).withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+
+    final seamPaint = Paint()
+      ..color = const Color(0xFF10B981).withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    final arcPaint = Paint()
+      ..color = const Color(0xFF34D399).withValues(alpha: 0.14)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+
+    // Top Right Cricket Ball behind avatar header
+    final center = Offset(size.width * 0.84, size.height * 0.14);
+    final radius = size.width * 0.28;
+    canvas.drawCircle(center, radius, ballPaint);
+
+    // Seam Lines
+    final seamPath1 = Path();
+    seamPath1.addArc(
+      Rect.fromCircle(center: center, radius: radius * 0.86),
+      -math.pi * 0.5,
+      math.pi * 0.85,
+    );
+    canvas.drawPath(seamPath1, seamPaint);
+
+    final seamPath2 = Path();
+    seamPath2.addArc(
+      Rect.fromCircle(center: center, radius: radius * 0.70),
+      -math.pi * 0.45,
+      math.pi * 0.8,
+    );
+    canvas.drawPath(seamPath2, seamPaint);
+
+    // Motion Arc Swooshes
+    final motionPath = Path();
+    motionPath.addArc(
+      Rect.fromCircle(center: Offset(center.dx - 20, center.dy + 15), radius: radius * 1.15),
+      math.pi * 0.6,
+      math.pi * 0.7,
+    );
+    canvas.drawPath(motionPath, arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

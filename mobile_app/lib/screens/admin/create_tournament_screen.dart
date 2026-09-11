@@ -1,15 +1,17 @@
 // lib/screens/admin/create_tournament_screen.dart
-// Tournament creation form
+// Tournament creation form with Custom Animated Date Picker matching reference design
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
+import '../../core/widgets/custom_date_time_pickers.dart';
 
 class CreateTournamentScreen extends StatefulWidget {
   const CreateTournamentScreen({super.key});
@@ -53,6 +55,31 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     super.dispose();
   }
 
+  Future<void> _selectDate(TextEditingController controller, {required bool isStart}) async {
+    DateTime initial = DateTime.now();
+    if (controller.text.isNotEmpty) {
+      try {
+        final parts = controller.text.split('-');
+        if (parts.length == 3) {
+          initial = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        }
+      } catch (_) {}
+    }
+
+    final pickedDate = await CustomDatePickerDialog.show(
+      context,
+      initialDate: initial,
+      title: isStart ? 'Select Start Date' : 'Select End Date',
+    );
+
+    if (pickedDate != null) {
+      final formatted = DateFormat('dd-MM-yyyy').format(pickedDate);
+      setState(() {
+        controller.text = formatted;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
@@ -61,11 +88,18 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Text(_isEdit ? 'Edit Tournament' : 'Create Tournament', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        elevation: 0,
+        title: Text(
+          _isEdit ? 'Edit Tournament' : 'Create Tournament',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.tournamentList),
-            child: Text('View All', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+            child: Text(
+              'View All',
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -76,7 +110,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon banner (White text on purple gradient)
+              // Icon banner
               CardEntranceAnimation(
                 index: 0,
                 child: Container(
@@ -93,8 +127,18 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_isEdit ? 'Edit Tournament' : 'New Tournament', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                          Text('Set up your cricket competition', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70)),
+                          Text(
+                            _isEdit ? 'Edit Tournament' : 'New Tournament',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Set up your cricket competition',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
+                          ),
                         ],
                       ),
                     ],
@@ -141,7 +185,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                               margin: EdgeInsets.only(right: type != 'Test' ? 8 : 0),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                color: selected ? AppTheme.accentPurple.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.03),
+                                color: selected
+                                    ? AppTheme.accentPurple.withValues(alpha: 0.08)
+                                    : Colors.black.withValues(alpha: 0.03),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: selected ? AppTheme.accentPurple : Colors.black.withValues(alpha: 0.08),
@@ -149,11 +195,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                 ),
                               ),
                               child: Center(
-                                child: Text(type,
-                                    style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 13,
-                                        fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                                        color: selected ? AppTheme.accentPurple : AppTheme.textSecondary)),
+                                child: Text(
+                                  type,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                                    color: selected ? AppTheme.accentPurple : AppTheme.textSecondary,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -190,6 +239,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               ),
 
               const SizedBox(height: 20),
+
+              // TOURNAMENT DATES WITH CUSTOM ANIMATED DATE PICKER
               CardEntranceAnimation(
                 index: 4,
                 child: Column(
@@ -199,69 +250,33 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
+                        // Start Date Field
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context, initialDate: DateTime.now(),
-                                firstDate: DateTime.now(), lastDate: DateTime(2027),
-                                builder: (ctx, child) => Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: const ColorScheme.light(
-                                      primary: AppTheme.accentPurple,
-                                      onPrimary: Colors.white,
-                                      onSurface: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  child: child!,
-                                ),
-                              );
-                              if (picked != null) _startCtrl.text = '${picked.day}-${picked.month}-${picked.year}';
-                            },
-                            child: AbsOrbPointer(
-                              child: TextFormField(
-                                controller: _startCtrl,
-                                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
-                                decoration: const InputDecoration(
-                                  hintText: 'Start Date',
-                                  prefixIcon: Icon(Icons.play_arrow_rounded, color: AppTheme.textMuted, size: 18),
-                                ),
-                                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                              ),
+                          child: TextFormField(
+                            controller: _startCtrl,
+                            readOnly: true,
+                            onTap: () => _selectDate(_startCtrl, isStart: true),
+                            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+                            decoration: const InputDecoration(
+                              hintText: 'Start Date',
+                              prefixIcon: Icon(Icons.calendar_today_rounded, color: AppTheme.primaryBlue, size: 18),
                             ),
+                            validator: (v) => _startCtrl.text.isEmpty ? 'Required' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // End Date Field
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context, initialDate: DateTime.now().add(const Duration(days: 30)),
-                                firstDate: DateTime.now(), lastDate: DateTime(2027),
-                                builder: (ctx, child) => Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: const ColorScheme.light(
-                                      primary: AppTheme.accentPurple,
-                                      onPrimary: Colors.white,
-                                      onSurface: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                  child: child!,
-                                ),
-                              );
-                              if (picked != null) _endCtrl.text = '${picked.day}-${picked.month}-${picked.year}';
-                            },
-                            child: AbsOrbPointer(
-                              child: TextFormField(
-                                controller: _endCtrl,
-                                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
-                                decoration: const InputDecoration(
-                                  hintText: 'End Date',
-                                  prefixIcon: Icon(Icons.stop_rounded, color: AppTheme.textMuted, size: 18),
-                                ),
-                                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                              ),
+                          child: TextFormField(
+                            controller: _endCtrl,
+                            readOnly: true,
+                            onTap: () => _selectDate(_endCtrl, isStart: false),
+                            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+                            decoration: const InputDecoration(
+                              hintText: 'End Date',
+                              prefixIcon: Icon(Icons.event_available_rounded, color: AppTheme.primaryBlue, size: 18),
                             ),
+                            validator: (v) => _endCtrl.text.isEmpty ? 'Required' : null,
                           ),
                         ),
                       ],
@@ -312,12 +327,25 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                               CircleAvatar(
                                 radius: 18,
                                 backgroundColor: color.withValues(alpha: 0.12),
-                                child: Text(team.shortName.substring(0, 2),
-                                    style: GoogleFonts.plusJakartaSans(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  team.shortName.length >= 2 ? team.shortName.substring(0, 2) : team.shortName,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: color,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Text(team.name, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  team.name,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               if (selected) Icon(Icons.check_circle_rounded, color: color, size: 18),
                             ],
@@ -337,6 +365,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () {
+                      if (_startCtrl.text.isEmpty || _endCtrl.text.isEmpty) {
+                        CustomNotification.show(
+                          context,
+                          'Please select both Start Date and End Date!',
+                          type: NotificationType.warning,
+                        );
+                        return;
+                      }
                       if (!_formKey.currentState!.validate()) return;
                       if (_selectedTeams.isEmpty) {
                         CustomNotification.show(
@@ -408,9 +444,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 }
 
-class AbsOrbPointer extends StatelessWidget {
+// Wrapper to pass taps through disabled input fields
+class PointerInterceptor extends StatelessWidget {
   final Widget child;
-  const AbsOrbPointer({super.key, required this.child});
+  const PointerInterceptor({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -424,7 +461,14 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1.2));
+    return Text(
+      text,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textSecondary,
+        letterSpacing: 1.2,
+      ),
+    );
   }
 }

@@ -389,3 +389,44 @@ export async function broadcastNotificationEndpoint(req: any, res: Response) {
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
+
+export async function logout(req: any, res: Response) {
+  try {
+    let user = req.user;
+
+    if (!user && req.headers?.authorization) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        if (token) {
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          user = {
+            id: decoded.id,
+            email: decoded.email,
+            role: decoded.role,
+          };
+        }
+      } catch (_) {}
+    }
+
+    const { name, email, role } = req.body || {};
+
+    const displayName = user?.name || name || user?.email?.split('@')[0] || (email ? email.split('@')[0] : 'A user');
+    const userEmail = user?.email || email || '';
+    const userRole = user?.role || role || 'User';
+
+    const identifierText = userEmail ? `${displayName} (${userEmail})` : `${displayName} (${userRole})`;
+
+    broadcastNotification({
+      title: 'User Signed Out',
+      message: `${identifierText} has signed out of CricketVerse.`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(200).json({ message: 'Successfully logged out.' });
+  } catch (err) {
+    console.error('Logout controller error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+

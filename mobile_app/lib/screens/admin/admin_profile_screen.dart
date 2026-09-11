@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
+import '../../core/widgets/custom_notification.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -316,8 +317,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 onPressed: () async {
                   final confirm = await LogoutDialog.show(context);
                   if (confirm == true && context.mounted) {
-                    Provider.of<StorageService>(context, listen: false).logout();
-                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (r) => false);
+                    await Provider.of<StorageService>(context, listen: false).logout();
+                    if (context.mounted) {
+                      CustomNotification.show(context, 'Successfully logged out!', type: NotificationType.success);
+                      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.auth, (r) => false);
+                    }
                   }
                 },
                 icon: const Icon(Icons.logout_rounded),
