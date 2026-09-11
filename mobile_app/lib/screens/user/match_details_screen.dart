@@ -20,7 +20,7 @@ class MatchDetailsScreen extends StatefulWidget {
   State<MatchDetailsScreen> createState() => _MatchDetailsScreenState();
 }
 
-class _MatchDetailsScreenState extends State<MatchDetailsScreen> with SingleTickerProviderStateMixin {
+class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _livePulseController;
   late Animation<double> _livePulseAnimation;
