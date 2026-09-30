@@ -1,15 +1,22 @@
 import { Router } from 'express';
-import { getMatches, getMatchById, scheduleMatch, updateMatch, adminActivateMatch, resetMatch, getMatchPrediction, deleteMatch } from '../controllers/matchController';
+import {
+  getMatches,
+  getMatchById,
+  scheduleMatch,
+  updateMatch,
+  adminActivateMatch,
+  resetMatch,
+  deleteMatch,
+  getMatchPrediction
+} from '../controllers/matchController';
 import { authenticateJWT, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Public routes
 router.get('/', getMatches);
 router.get('/:id', getMatchById);
 router.get('/:id/prediction', getMatchPrediction);
 
-// Admin-only write routes
 router.post('/', authenticateJWT, requireRole(['Admin']), scheduleMatch);
 router.put('/:id', authenticateJWT, requireRole(['Admin']), updateMatch);
 router.delete('/:id', authenticateJWT, requireRole(['Admin']), deleteMatch);

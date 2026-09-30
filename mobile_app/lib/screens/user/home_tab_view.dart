@@ -7,6 +7,8 @@ import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../models/models.dart';
 import '../../services/storage_service.dart';
+import '../../core/widgets/network_status_bar.dart';
+import '../../services/network_connectivity_service.dart';
 
 class HomeTabView extends StatefulWidget {
   const HomeTabView({super.key});
@@ -28,6 +30,10 @@ class _HomeTabViewState extends State<HomeTabView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          NetworkStatusBar(
+            pendingCount: storage.pendingScoreCount,
+            onRetry: () => NetworkConnectivityService().checkConnectivity(),
+          ),
           // 1. Welcome Header
           _buildHeaderSection(storage),
           const SizedBox(height: 18),

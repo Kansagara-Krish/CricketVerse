@@ -9,6 +9,8 @@ import '../../services/elevenlabs_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../core/widgets/network_status_bar.dart';
+import '../../services/network_connectivity_service.dart';
 
 
 
@@ -341,6 +343,10 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
       ),
       body: Column(
         children: [
+          NetworkStatusBar(
+            pendingCount: storage.pendingScoreCount,
+            onRetry: () => NetworkConnectivityService().checkConnectivity(),
+          ),
           // Hero Live Match Banner matching Reference Image
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1235,67 +1241,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  BarChartGroupData _makeBarGroup(int x, double y, {bool isWicket = false}) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: isWicket ? AppTheme.accentRed : AppTheme.primaryBlue,
-          width: 14,
-          borderRadius: BorderRadius.circular(4),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompactBatterRow(BuildContext context, Player player, {required bool isStriker, required String sr}) {
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.userPlayerDetails, arguments: player),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: Row(
-                children: [
-                  if (isStriker)
-                    Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      width: 5,
-                      height: 5,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      '${player.name}${isStriker ? "*" : ""}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: isStriker ? FontWeight.bold : FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(flex: 1, child: Text('${player.runsScored}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue))),
-            Expanded(flex: 1, child: Text('${player.ballsFaced}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
-            Expanded(flex: 1, child: Text('4', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
-            Expanded(flex: 1, child: Text('2', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary))),
-            Expanded(flex: 2, child: Text(sr, textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary))),
-          ],
-        ),
       ),
     );
   }

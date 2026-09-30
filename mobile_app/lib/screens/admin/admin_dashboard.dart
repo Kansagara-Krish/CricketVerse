@@ -13,6 +13,8 @@ import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/custom_drawer.dart';
+import '../../core/widgets/network_status_bar.dart';
+import '../../services/network_connectivity_service.dart';
 import '../../models/models.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -333,7 +335,16 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
               const SizedBox(width: 4),
             ],
           ),
-          body: _views[_currentIndex],
+          body: Column(
+            children: [
+              NetworkStatusBar(
+                onRetry: () => NetworkConnectivityService().checkConnectivity(),
+              ),
+              Expanded(
+                child: _views[_currentIndex],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -14,6 +14,8 @@ import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../services/socket_service.dart';
 import '../../core/widgets/custom_drawer.dart';
+import '../../core/widgets/network_status_bar.dart';
+import '../../services/network_connectivity_service.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({super.key});
@@ -353,11 +355,21 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                               ),
                             ],
                           ),
-                          body: _currentViewIndex == 1
-                              ? _buildProfileView()
-                              : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
-                                  ? _buildSetupView(match, storage)
-                                  : _buildScoringView(match, storage)),
+                          body: Column(
+                            children: [
+                              NetworkStatusBar(
+                                pendingCount: storage.pendingScoreCount,
+                                onRetry: () => NetworkConnectivityService().checkConnectivity(),
+                              ),
+                              Expanded(
+                                child: _currentViewIndex == 1
+                                    ? _buildProfileView()
+                                    : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
+                                        ? _buildSetupView(match, storage)
+                                        : _buildScoringView(match, storage)),
+                              ),
+                            ],
+                          ),
                         ),
                 );
               },
@@ -397,30 +409,37 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           ),
         ],
       ),
-      body: assignedMatches.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.sports_cricket_rounded, size: 48, color: AppTheme.textMuted),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Matches Assigned to You',
-                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Contact administrator to get scoring matches.',
-                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: assignedMatches.length,
-              itemBuilder: (context, i) {
-                final match = assignedMatches[i];
+      body: Column(
+        children: [
+          NetworkStatusBar(
+            pendingCount: storage.pendingScoreCount,
+            onRetry: () => NetworkConnectivityService().checkConnectivity(),
+          ),
+          Expanded(
+            child: assignedMatches.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.sports_cricket_rounded, size: 48, color: AppTheme.textMuted),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Matches Assigned to You',
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Contact administrator to get scoring matches.',
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: assignedMatches.length,
+                    itemBuilder: (context, i) {
+                      final match = assignedMatches[i];
                 final statusColor = AppTheme.statusColor(match.status);
                 
                 return CardEntranceAnimation(
@@ -545,6 +564,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -22,6 +22,8 @@ class RegisterResponse {
 }
 
 class ApiService {
+  static const Duration defaultTimeout = Duration(seconds: 8);
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:3000/api/v1';
@@ -611,6 +613,165 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('ApiService endMatchForce error: $e');
+      return null;
+    }
+  }
+
+  // --- Tournaments API ---
+  static Future<List<Tournament>> getTournaments() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/tournaments'), headers: _headers);
+      if (res.statusCode == 200) {
+        final List decoded = jsonDecode(res.body);
+        return decoded.map((item) => Tournament.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('ApiService getTournaments error: $e');
+      return [];
+    }
+  }
+
+  static Future<Tournament?> getTournamentById(String id) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers);
+      if (res.statusCode == 200) {
+        return Tournament.fromJson(jsonDecode(res.body));
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getTournamentById error: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> createTournament(Tournament tournament) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/tournaments'),
+        headers: _headers,
+        body: jsonEncode(tournament.toJson()),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      debugPrint('ApiService createTournament error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> updateTournament(Tournament tournament) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/tournaments/${tournament.id}'),
+        headers: _headers,
+        body: jsonEncode(tournament.toJson()),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService updateTournament error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> deleteTournament(String id) async {
+    try {
+      final res = await http.delete(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers);
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService deleteTournament error: $e');
+      return false;
+    }
+  }
+
+  // --- Prediction API ---
+  static Future<Map<String, dynamic>?> getMatchPrediction(String matchId) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/matches/$matchId/prediction'), headers: _headers);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getMatchPrediction error: $e');
+      return null;
+    }
+  }
+
+  // --- Notifications API ---
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: _headers);
+      if (res.statusCode == 200) {
+        final List decoded = jsonDecode(res.body);
+        return decoded.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('ApiService getNotifications error: $e');
+      return [];
+    }
+  }
+
+  static Future<bool> createNotification(String title, String message, {String? category}) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/notifications'),
+        headers: _headers,
+        body: jsonEncode({
+          'title': title,
+          'message': message,
+          if (category != null) 'category': category,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      debugPrint('ApiService createNotification error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> markNotificationRead(String notifId) async {
+    try {
+      final res = await http.put(Uri.parse('$baseUrl/notifications/$notifId/read'), headers: _headers);
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService markNotificationRead error: $e');
+      return false;
+    }
+  }
+
+  // --- Analytics API ---
+  static Future<Map<String, dynamic>?> getSystemAnalytics() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/analytics/stats'), headers: _headers);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getSystemAnalytics error: $e');
+      return null;
+    }
+  }
+
+  // --- Voice / TTS API ---
+  static Future<String?> generateCommentaryVoice(String text, {String? voiceId}) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ai/voice'),
+        headers: _headers,
+        body: jsonEncode({
+          'text': text,
+          if (voiceId != null) 'voiceId': voiceId,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['audioBase64'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService generateCommentaryVoice error: $e');
       return null;
     }
   }

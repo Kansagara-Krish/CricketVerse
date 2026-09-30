@@ -10,6 +10,10 @@ import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';
 import matchRoutes from './routes/matchRoutes';
 import scoringRoutes from './routes/scoringRoutes';
+import tournamentRoutes from './routes/tournamentRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import aiRoutes from './routes/aiRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 dotenv.config();
 
@@ -18,42 +22,68 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Enable CORS
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));
+app.use(
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  })
+);
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Routes
+// Base API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/matches', matchRoutes);
 app.use('/api/v1/scoring', scoringRoutes);
+app.use('/api/v1/tournaments', tournamentRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date() });
+  res.status(200).json({
+    status: 'OK',
+    database: 'MongoDB Atlas',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// Basic error handler
+// Centralized error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error occurred:', err);
-  res.status(500).json({ error: 'Something went wrong on the server.' });
+  console.error('Unhandled server error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Something went wrong on the server.',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler for unknown endpoints
+app.use('*', (req, res) => {
+  res.status(404).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
 });
 
 // Start servers
 async function startServer() {
-  // Initialize Database
-  await initDatabase();
-  
-  // Initialize Socket.IO
-  initSocketIO(server);
+  try {
+    // Initialize MongoDB Atlas connection & seeding
+    await initDatabase();
 
-  server.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
-  });
+    // Initialize Socket.IO
+    initSocketIO(server);
+
+    server.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`🚀 CricketVerse Backend running on http://0.0.0.0:${PORT}`);
+      console.log(`📡 Socket.IO initialized and listening for real-time events.`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 }
 
 startServer();

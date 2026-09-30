@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import 'api_service.dart';
 import 'socket_service.dart';
@@ -10,6 +9,7 @@ import 'auth_storage_service.dart';
 import 'notification_cache_service.dart';
 import 'ai_commentary_generator.dart';
 import 'elevenlabs_service.dart';
+import 'network_connectivity_service.dart';
 
 class StorageService with ChangeNotifier {
   SharedPreferences? _prefs;
@@ -25,6 +25,10 @@ class StorageService with ChangeNotifier {
   bool _isOnlineMode = false;
   String? _currentUserName;
   String? _offlineOtp;
+
+  // Offline scoring queue for resilient manager sync
+  final List<Map<String, dynamic>> _pendingScoreQueue = [];
+  int get pendingScoreCount => _pendingScoreQueue.length;
 
   List<Team> get teams => _teams;
   List<CricketMatch> get matches => _matches;
@@ -48,22 +52,72 @@ class StorageService with ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     await ApiService.init();
 
-    // Health check check to auto detect server online
-    try {
-      final res = await http.get(Uri.parse('${ApiService.baseUrl}/health')).timeout(const Duration(seconds: 2));
-      if (res.statusCode == 200) {
-        _isOnlineMode = true;
-        debugPrint('Backend server detected. Running in ONLINE mode.');
-      } else {
-        _isOnlineMode = false;
-        debugPrint('Backend server health check failed. Running in OFFLINE mode.');
+    // Initialize proactive network connectivity monitoring
+    final netService = NetworkConnectivityService();
+    netService.initialize();
+
+    netService.statusNotifier.addListener(() {
+      final isOnline = netService.status == NetworkStatus.online;
+      if (isOnline != _isOnlineMode) {
+        _isOnlineMode = isOnline;
+        if (isOnline) {
+          loadData();
+          flushPendingScores();
+          if (_activeScorerMatchId != null) {
+            subscribeToMatchLiveUpdates(_activeScorerMatchId!);
+          }
+        }
+        notifyListeners();
       }
-    } catch (_) {
-      _isOnlineMode = false;
-      debugPrint('Backend server unreachable. Running in OFFLINE mode.');
-    }
+    });
+
+    netService.addConnectionRestoredListener(() async {
+      _isOnlineMode = true;
+      await loadData();
+      await flushPendingScores();
+      if (_activeScorerMatchId != null) {
+        subscribeToMatchLiveUpdates(_activeScorerMatchId!);
+      }
+      notifyListeners();
+    });
+
+    // Initial online status probe
+    final initialStatus = await netService.checkConnectivity();
+    _isOnlineMode = initialStatus == NetworkStatus.online;
 
     await loadData();
+  }
+
+  Future<void> flushPendingScores() async {
+    if (_pendingScoreQueue.isEmpty || !_isOnlineMode) return;
+    debugPrint('Flushing ${_pendingScoreQueue.length} offline pending score actions to backend...');
+    
+    final toProcess = List<Map<String, dynamic>>.from(_pendingScoreQueue);
+    _pendingScoreQueue.clear();
+
+    for (final item in toProcess) {
+      try {
+        final updated = await ApiService.updateScore(
+          matchId: item['matchId'],
+          runs: item['runs'],
+          extraType: item['extraType'],
+          extraRuns: item['extraRuns'],
+          isWicket: item['isWicket'],
+          wicketType: item['wicketType'],
+          dismissedPlayerId: item['dismissedPlayerId'],
+          newBatsmanId: item['newBatsmanId'],
+          newBatsmanPosition: item['newBatsmanPosition'],
+        );
+        if (updated != null) {
+          final idx = _matches.indexWhere((m) => m.id == item['matchId']);
+          if (idx != -1) _matches[idx] = updated;
+        }
+      } catch (e) {
+        debugPrint('Failed to sync queued ball action: $e');
+        _pendingScoreQueue.add(item); // Re-queue if failed
+      }
+    }
+    notifyListeners();
   }
 
   Future<void> toggleOnlineMode(bool val) async {
@@ -95,6 +149,9 @@ class StorageService with ChangeNotifier {
         
         final remoteMatches = await ApiService.getMatches();
         _matches = remoteMatches;
+
+        final remoteTournaments = await ApiService.getTournaments();
+        _tournaments = remoteTournaments;
         
         for (var t in _teams) {
           _ensureTeamHasPlayers(t);
@@ -241,24 +298,40 @@ class StorageService with ChangeNotifier {
     _saveTournaments();
   }
 
-  void addTournament(Tournament tournament) {
+  Future<void> addTournament(Tournament tournament) async {
     _tournaments.add(tournament);
-    _saveTournaments();
+    if (_isOnlineMode) {
+      await ApiService.createTournament(tournament);
+      final refreshed = await ApiService.getTournaments();
+      if (refreshed.isNotEmpty) {
+        _tournaments = refreshed;
+      }
+    } else {
+      _saveTournaments();
+    }
     notifyListeners();
   }
 
-  void updateTournament(Tournament updated) {
+  Future<void> updateTournament(Tournament updated) async {
     final idx = _tournaments.indexWhere((t) => t.id == updated.id);
     if (idx != -1) {
       _tournaments[idx] = updated;
-      _saveTournaments();
+      if (_isOnlineMode) {
+        await ApiService.updateTournament(updated);
+      } else {
+        _saveTournaments();
+      }
       notifyListeners();
     }
   }
 
-  void deleteTournament(String id) {
+  Future<void> deleteTournament(String id) async {
     _tournaments.removeWhere((t) => t.id == id);
-    _saveTournaments();
+    if (_isOnlineMode) {
+      await ApiService.deleteTournament(id);
+    } else {
+      _saveTournaments();
+    }
     notifyListeners();
   }
 
@@ -843,26 +916,43 @@ class StorageService with ChangeNotifier {
     if (_activeScorerMatchId == null) return;
 
     if (_isOnlineMode) {
-      final updated = await ApiService.updateScore(
-        matchId: _activeScorerMatchId!,
-        runs: runs,
-        extraType: extraType,
-        extraRuns: extraRuns,
-        isWicket: isWicket,
-        wicketType: wicketType,
-        dismissedPlayerId: dismissedPlayerId,
-        newBatsmanId: newBatsmanId,
-        newBatsmanPosition: newBatsmanPosition,
-      );
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
+      try {
+        final updated = await ApiService.updateScore(
+          matchId: _activeScorerMatchId!,
+          runs: runs,
+          extraType: extraType,
+          extraRuns: extraRuns,
+          isWicket: isWicket,
+          wicketType: wicketType,
+          dismissedPlayerId: dismissedPlayerId,
+          newBatsmanId: newBatsmanId,
+          newBatsmanPosition: newBatsmanPosition,
+        );
+        if (updated != null) {
+          final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+          if (idx != -1) _matches[idx] = updated;
+          notifyListeners();
+          return;
+        }
+      } catch (e) {
+        debugPrint('Online scoring error, falling back to local queue: $e');
       }
-      return;
+
+      // Queue action for automatic sync when network recovers
+      _pendingScoreQueue.add({
+        'matchId': _activeScorerMatchId!,
+        'runs': runs,
+        'extraType': extraType,
+        'extraRuns': extraRuns,
+        'isWicket': isWicket,
+        'wicketType': wicketType,
+        'dismissedPlayerId': dismissedPlayerId,
+        'newBatsmanId': newBatsmanId,
+        'newBatsmanPosition': newBatsmanPosition,
+      });
     }
 
-    // --- Offline ---
+    // --- Offline / Optimistic Update ---
     final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
 
     final String currentStrikerIdBefore = match.currentStrikerId;
@@ -1165,20 +1255,6 @@ class StorageService with ChangeNotifier {
     }
 
     return prob.clamp(1.0, 99.0);
-  }
-
-  String _generateAICommentary(String batsman, String bowler, int runs, String extraType, bool isWicket, String wicketType) {
-    return AiCommentaryGenerator.generate(
-      AiCommentaryContext(
-        batsman: batsman,
-        bowler: bowler,
-        runs: runs,
-        extraType: extraType,
-        isWicket: isWicket,
-        wicketType: wicketType,
-        style: ElevenLabsService().settings.commentaryStyle,
-      ),
-    );
   }
 
   void resetMatchToZero(String matchId) async {
