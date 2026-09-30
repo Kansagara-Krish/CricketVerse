@@ -8,6 +8,8 @@ import 'api_service.dart';
 import 'socket_service.dart';
 import 'auth_storage_service.dart';
 import 'notification_cache_service.dart';
+import 'ai_commentary_generator.dart';
+import 'elevenlabs_service.dart';
 
 class StorageService with ChangeNotifier {
   SharedPreferences? _prefs;
@@ -915,7 +917,38 @@ class StorageService with ChangeNotifier {
       bowler.oversBowled = _incrementOvers(bowler.oversBowled, 1);
     }
 
-    String commentary = _generateAICommentary(striker.name, bowler.name, runs, extraType, isWicket, wicketType);
+    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+    final totalRuns = match.isFirstInnings ? match.runsA : match.runsB;
+    final totalWickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
+
+    String commentary = AiCommentaryGenerator.generate(
+      AiCommentaryContext(
+        batsman: striker.name,
+        bowler: bowler.name,
+        runs: runs,
+        extraType: extraType,
+        extraRuns: extraRuns,
+        isWicket: isWicket,
+        wicketType: wicketType,
+        currentOvers: currentOvers,
+        totalRuns: totalRuns,
+        totalWickets: totalWickets,
+        target: match.target > 0 ? match.target : null,
+        style: ElevenLabsService().settings.commentaryStyle,
+      ),
+    );
+
+    // Auto-play voice commentary if enabled in ElevenLabs settings
+    final elevenSettings = ElevenLabsService().settings;
+    if (elevenSettings.autoPlayVoice) {
+      final trigger = elevenSettings.commentaryTrigger;
+      bool shouldSpeak = (trigger == 'Every Ball') ||
+          (trigger == 'Boundaries & Wickets' && (runs >= 4 || isWicket)) ||
+          (trigger == 'Over Finish' && currentOvers.toString().endsWith('.0'));
+      if (shouldSpeak) {
+        ElevenLabsService().speakCommentary(commentary);
+      }
+    }
 
     final newBall = BallRecord(
       run: runs,
@@ -1135,56 +1168,17 @@ class StorageService with ChangeNotifier {
   }
 
   String _generateAICommentary(String batsman, String bowler, int runs, String extraType, bool isWicket, String wicketType) {
-    final random = Random();
-    
-    if (isWicket) {
-      final wicketTpls = [
-        "OUT! $bowler strikes! $batsman tries to smash it but is clean bowled! Brilliant delivery!",
-        "CAUGHT! In the air... and taken! $batsman goes for the big one off $bowler, but finds the fielder at deep midwicket.",
-        "LBW! Huge shout from $bowler, and the finger goes up! $batsman is trapped right in front of the stumps.",
-        "RUN OUT! Sensational fielding! Direct hit from point and $batsman is yards short of the crease!",
-      ];
-      return wicketTpls[random.nextInt(wicketTpls.length)];
-    }
-
-    if (extraType == 'Wide') {
-      return "Wide ball! $bowler strays down the leg side, $batsman lets it go. Extra run to the total.";
-    }
-    if (extraType == 'No Ball') {
-      return "No Ball! $bowler oversteps the crease. That's an extra run and a Free Hit for $batsman!";
-    }
-
-    if (runs == 6) {
-      final sixTpls = [
-        "SIX! $batsman steps out and launches $bowler high over long-on! That has gone miles!",
-        "MAXIMUM! Incredilby struck by $batsman! Picked up off the pads and dispatched into the crowd!",
-        "SIX MORE! $batsman displays pure class, a sweet pull shot that sails comfortably over deep square leg.",
-      ];
-      return sixTpls[random.nextInt(sixTpls.length)];
-    }
-    if (runs == 4) {
-      final fourTpls = [
-        "FOUR! Beautiful shot by $batsman. Edges past slip and races away to the third man boundary.",
-        "CRACKING BOUNDARY! $batsman stands tall and drives $bowler through extra cover for four.",
-        "FOUR RUNS! Short and wide from $bowler, cut away elegantly by $batsman to the fence.",
-      ];
-      return fourTpls[random.nextInt(fourTpls.length)];
-    }
-    if (runs == 0) {
-      final dotTpls = [
-        "No run. Good length delivery from $bowler, played defensively back to the bowler.",
-        "Dot ball. $batsman swings and misses a slower delivery from $bowler.",
-        "Well bowled! $bowler beats $batsman outside the off stump with a beautiful outswinger.",
-      ];
-      return dotTpls[random.nextInt(dotTpls.length)];
-    }
-
-    final runTpls = [
-      "Just a single. $batsman drives it down to long-off to rotate the strike.",
-      "Tucked away off the hips by $batsman, they scamper back for a quick couple of runs.",
-      "Placed softly into the gap at cover by $batsman, allowing a quick single.",
-    ];
-    return runTpls[random.nextInt(runTpls.length)];
+    return AiCommentaryGenerator.generate(
+      AiCommentaryContext(
+        batsman: batsman,
+        bowler: bowler,
+        runs: runs,
+        extraType: extraType,
+        isWicket: isWicket,
+        wicketType: wicketType,
+        style: ElevenLabsService().settings.commentaryStyle,
+      ),
+    );
   }
 
   void resetMatchToZero(String matchId) async {

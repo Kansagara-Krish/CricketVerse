@@ -8,6 +8,7 @@ import 'services/api_service.dart';
 import 'services/notification_cache_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
+import 'services/elevenlabs_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
 import 'core/widgets/app_notification.dart' hide NotificationService;
@@ -21,10 +22,11 @@ void main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  // Initialize Auth storage, Hive CE notification cache, and FCM push notifications
+  // Initialize Auth storage, Hive CE notification cache, FCM push notifications, and ElevenLabs TTS
   await ApiService.init();
   await NotificationCacheService.init();
   await NotificationService.init();
+  await ElevenLabsService().init();
 
   runApp(
     ChangeNotifierProvider(

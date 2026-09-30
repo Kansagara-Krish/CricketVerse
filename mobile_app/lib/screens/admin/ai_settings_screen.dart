@@ -1,10 +1,11 @@
 // lib/screens/admin/ai_settings_screen.dart
-// AI feature configuration settings
+// AI & ElevenLabs Voice configuration settings
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
+import '../../services/elevenlabs_service.dart';
 
 class AiSettingsScreen extends StatefulWidget {
   const AiSettingsScreen({super.key});
@@ -14,14 +15,169 @@ class AiSettingsScreen extends StatefulWidget {
 }
 
 class _AiSettingsScreenState extends State<AiSettingsScreen> {
+  final ElevenLabsService _elevenLabsService = ElevenLabsService();
+
+  late TextEditingController _apiKeyController;
+  late TextEditingController _customVoiceIdController;
+
+  bool _obscureApiKey = true;
+  bool _isTestingConnection = false;
+  String? _connectionStatusMessage;
+  bool? _isConnectionValid;
+
+  bool _isTestingVoice = false;
+
+  // Commentary settings
   bool _aiCommentary = true;
-  bool _autoGenerate = false;
+  bool _autoPlayVoice = false;
+  String _selectedVoiceId = 'JBFqnCBsd6RMkjVDRZzb';
+  String _selectedModel = 'eleven_turbo_v2_5';
+  String _commentaryStyle = 'Hype / Energetic';
+  String _commentaryTrigger = 'Every Ball';
+
+  double _stability = 0.50;
+  double _similarityBoost = 0.80;
+  double _styleExaggeration = 0.35;
+  bool _useSpeakerBoost = true;
+
+  // Prediction engine settings
   bool _winPrediction = true;
   bool _smartAlerts = true;
-  bool _playerInsights = false;
-  double _commentaryFrequency = 3.0;
-  String _commentaryStyle = 'Professional';
+  bool _playerInsights = true;
   String _predictionModel = 'Advanced ML';
+
+  @override
+  void initState() {
+    super.initState();
+    final s = _elevenLabsService.settings;
+    _apiKeyController = TextEditingController(text: s.apiKey);
+    _customVoiceIdController = TextEditingController(text: s.voiceId);
+
+    _autoPlayVoice = s.autoPlayVoice;
+    _selectedVoiceId = s.voiceId;
+    _selectedModel = s.modelId;
+    _commentaryStyle = s.commentaryStyle;
+    _commentaryTrigger = s.commentaryTrigger;
+    _stability = s.stability;
+    _similarityBoost = s.similarityBoost;
+    _styleExaggeration = s.style;
+    _useSpeakerBoost = s.useSpeakerBoost;
+  }
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _customVoiceIdController.dispose();
+    _elevenLabsService.stopAudio();
+    super.dispose();
+  }
+
+  Future<void> _saveAllSettings() async {
+    final s = _elevenLabsService.settings;
+    s.apiKey = _apiKeyController.text.trim();
+    s.voiceId = _selectedVoiceId == 'CUSTOM'
+        ? _customVoiceIdController.text.trim()
+        : _selectedVoiceId;
+    
+    // Find voice name
+    final matchedPreset = ElevenLabsService.defaultVoices.where((v) => v.id == s.voiceId);
+    s.voiceName = matchedPreset.isNotEmpty ? matchedPreset.first.name : 'Custom Voice';
+
+    s.modelId = _selectedModel;
+    s.stability = _stability;
+    s.similarityBoost = _similarityBoost;
+    s.style = _styleExaggeration;
+    s.useSpeakerBoost = _useSpeakerBoost;
+    s.autoPlayVoice = _autoPlayVoice;
+    s.commentaryStyle = _commentaryStyle;
+    s.commentaryTrigger = _commentaryTrigger;
+
+    final ok = await _elevenLabsService.saveSettings(s);
+    if (!mounted) return;
+
+    if (ok) {
+      CustomNotification.show(
+        context,
+        'ElevenLabs & AI Settings saved successfully! 🎙️',
+        type: NotificationType.success,
+      );
+    } else {
+      CustomNotification.show(
+        context,
+        'Failed to save settings.',
+        type: NotificationType.error,
+      );
+    }
+  }
+
+  Future<void> _testElevenLabsKey() async {
+    final key = _apiKeyController.text.trim();
+    if (key.isEmpty) {
+      setState(() {
+        _isConnectionValid = false;
+        _connectionStatusMessage = 'Please enter an ElevenLabs API Key to test.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isTestingConnection = true;
+      _connectionStatusMessage = null;
+    });
+
+    final res = await _elevenLabsService.testConnection(key);
+
+    if (!mounted) return;
+    setState(() {
+      _isTestingConnection = false;
+      _isConnectionValid = res['success'] == true;
+      _connectionStatusMessage = res['message'] ?? '';
+    });
+  }
+
+  Future<void> _testVoicePlayback() async {
+    if (_isTestingVoice) {
+      await _elevenLabsService.stopAudio();
+      setState(() => _isTestingVoice = false);
+      return;
+    }
+
+    setState(() => _isTestingVoice = true);
+
+    // Temporarily sync active settings for preview
+    final s = _elevenLabsService.settings;
+    s.apiKey = _apiKeyController.text.trim();
+    s.voiceId = _selectedVoiceId == 'CUSTOM'
+        ? _customVoiceIdController.text.trim()
+        : _selectedVoiceId;
+    s.modelId = _selectedModel;
+    s.stability = _stability;
+    s.similarityBoost = _similarityBoost;
+    s.style = _styleExaggeration;
+    s.useSpeakerBoost = _useSpeakerBoost;
+
+    const sampleText =
+        "SIX! What an extraordinary shot over deep mid-wicket! That has cleared the stadium roof! Welcome to CricketVerse live commentary!";
+
+    CustomNotification.show(
+      context,
+      '🎙️ Speaking with ${s.apiKey.isNotEmpty ? "ElevenLabs AI Voice" : "Device TTS Voice"}...',
+      type: NotificationType.info,
+    );
+
+    await _elevenLabsService.speakCommentary(
+      sampleText,
+      onComplete: () {
+        if (mounted) setState(() => _isTestingVoice = false);
+      },
+      onError: (err) {
+        if (mounted) {
+          setState(() => _isTestingVoice = false);
+          CustomNotification.show(context, 'Voice test error: $err', type: NotificationType.error);
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,153 +185,441 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
-        title: Text('AI Settings', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        elevation: 0,
+        title: Text(
+          'AI & Voice Settings',
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         actions: [
-          TextButton(
-            onPressed: () {
-              CustomNotification.show(
-                context,
-                'AI Settings saved successfully!',
-                type: NotificationType.success,
-              );
-            },
-            child: Text('Save', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
+          TextButton.icon(
+            onPressed: _saveAllSettings,
+            icon: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryBlue, size: 18),
+            label: Text(
+              'Save',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.primaryBlue,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // AI Branding Banner
+            // AI Header Banner
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                gradient: AppTheme.purpleGradient,
-                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  )
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 36),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 30),
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CricketVerse AI Engine', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Configure AI features for your app', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white)),
+                        Text(
+                          'ElevenLabs AI Voice Commentary',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Broadcast-quality voice narration & smart match intelligence',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text('v1.0', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white)),
+                    child: Text('v2.5 Pro',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            const _SectionLabel('COMMENTARY'),
+            // Section 1: ELEVENLABS CREDENTIALS & VOICE
+            const _SectionLabel('ELEVENLABS API & VOICE ENGINE'),
             const SizedBox(height: 12),
-            _SwitchTile(Icons.record_voice_over_rounded, 'AI Commentary', 'Generate intelligent ball-by-ball commentary', _aiCommentary,
-                (v) => setState(() => _aiCommentary = v), AppTheme.primaryBlue),
-            _SwitchTile(Icons.play_circle_outlined, 'Auto-Generate', 'Automatically add commentary on each ball', _autoGenerate,
-                (v) => setState(() => _autoGenerate = v), AppTheme.primaryGreen),
 
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+            // API Key Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.bgMedium,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Commentary Frequency', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary)),
-                      Text('${_commentaryFrequency.toInt()}s', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold)),
+                      const Icon(Icons.key_rounded, color: AppTheme.accentGold, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'ElevenLabs API Key',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isTestingConnection)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentGold),
+                        ),
                     ],
                   ),
-                  Slider(
-                    value: _commentaryFrequency,
-                    min: 1, max: 10,
-                    divisions: 9,
-                    activeColor: AppTheme.primaryBlue,
-                    inactiveColor: Colors.white.withValues(alpha: 0.1),
-                    onChanged: (v) => setState(() => _commentaryFrequency = v),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Get your key at beta.elevenlabs.io under Profile Settings.',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
                   ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _apiKeyController,
+                    obscureText: _obscureApiKey,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. sk_1234567890abcdef...',
+                      hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.black.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                      ),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              _obscureApiKey ? Icons.visibility_off : Icons.visibility,
+                              color: AppTheme.textMuted,
+                              size: 18,
+                            ),
+                            onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
+                          ),
+                          TextButton(
+                            onPressed: _isTestingConnection ? null : _testElevenLabsKey,
+                            child: Text(
+                              'Test Key',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppTheme.accentGold,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (_connectionStatusMessage != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isConnectionValid == true
+                            ? AppTheme.primaryGreen.withValues(alpha: 0.15)
+                            : AppTheme.accentRed.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isConnectionValid == true
+                              ? AppTheme.primaryGreen.withValues(alpha: 0.4)
+                              : AppTheme.accentRed.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isConnectionValid == true ? Icons.check_circle : Icons.error_outline,
+                            color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _connectionStatusMessage!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(height: 14),
 
-            const SizedBox(height: 10),
+            // Voice Preset Selector
             _DropdownTile(
-              'Commentary Style',
-              _commentaryStyle,
-              const ['Professional', 'Casual', 'Excited', 'Technical'],
-              (v) => setState(() => _commentaryStyle = v),
+              'Voice Character / Announcer',
+              _selectedVoiceId,
+              [
+                ...ElevenLabsService.defaultVoices.map((v) => DropdownMenuItem(
+                      value: v.id,
+                      child: Text('${v.name} (${v.sampleGender})'),
+                    )),
+                const DropdownMenuItem(value: 'CUSTOM', child: Text('Custom Voice ID...')),
+              ],
+              (val) => setState(() => _selectedVoiceId = val),
             ),
 
-            const SizedBox(height: 24),
-            const _SectionLabel('PREDICTION ENGINE'),
-            const SizedBox(height: 12),
-            _SwitchTile(Icons.auto_awesome, 'Win Probability', 'Show real-time win probability gauge', _winPrediction,
-                (v) => setState(() => _winPrediction = v), AppTheme.accentPurple),
-            _SwitchTile(Icons.notifications_active_outlined, 'Smart Alerts', 'Alert on major probability shifts', _smartAlerts,
-                (v) => setState(() => _smartAlerts = v), AppTheme.accentGold),
-            _SwitchTile(Icons.insights_rounded, 'Player Insights', 'Show individual player contribution scores', _playerInsights,
-                (v) => setState(() => _playerInsights = v), AppTheme.accentOrange),
-
-            const SizedBox(height: 10),
-            _DropdownTile(
-              'Prediction Model',
-              _predictionModel,
-              const ['Simple Average', 'Advanced ML', 'Historical + Live'],
-              (v) => setState(() => _predictionModel = v),
-            ),
-
-            const SizedBox(height: 24),
-            const _SectionLabel('MODEL INFO'),
-            const SizedBox(height: 12),
-            ...[
-              ['Current Run Rate', 'Weight: 25%'],
-              ['Required Run Rate', 'Weight: 20%'],
-              ['Wickets in Hand', 'Weight: 20%'],
-              ['Powerplay Performance', 'Weight: 15%'],
-              ['Head-to-Head', 'Weight: 12%'],
-              ['Pitch & Weather', 'Weight: 8%'],
-            ].map((item) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: AppTheme.glassCardSmall,
-              child: Row(
-                children: [
-                  const Icon(Icons.analytics_outlined, color: AppTheme.accentPurple, size: 16),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(item[0], style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary))),
-                  Text(item[1], style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.accentPurple, fontWeight: FontWeight.w600)),
-                ],
+            if (_selectedVoiceId == 'CUSTOM') ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _customVoiceIdController,
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Custom ElevenLabs Voice ID',
+                  labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
+                  filled: true,
+                  fillColor: AppTheme.bgMedium,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                ),
               ),
-            )),
+            ],
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 10),
+
+            // Model Selection
+            _DropdownTile(
+              'ElevenLabs Model',
+              _selectedModel,
+              ElevenLabsService.availableModels
+                  .map((m) => DropdownMenuItem(
+                        value: m,
+                        child: Text(
+                          m == 'eleven_turbo_v2_5'
+                              ? 'Turbo v2.5 (Fastest & Real-time)'
+                              : m == 'eleven_multilingual_v2'
+                                  ? 'Multilingual v2 (High Quality)'
+                                  : 'Monolingual v1',
+                        ),
+                      ))
+                  .toList(),
+              (val) => setState(() => _selectedModel = val),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Sliders (Stability, Similarity, Style)
+            _SliderCard(
+              label: 'Voice Stability',
+              value: _stability,
+              min: 0.0,
+              max: 1.0,
+              displayFormat: '${(_stability * 100).toInt()}%',
+              subtitle: 'Higher is more consistent; lower is more emotive and dynamic',
+              onChanged: (v) => setState(() => _stability = v),
+            ),
+            const SizedBox(height: 10),
+            _SliderCard(
+              label: 'Clarity / Similarity Boost',
+              value: _similarityBoost,
+              min: 0.0,
+              max: 1.0,
+              displayFormat: '${(_similarityBoost * 100).toInt()}%',
+              subtitle: 'Enhances voice identity adherence and reduces background noise',
+              onChanged: (v) => setState(() => _similarityBoost = v),
+            ),
+            const SizedBox(height: 10),
+            _SliderCard(
+              label: 'Style Exaggeration',
+              value: _styleExaggeration,
+              min: 0.0,
+              max: 1.0,
+              displayFormat: '${(_styleExaggeration * 100).toInt()}%',
+              subtitle: 'Amplifies cricket commentator energy and excitement tone',
+              onChanged: (v) => setState(() => _styleExaggeration = v),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Live Voice Test Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  CustomNotification.show(
-                    context,
-                    'AI Settings saved successfully!',
-                    type: NotificationType.success,
-                  );
-                },
-                icon: const Icon(Icons.save_rounded),
-                label: const Text('Save AI Settings'),
+                onPressed: _testVoicePlayback,
+                icon: Icon(
+                  _isTestingVoice ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  _isTestingVoice ? 'Stop Audio Preview' : 'Test ElevenLabs Voice Live 🎙️',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isTestingVoice ? AppTheme.accentRed : const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Section 2: SMART COMMENTARY ENGINE
+            const _SectionLabel('SMART CRICKET COMMENTARY ENGINE'),
+            const SizedBox(height: 12),
+
+            _SwitchTile(
+              Icons.record_voice_over_rounded,
+              'AI Commentary Engine',
+              'Generate contextual ball-by-ball & over finish commentary',
+              _aiCommentary,
+              (v) => setState(() => _aiCommentary = v),
+              AppTheme.primaryBlue,
+            ),
+
+            _SwitchTile(
+              Icons.volume_up_outlined,
+              'Auto-Play Voice',
+              'Automatically speak each ball commentary via audio',
+              _autoPlayVoice,
+              (v) => setState(() => _autoPlayVoice = v),
+              AppTheme.primaryGreen,
+            ),
+
+            const SizedBox(height: 10),
+
+            _DropdownTile(
+              'Commentary Style',
+              _commentaryStyle,
+              const [
+                DropdownMenuItem(value: 'Hype / Energetic', child: Text('Hype / Energetic (Stadium Announcer)')),
+                DropdownMenuItem(value: 'Professional', child: Text('Professional (Broadcaster Classic)')),
+                DropdownMenuItem(value: 'Technical / Tactical', child: Text('Technical / Tactical (Analysis)')),
+                DropdownMenuItem(value: 'Casual Fan', child: Text('Casual Fan (Relaxed Companion)')),
+              ],
+              (v) => setState(() => _commentaryStyle = v),
+            ),
+
+            const SizedBox(height: 10),
+
+            _DropdownTile(
+              'Voice Narration Trigger',
+              _commentaryTrigger,
+              const [
+                DropdownMenuItem(value: 'Every Ball', child: Text('Every Ball (Full Narration)')),
+                DropdownMenuItem(value: 'Boundaries & Wickets', child: Text('Boundaries & Wickets Only')),
+                DropdownMenuItem(value: 'Over Finish', child: Text('Over Finish & Milestones Only')),
+              ],
+              (v) => setState(() => _commentaryTrigger = v),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Section 3: PREDICTION ENGINE
+            const _SectionLabel('PREDICTION & ANALYTICS ENGINE'),
+            const SizedBox(height: 12),
+
+            _SwitchTile(
+              Icons.auto_awesome,
+              'Live Win Probability',
+              'Compute real-time win probability gauge based on CRR & RRR',
+              _winPrediction,
+              (v) => setState(() => _winPrediction = v),
+              AppTheme.accentPurple,
+            ),
+
+            _SwitchTile(
+              Icons.notifications_active_outlined,
+              'Smart Momentum Alerts',
+              'Alert users on major win probability swings & boundary bursts',
+              _smartAlerts,
+              (v) => setState(() => _smartAlerts = v),
+              AppTheme.accentGold,
+            ),
+
+            _SwitchTile(
+              Icons.insights_rounded,
+              'Player Impact Scores',
+              'Calculate real-time player contribution metrics',
+              _playerInsights,
+              (v) => setState(() => _playerInsights = v),
+              AppTheme.accentOrange,
+            ),
+
+            const SizedBox(height: 10),
+
+            _DropdownTile(
+              'Prediction ML Algorithm',
+              _predictionModel,
+              const [
+                DropdownMenuItem(value: 'Simple Average', child: Text('Simple Average')),
+                DropdownMenuItem(value: 'Advanced ML', child: Text('Advanced ML (Ensemble Model)')),
+                DropdownMenuItem(value: 'Historical + Live', child: Text('Historical + Live Conditions')),
+              ],
+              (v) => setState(() => _predictionModel = v),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Final Save Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _saveAllSettings,
+                icon: const Icon(Icons.save_rounded, color: Colors.white),
+                label: const Text('Save All Settings'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentPurple,
                   foregroundColor: Colors.white,
@@ -199,8 +643,93 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(label,
-        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 1.4));
+    return Text(
+      label,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppTheme.textMuted,
+        letterSpacing: 1.4,
+      ),
+    );
+  }
+}
+
+class _SliderCard extends StatelessWidget {
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final String displayFormat;
+  final String subtitle;
+  final ValueChanged<double> onChanged;
+
+  const _SliderCard({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.displayFormat,
+    required this.subtitle,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.bgMedium,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                displayFormat,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              activeColor: AppTheme.primaryBlue,
+              inactiveColor: Colors.white.withValues(alpha: 0.1),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -218,24 +747,40 @@ class _SwitchTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: value ? color.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: value ? color.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.08)),
+        color: value ? color.withValues(alpha: 0.08) : AppTheme.bgMedium,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: value ? color.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: value ? color : Colors.black38, size: 22),
+          Icon(icon, color: value ? color : Colors.white38, size: 22),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
+                Text(
+                  title,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13.5,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+                ),
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: color),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: color,
+          ),
         ],
       ),
     );
@@ -245,31 +790,34 @@ class _SwitchTile extends StatelessWidget {
 class _DropdownTile extends StatelessWidget {
   final String label;
   final String current;
-  final List<String> options;
+  final List<DropdownMenuItem<String>> items;
   final ValueChanged<String> onChanged;
-  const _DropdownTile(this.label, this.current, this.options, this.onChanged);
+  const _DropdownTile(this.label, this.current, this.items, this.onChanged);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.textPrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.textPrimary.withValues(alpha: 0.08)),
+        color: AppTheme.bgMedium,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: DropdownButtonFormField<String>(
-        initialValue: current,
+        initialValue: items.any((it) => it.value == current) ? current : items.first.value,
         dropdownColor: AppTheme.bgMedium,
         style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
         ),
-        items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-        onChanged: (v) { if (v != null) onChanged(v); },
+        items: items,
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
       ),
     );
   }

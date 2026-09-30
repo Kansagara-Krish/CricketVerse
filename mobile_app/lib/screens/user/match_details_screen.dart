@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../services/storage_service.dart';
+import '../../services/elevenlabs_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/widgets/team_logo.dart';
 import '../../core/widgets/custom_notification.dart';
 
 
@@ -135,6 +135,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
 
   void _playVoiceCommentary(int index, String text) async {
     if (_isPlayingVoice && _playingVoiceIndex == index) {
+      await ElevenLabsService().stopAudio();
       await _flutterTts.stop();
       if (mounted) {
         setState(() {
@@ -143,24 +144,45 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
         });
       }
     } else {
+      await ElevenLabsService().stopAudio();
       await _flutterTts.stop();
       if (mounted) {
         setState(() {
           _isPlayingVoice = true;
           _playingVoiceIndex = index;
         });
+        final voiceName = ElevenLabsService().settings.voiceName;
         CustomNotification.show(
           context,
-          '🎙️ Playing AI Voice Commentary sound...',
+          '🎙️ Playing AI Voice Commentary ($voiceName)...',
           type: NotificationType.info,
         );
       }
-      await _flutterTts.speak(text);
+      await ElevenLabsService().speakCommentary(
+        text,
+        onComplete: () {
+          if (mounted) {
+            setState(() {
+              _isPlayingVoice = false;
+              _playingVoiceIndex = -1;
+            });
+          }
+        },
+        onError: (err) {
+          if (mounted) {
+            setState(() {
+              _isPlayingVoice = false;
+              _playingVoiceIndex = -1;
+            });
+          }
+        },
+      );
     }
   }
 
   void _togglePlayAllCommentary(CricketMatch match) async {
     if (_isPlayingVoice) {
+      await ElevenLabsService().stopAudio();
       await _flutterTts.stop();
       if (mounted) {
         setState(() {

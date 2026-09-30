@@ -142,15 +142,49 @@ function decrementOvers(currentOvers: number, ballsRemoved: number): number {
   return parseFloat((oversInt + (ballsInt / 10.0)).toFixed(1));
 }
 
-function generateAICommentary(batsman: string, bowler: string, runs: number, extraType: string, isWicket: boolean, wicketType: string): string {
+function generateAICommentary(
+  batsman: string,
+  bowler: string,
+  runs: number,
+  extraType: string,
+  isWicket: boolean,
+  wicketType: string,
+  overs?: number,
+  totalRuns?: number,
+  totalWickets?: number
+): string {
   const selectRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  const scoreText = (totalRuns !== undefined && totalWickets !== undefined) ? ` Score: ${totalRuns}/${totalWickets}.` : '';
+  const overStr = overs !== undefined ? ` (Over ${overs.toFixed(1)})` : '';
 
   if (isWicket) {
+    if (wicketType === 'Bowled') {
+      return selectRandom([
+        `BOWLED HIM! Clean through the gate! ${bowler} knocks back middle stump! ${batsman} departs.${scoreText}`,
+        `TIMBERRR! Absolute jaffa from ${bowler}! Shatters the stumps, sending bails flying!${scoreText}`,
+      ]);
+    }
+    if (wicketType === 'Caught') {
+      return selectRandom([
+        `CAUGHT! In the air... and taken! ${batsman} goes for the big one off ${bowler}, but finds the fielder at deep mid-wicket.${scoreText}`,
+        `WHAT A CATCH! Fielder dives full length at backward point to grab a stunner off ${bowler}! ${batsman} is out.${scoreText}`,
+      ]);
+    }
+    if (wicketType === 'LBW') {
+      return selectRandom([
+        `LBW! Huge shout from ${bowler}, and the finger goes straight up! ${batsman} is trapped right in front.${scoreText}`,
+        `DEAD PLUMB! ${bowler} hits the front pad on the knee roll! Umpire raises the finger without hesitation!${scoreText}`,
+      ]);
+    }
+    if (wicketType === 'Run Out') {
+      return selectRandom([
+        `RUN OUT! DIRECT HIT! Fielder fires at the striker's end and catches ${batsman} inches short of the crease!${scoreText}`,
+        `DISASTER RUN OUT! Mix-up between the wickets, flat throw to the keeper and bails are whipped off!${scoreText}`,
+      ]);
+    }
     const wicketTpls = [
-      `OUT! ${bowler} strikes! ${batsman} tries to smash it but is clean bowled! Brilliant delivery!`,
-      `CAUGHT! In the air... and taken! ${batsman} goes for the big one off ${bowler}, but finds the fielder at deep midwicket.`,
-      `LBW! Huge shout from ${bowler}, and the finger goes up! ${batsman} is trapped right in front of the stumps.`,
-      `RUN OUT! Sensational fielding! Direct hit from point and ${batsman} is yards short of the crease!`,
+      `OUT! ${bowler} strikes! ${batsman} tries to smash it but is dismissed! Brilliant delivery!${scoreText}`,
+      `WICKET! ${bowler} breaks through! Crucial wicket of ${batsman} falls.${scoreText}`,
     ];
     return selectRandom(wicketTpls);
   }
@@ -164,35 +198,46 @@ function generateAICommentary(batsman: string, bowler: string, runs: number, ext
 
   if (runs === 6) {
     const sixTpls = [
-      `SIX! ${batsman} steps out and launches ${bowler} high over long-on! That has gone miles!`,
-      `MAXIMUM! Incredibly struck by ${batsman}! Picked up off the pads and dispatched into the crowd!`,
-      `SIX MORE! ${batsman} displays pure class, a sweet pull shot that sails comfortably over deep square leg.`,
+      `SIX! MASSIVE HIT! ${batsman} steps out and launches ${bowler} 95 meters into the top tier!${scoreText}`,
+      `MAXIMUM! Incredibly struck by ${batsman}! Picked up off the pads and dispatched into the crowd!${scoreText}`,
+      `SIX MORE! ${batsman} displays pure class, a sweet pull shot that sails comfortably over deep square leg.${scoreText}`,
+      `BOOM! Pure timing and muscle from ${batsman}! Dispatches ${bowler} straight over the bowler's head for SIX!${scoreText}`,
     ];
     return selectRandom(sixTpls);
   }
   if (runs === 4) {
     const fourTpls = [
-      `FOUR! Beautiful shot by ${batsman}. Edges past slip and races away to the third man boundary.`,
-      `CRACKING BOUNDARY! ${batsman} stands tall and drives ${bowler} through extra cover for four.`,
-      `FOUR RUNS! Short and wide from ${bowler}, cut away elegantly by ${batsman} to the fence.`,
+      `FOUR! GLORIOUS COVER DRIVE! ${batsman} leans into the half-volley from ${bowler} and pierces the boundary gap!${scoreText}`,
+      `CRACKING BOUNDARY! Short and wide from ${bowler}, ${batsman} punishes it with a blistering cut for four.${scoreText}`,
+      `FOUR RUNS! Short and wide from ${bowler}, cut away elegantly by ${batsman} to the fence.${scoreText}`,
+      `DELICIOUS WRIST-WORK! ${batsman} flicks ${bowler} past mid-wicket and it races away to the rope!${scoreText}`,
     ];
     return selectRandom(fourTpls);
   }
   if (runs === 0) {
     const dotTpls = [
-      `No run. Good length delivery from ${bowler}, played defensively back to the bowler.`,
-      `Dot ball. ${batsman} swings and misses a slower delivery from ${bowler}.`,
+      `Dot ball. Good length delivery from ${bowler}, played defensively back to the bowler.`,
+      `Dot ball. ${batsman} swings and misses a slower off-cutter from ${bowler}.`,
       `Well bowled! ${bowler} beats ${batsman} outside the off stump with a beautiful outswinger.`,
+      `Fierce 142 km/h bouncer from ${bowler}! ${batsman} ducks under it just in time.`,
     ];
     return selectRandom(dotTpls);
   }
 
-  const runTpls = [
-    `Just a single. ${batsman} drives it down to long-off to rotate the strike.`,
-    `Tucked away off the hips by ${batsman}, they scamper back for a quick couple of runs.`,
-    `Placed softly into the gap at cover by ${batsman}, allowing a quick single.`,
-  ];
-  return selectRandom(runTpls);
+  if (runs === 1) {
+    const runTpls = [
+      `Single taken. ${batsman} drives ${bowler} down to long-off to rotate the strike.${scoreText}`,
+      `Quick single! Tapped to mid-on by ${batsman}, sharp call and they scramble home.${scoreText}`,
+      `Worked away off the hips by ${batsman} into deep square leg for a single.${scoreText}`,
+    ];
+    return selectRandom(runTpls);
+  }
+
+  if (runs === 2) {
+    return `Two runs! Driven into the deep extra cover pocket, swift turn by ${batsman} to steal a second run.${scoreText}`;
+  }
+
+  return `${runs} runs scored. Excellent running between wickets by ${batsman}.${scoreText}`;
 }
 
 export async function startMatchSetup(req: Request, res: Response) {
@@ -336,7 +381,20 @@ export async function updateScore(req: Request, res: Response) {
         },
       });
 
-      const commentary = generateAICommentary(striker.name, bowler.name, runs, extraType, isWicket, wicketType);
+      const currentOvers = match.isFirstInnings ? oversA : oversB;
+      const totalRuns = match.isFirstInnings ? runsA : runsB;
+      const totalWickets = match.isFirstInnings ? wicketsA : wicketsB;
+      const commentary = generateAICommentary(
+        striker.name,
+        bowler.name,
+        runs,
+        extraType,
+        isWicket,
+        wicketType,
+        currentOvers,
+        totalRuns,
+        totalWickets
+      );
 
       await tx.ballRecord.create({
         data: {
