@@ -207,52 +207,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
               ),
             ),
 
-            // Online Mode Switcher
-            Consumer<StorageService>(
-              builder: (context, storage, _) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12, right: 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            storage.isOnlineMode ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                            color: storage.isOnlineMode ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            storage.isOnlineMode ? 'Online Mode' : 'Offline Mode',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Switch(
-                        value: storage.isOnlineMode,
-                        activeColor: const Color(0xFF10B981),
-                        activeTrackColor: const Color(0xFF028A6B).withValues(alpha: 0.4),
-                        onChanged: (val) {
-                          storage.toggleOnlineMode(val);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-
             // Logout Button
             AnimatedDrawerTile(
               icon: Icons.logout_rounded,

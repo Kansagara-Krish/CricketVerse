@@ -383,3 +383,35 @@ class SearchHistoryItem {
       );
 }
 
+class Manager {
+  final String id;
+  final String name;
+  final String username;
+  final String password;
+  final String? phone;
+
+  Manager({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.password,
+    this.phone,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'username': username,
+        'password': password,
+        'phone': phone,
+      };
+
+  factory Manager.fromJson(Map<String, dynamic> json) => Manager(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        username: json['username']?.toString() ?? '',
+        password: json['password']?.toString() ?? '',
+        phone: json['phone']?.toString(),
+      );
+}
+

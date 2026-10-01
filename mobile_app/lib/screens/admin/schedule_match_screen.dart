@@ -1,5 +1,5 @@
 // lib/screens/admin/schedule_match_screen.dart
-// Dedicated schedule match screen (extracted from old dashboard)
+// Dedicated schedule match screen with Manager dropdown and Quick Add Manager modal
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,7 +9,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../core/widgets/custom_date_time_pickers.dart';
-
 import '../../models/models.dart';
 
 class ScheduleMatchScreen extends StatefulWidget {
@@ -29,6 +28,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
   final _scorerUserCtrl = TextEditingController();
   final _scorerPassCtrl = TextEditingController();
   CricketMatch? _editingMatch;
+  String? _selectedManagerId;
 
   @override
   void initState() {
@@ -43,6 +43,12 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
       _scorerUserCtrl.text = _editingMatch!.scorerUsername;
       _scorerPassCtrl.text = _editingMatch!.scorerPassword;
     }
+
+    // Proactively fetch managers list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final storage = Provider.of<StorageService>(context, listen: false);
+      storage.loadManagers();
+    });
   }
 
   @override
@@ -61,6 +67,15 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
         _scorerPassCtrl.text = _editingMatch!.scorerPassword;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _dateCtrl.dispose();
+    _timeCtrl.dispose();
+    _scorerUserCtrl.dispose();
+    _scorerPassCtrl.dispose();
+    super.dispose();
   }
 
   void _pickDate() async {
@@ -112,6 +127,195 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
         _timeCtrl.text = picked.format(context);
       });
     }
+  }
+
+  void _showAddManagerDialog() {
+    final nameCtrl = TextEditingController();
+    final usernameCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    final dialogFormKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.primaryBlue, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Create New Manager',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Add login credentials for official match scorer / manager',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 18),
+
+                // Name
+                TextFormField(
+                  controller: nameCtrl,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Full Name (e.g. Arun Patel)',
+                    prefixIcon: const Icon(Icons.badge_outlined, color: AppTheme.textMuted, size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter manager name' : null,
+                ),
+                const SizedBox(height: 14),
+
+                // Username
+                TextFormField(
+                  controller: usernameCtrl,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Username or Email (e.g. arun_scorer)',
+                    prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.textMuted, size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter username' : null,
+                ),
+                const SizedBox(height: 14),
+
+                // Password
+                TextFormField(
+                  controller: passwordCtrl,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.textMuted, size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter password' : null,
+                ),
+                const SizedBox(height: 24),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            if (!dialogFormKey.currentState!.validate()) return;
+                            setModalState(() => isSubmitting = true);
+
+                            final storage = Provider.of<StorageService>(context, listen: false);
+                            final created = await storage.addManager(
+                              name: nameCtrl.text.trim(),
+                              username: usernameCtrl.text.trim(),
+                              password: passwordCtrl.text.trim(),
+                            );
+
+                            if (ctx.mounted) {
+                              setModalState(() => isSubmitting = false);
+                            }
+
+                            if (created != null) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedManagerId = created.id;
+                                  _scorerUserCtrl.text = created.username;
+                                  _scorerPassCtrl.text = created.password;
+                                });
+                              }
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                              }
+                              if (mounted) {
+                                CustomNotification.show(
+                                  context,
+                                  'Manager "${created.name}" created and assigned!',
+                                  type: NotificationType.success,
+                                );
+                              }
+                            } else {
+                              if (mounted) {
+                                CustomNotification.show(
+                                  context,
+                                  'Failed to create manager. Username might already exist.',
+                                  type: NotificationType.error,
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    icon: isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_circle_outline_rounded),
+                    label: Text(
+                      isSubmitting ? 'Creating...' : 'Create & Assign Manager',
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _submit() {
@@ -204,6 +408,14 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
 
     final isEdit = _editingMatch != null;
 
+    // Check if current scorer username matches any known manager
+    if (_selectedManagerId == null && _scorerUserCtrl.text.isNotEmpty) {
+      final matching = storage.managers.where((m) => m.username == _scorerUserCtrl.text).toList();
+      if (matching.isNotEmpty) {
+        _selectedManagerId = matching.first.id;
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
@@ -214,7 +426,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isEdit ? 'Edit Match Details' : 'Schedule Match', 
+          isEdit ? 'Edit Match Details' : 'Schedule Match',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 18),
         ),
       ),
@@ -236,7 +448,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     border: Border.all(color: AppTheme.bgSurface),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
@@ -276,7 +488,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                value: _teamAId,
+                initialValue: _teamAId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team A'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamAId = v),
@@ -286,7 +498,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-                value: _teamBId,
+                initialValue: _teamBId,
                 decoration: inputDecorationTheme.copyWith(hintText: 'Select Team B'),
                 items: storage.teams.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))).toList(),
                 onChanged: (v) => setState(() => _teamBId = v),
@@ -369,14 +581,90 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                 ],
               ),
 
-              const SizedBox(height: 20),
-              const _Label('MANAGER / SCORER CREDENTIALS'),
-              const SizedBox(height: 4),
+              const SizedBox(height: 24),
+
+              // Manager Assignment Header with Add Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _Label('MANAGER / SCORER CREDENTIALS'),
+                  InkWell(
+                    onTap: _showAddManagerDialog,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.add_rounded, size: 16, color: AppTheme.primaryBlue),
+                          const SizedBox(width: 4),
+                          Text(
+                            'New Manager',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
               Text(
-                'The match manager will use these to log in and score the match',
+                'Select an existing manager from dropdown or tap "+ New Manager"',
                 style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 10),
+
+              // Manager Dropdown
+              DropdownButtonFormField<String>(
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
+                initialValue: _selectedManagerId,
+                decoration: inputDecorationTheme.copyWith(
+                  hintText: storage.managers.isEmpty
+                      ? 'No managers found (Tap + New Manager)'
+                      : 'Choose an existing Manager',
+                  prefixIcon: const Icon(Icons.manage_accounts_outlined, color: AppTheme.primaryBlue, size: 20),
+                ),
+                items: storage.managers.map((m) {
+                  return DropdownMenuItem(
+                    value: m.id,
+                    child: Text(
+                      '${m.name} (${m.username})',
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedManagerId = val;
+                    if (val != null) {
+                      final selected = storage.managers.firstWhere(
+                        (m) => m.id == val,
+                        orElse: () => Manager(id: '', name: '', username: '', password: ''),
+                      );
+                      if (selected.id.isNotEmpty) {
+                        _scorerUserCtrl.text = selected.username;
+                        _scorerPassCtrl.text = selected.password;
+                      }
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Auto-filled / Manual Fields
               Row(
                 children: [
                   Expanded(
@@ -384,7 +672,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                       controller: _scorerUserCtrl,
                       style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                       decoration: inputDecorationTheme.copyWith(
-                        labelText: 'Manager Username/Email',
+                        labelText: 'Manager Username',
                         prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textMuted, size: 18),
                       ),
                       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -441,9 +729,9 @@ class _Label extends StatelessWidget {
     return Text(
       text,
       style: GoogleFonts.plusJakartaSans(
-        fontSize: 11, 
-        fontWeight: FontWeight.w700, 
-        color: AppTheme.textSecondary, 
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppTheme.textSecondary,
         letterSpacing: 1.3,
       ),
     );

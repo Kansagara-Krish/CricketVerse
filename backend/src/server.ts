@@ -14,6 +14,7 @@ import tournamentRoutes from './routes/tournamentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import aiRoutes from './routes/aiRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import managerRoutes from './routes/managerRoutes';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/v1/tournaments', tournamentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/managers', managerRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

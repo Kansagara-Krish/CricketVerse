@@ -197,16 +197,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _continueAsGuest() {
-    Provider.of<StorageService>(context, listen: false).loginAsGuest();
-    CustomNotification.show(
-      context,
-      'Logged in as Guest',
-      type: NotificationType.info,
-    );
-    Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
-  }
-
   Widget _buildPasswordRequirements() {
     final pass = _passwordController.text;
     if (pass.isEmpty) {
@@ -840,54 +830,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       ),
                                     ),
                                     const SizedBox(height: 16),
-              
-                                    // OR Separator
-                                    Row(
-                                      children: [
-                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          child: Text(
-                                            'OR',
-                                            style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.18))),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 14),
-              
-                                    // Google Login Button (Solid White)
-                                    SizedBox(
-                                      width: double.infinity,
-                                      height: 44,
-                                      child: OutlinedButton(
-                                        onPressed: _continueAsGuest,
-                                        style: OutlinedButton.styleFrom(
-                                          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                                          backgroundColor: Colors.white.withValues(alpha: 0.9),
-                                          foregroundColor: Colors.black87,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Image.network(
-                                              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/24px-Google_%22G%22_logo.svg.png',
-                                              height: 16,
-                                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata_rounded, color: Colors.redAccent, size: 24),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Continue with Google',
-                                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.black87),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
                                     const SizedBox(height: 20),
               
                                     // Sign In/Up Toggle

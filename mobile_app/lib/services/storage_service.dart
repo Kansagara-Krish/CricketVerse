@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
@@ -7,38 +6,33 @@ import 'api_service.dart';
 import 'socket_service.dart';
 import 'auth_storage_service.dart';
 import 'notification_cache_service.dart';
-import 'ai_commentary_generator.dart';
 import 'elevenlabs_service.dart';
-import 'network_connectivity_service.dart';
 
 class StorageService with ChangeNotifier {
   SharedPreferences? _prefs;
   List<Team> _teams = [];
   List<CricketMatch> _matches = [];
   List<Tournament> _tournaments = [];
-  Map<String, String> _users = {}; // Email -> Password
-  
+  List<Manager> _managers = [];
+
   // App Session State
   String? _currentUserEmail;
-  String? _currentRole; // "Admin", "Scorer", "User", "Guest"
+  String? _currentRole; // "Admin", "Scorer", "User"
   String? _activeScorerMatchId; // Active match ID currently being scored
-  bool _isOnlineMode = false;
   String? _currentUserName;
-  String? _offlineOtp;
-
-  // Offline scoring queue for resilient manager sync
-  final List<Map<String, dynamic>> _pendingScoreQueue = [];
-  int get pendingScoreCount => _pendingScoreQueue.length;
 
   List<Team> get teams => _teams;
   List<CricketMatch> get matches => _matches;
   List<Tournament> get tournaments => _tournaments;
+  List<Manager> get managers => _managers;
   String? get currentRole => _currentRole;
   String? get currentUserEmail => _currentUserEmail;
   String? get currentUserName => _currentUserName;
   String? get activeScorerMatchId => _activeScorerMatchId;
-  bool get isOnlineMode => _isOnlineMode;
+  bool get isOnlineMode => true;
+  int get pendingScoreCount => 0;
   int get unreadNotificationCount => NotificationCacheService.getUnreadCount();
+
   String? _lastAuthError;
   String? get lastAuthError => _lastAuthError;
   String? _lastAuthErrorField;
@@ -51,77 +45,11 @@ class StorageService with ChangeNotifier {
   Future<void> _initStorage() async {
     _prefs = await SharedPreferences.getInstance();
     await ApiService.init();
-
-    // Initialize proactive network connectivity monitoring
-    final netService = NetworkConnectivityService();
-    netService.initialize();
-
-    netService.statusNotifier.addListener(() {
-      final isOnline = netService.status == NetworkStatus.online;
-      if (isOnline != _isOnlineMode) {
-        _isOnlineMode = isOnline;
-        if (isOnline) {
-          loadData();
-          flushPendingScores();
-          if (_activeScorerMatchId != null) {
-            subscribeToMatchLiveUpdates(_activeScorerMatchId!);
-          }
-        }
-        notifyListeners();
-      }
-    });
-
-    netService.addConnectionRestoredListener(() async {
-      _isOnlineMode = true;
-      await loadData();
-      await flushPendingScores();
-      if (_activeScorerMatchId != null) {
-        subscribeToMatchLiveUpdates(_activeScorerMatchId!);
-      }
-      notifyListeners();
-    });
-
-    // Initial online status probe
-    final initialStatus = await netService.checkConnectivity();
-    _isOnlineMode = initialStatus == NetworkStatus.online;
-
+    await tryTokenAuth();
     await loadData();
   }
 
-  Future<void> flushPendingScores() async {
-    if (_pendingScoreQueue.isEmpty || !_isOnlineMode) return;
-    debugPrint('Flushing ${_pendingScoreQueue.length} offline pending score actions to backend...');
-    
-    final toProcess = List<Map<String, dynamic>>.from(_pendingScoreQueue);
-    _pendingScoreQueue.clear();
-
-    for (final item in toProcess) {
-      try {
-        final updated = await ApiService.updateScore(
-          matchId: item['matchId'],
-          runs: item['runs'],
-          extraType: item['extraType'],
-          extraRuns: item['extraRuns'],
-          isWicket: item['isWicket'],
-          wicketType: item['wicketType'],
-          dismissedPlayerId: item['dismissedPlayerId'],
-          newBatsmanId: item['newBatsmanId'],
-          newBatsmanPosition: item['newBatsmanPosition'],
-        );
-        if (updated != null) {
-          final idx = _matches.indexWhere((m) => m.id == item['matchId']);
-          if (idx != -1) _matches[idx] = updated;
-        }
-      } catch (e) {
-        debugPrint('Failed to sync queued ball action: $e');
-        _pendingScoreQueue.add(item); // Re-queue if failed
-      }
-    }
-    notifyListeners();
-  }
-
   Future<void> toggleOnlineMode(bool val) async {
-    _isOnlineMode = val;
     await loadData();
     notifyListeners();
   }
@@ -142,202 +70,66 @@ class StorageService with ChangeNotifier {
   }
 
   Future<void> loadData() async {
-    if (_isOnlineMode) {
-      try {
-        final remoteTeams = await ApiService.getTeams();
-        _teams = remoteTeams;
-        
-        final remoteMatches = await ApiService.getMatches();
-        _matches = remoteMatches;
+    try {
+      final remoteTeams = await ApiService.getTeams();
+      _teams = remoteTeams;
 
-        final remoteTournaments = await ApiService.getTournaments();
-        _tournaments = remoteTournaments;
-        
-        for (var t in _teams) {
-          _ensureTeamHasPlayers(t);
-        }
-        for (var m in _matches) {
-          _ensureTeamHasPlayers(m.teamA);
-          _ensureTeamHasPlayers(m.teamB);
-        }
+      final remoteMatches = await ApiService.getMatches();
+      _matches = remoteMatches;
 
-        notifyListeners();
-        return;
-      } catch (e) {
-        debugPrint('Error loading online data: $e');
-        rethrow;
+      final remoteTournaments = await ApiService.getTournaments();
+      _tournaments = remoteTournaments;
+
+      final remoteManagers = await ApiService.getManagers();
+      _managers = remoteManagers;
+
+      for (var t in _teams) {
+        _ensureTeamHasPlayers(t);
       }
-    }
-
-    // --- Offline Data Loading ---
-    // 1. Load users
-    final usersJson = _prefs?.getString('users');
-    if (usersJson != null) {
-      final Map<String, dynamic> decoded = jsonDecode(usersJson);
-      _users = decoded.map((key, value) => MapEntry(key, value.toString()));
-    }
-    
-    _saveUsers();
-
-    final isUvpceLoaded = _prefs?.getBool('data_version_uvpce_2026_v2') ?? false;
-
-    // 2. Load Teams
-    final teamsJson = _prefs?.getString('teams');
-    if (teamsJson != null && isUvpceLoaded) {
-      final List decoded = jsonDecode(teamsJson);
-      _teams = decoded.map((item) => Team.fromJson(item)).toList();
-    } else {
-      _loadDefaultTeams();
-    }
-
-    // 3. Load Matches
-    final matchesJson = _prefs?.getString('matches');
-    if (matchesJson != null && isUvpceLoaded) {
-      final List decoded = jsonDecode(matchesJson);
-      _matches = decoded.map((item) => CricketMatch.fromJson(item)).toList();
-    } else {
-      _loadDefaultMatches();
-      _prefs?.setBool('data_version_uvpce_2026_v2', true);
-    }
-
-    // 4. Load Tournaments
-    final tournamentsJson = _prefs?.getString('tournaments');
-    if (tournamentsJson != null) {
-      try {
-        final List decoded = jsonDecode(tournamentsJson);
-        _tournaments = decoded.map((item) => Tournament.fromJson(item)).toList();
-      } catch (e) {
-        debugPrint('Error decoding tournaments from storage: $e');
-        _loadDefaultTournaments();
+      for (var m in _matches) {
+        _ensureTeamHasPlayers(m.teamA);
+        _ensureTeamHasPlayers(m.teamB);
       }
-    } else {
-      _loadDefaultTournaments();
-    }
 
-    for (var t in _teams) {
-      _ensureTeamHasPlayers(t);
-    }
-    for (var m in _matches) {
-      _ensureTeamHasPlayers(m.teamA);
-      _ensureTeamHasPlayers(m.teamB);
-    }
-
-    notifyListeners();
-  }
-
-  void _saveUsers() {
-    _prefs?.setString('users', jsonEncode(_users));
-  }
-
-  void _saveTeams() {
-    _prefs?.setString('teams', jsonEncode(_teams.map((t) => t.toJson()).toList()));
-  }
-
-  void _saveMatches() {
-    _prefs?.setString('matches', jsonEncode(_matches.map((m) => m.toJson()).toList()));
-  }
-
-  void _saveTournaments() {
-    _prefs?.setString('tournaments', jsonEncode(_tournaments.map((t) => t.toJson()).toList()));
-  }
-
-  // Preload UVPCE College cricket teams and player names
-  void _loadDefaultTeams() {
-    _teams = [];
-    _saveTeams();
-  }
-
-  void _loadDefaultMatches() {
-    _matches = [];
-    _saveMatches();
-  }
-
-  void _loadDefaultTournaments() {
-    _tournaments = [
-      Tournament(
-        id: 'tourn_t20_wc_2026',
-        name: 'T20 World Cup 2026',
-        format: 'T20',
-        status: 'Live',
-        teamsCount: 16,
-        matchesCount: 45,
-        startDate: '01-07-2026',
-        endDate: '30-07-2026',
-      ),
-      Tournament(
-        id: 'tourn_ipl_19',
-        name: 'IPL Season 19',
-        format: 'T20',
-        status: 'Upcoming',
-        teamsCount: 10,
-        matchesCount: 74,
-        startDate: '01-09-2026',
-        endDate: '30-11-2026',
-      ),
-      Tournament(
-        id: 'tourn_cpl_2026',
-        name: 'CricketVerse Premier League',
-        format: 'T20',
-        status: 'Upcoming',
-        teamsCount: 8,
-        matchesCount: 28,
-        startDate: '15-08-2026',
-        endDate: '14-09-2026',
-      ),
-      Tournament(
-        id: 'tourn_ind_aus_2026',
-        name: 'India-Australia Bilateral ODI',
-        format: 'ODI',
-        status: 'Completed',
-        teamsCount: 2,
-        matchesCount: 5,
-        startDate: '01-06-2026',
-        endDate: '20-06-2026',
-      ),
-    ];
-    _saveTournaments();
-  }
-
-  Future<void> addTournament(Tournament tournament) async {
-    _tournaments.add(tournament);
-    if (_isOnlineMode) {
-      await ApiService.createTournament(tournament);
-      final refreshed = await ApiService.getTournaments();
-      if (refreshed.isNotEmpty) {
-        _tournaments = refreshed;
-      }
-    } else {
-      _saveTournaments();
-    }
-    notifyListeners();
-  }
-
-  Future<void> updateTournament(Tournament updated) async {
-    final idx = _tournaments.indexWhere((t) => t.id == updated.id);
-    if (idx != -1) {
-      _tournaments[idx] = updated;
-      if (_isOnlineMode) {
-        await ApiService.updateTournament(updated);
-      } else {
-        _saveTournaments();
-      }
       notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading online data from MongoDB: $e');
     }
   }
 
-  Future<void> deleteTournament(String id) async {
-    _tournaments.removeWhere((t) => t.id == id);
-    if (_isOnlineMode) {
-      await ApiService.deleteTournament(id);
-    } else {
-      _saveTournaments();
+  Future<void> loadManagers() async {
+    try {
+      final remoteManagers = await ApiService.getManagers();
+      _managers = remoteManagers;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading managers: $e');
     }
-    notifyListeners();
+  }
+
+  Future<Manager?> addManager({
+    required String name,
+    required String username,
+    required String password,
+    String? phone,
+  }) async {
+    final created = await ApiService.createManager(
+      name: name,
+      username: username,
+      password: password,
+      phone: phone,
+    );
+    if (created != null) {
+      _managers.removeWhere((m) => m.id == created.id || m.username == created.username);
+      _managers.insert(0, created);
+      notifyListeners();
+      return created;
+    }
+    return null;
   }
 
   // --- Real-time WebSockets Subscriptions ---
   void subscribeToMatchLiveUpdates(String matchId) {
-    if (!_isOnlineMode) return;
     SocketService.connect();
     SocketService.joinMatch(matchId);
     SocketService.listenToMatchUpdates((data) {
@@ -353,7 +145,6 @@ class StorageService with ChangeNotifier {
   }
 
   void unsubscribeFromMatchLiveUpdates(String matchId) {
-    if (!_isOnlineMode) return;
     SocketService.leaveMatch(matchId);
   }
 
@@ -362,179 +153,79 @@ class StorageService with ChangeNotifier {
     final hasSession = await AuthStorageService.hasValidSession();
     if (!hasSession) return false;
 
-    if (_isOnlineMode) {
-      try {
-        final res = await ApiService.getMe();
-        if (res != null && res['user'] != null) {
-          _currentUserEmail = res['user']['email'];
-          _currentRole = res['user']['role'];
-          _currentUserName = res['user']['name'];
-          if (_currentRole == 'Scorer') {
-            _activeScorerMatchId = res['activeScorerMatchId'];
-            if (_activeScorerMatchId == null && res['user']['id'] != null) {
-              final String userId = res['user']['id'];
-              if (userId.startsWith('scorer_')) {
-                _activeScorerMatchId = userId.substring(7);
-              }
+    try {
+      final res = await ApiService.getMe();
+      if (res != null && res['user'] != null) {
+        _currentUserEmail = res['user']['email'];
+        _currentRole = res['user']['role'];
+        _currentUserName = res['user']['name'];
+        if (_currentRole == 'Scorer') {
+          _activeScorerMatchId = res['activeScorerMatchId'];
+          if (_activeScorerMatchId == null && res['user']['id'] != null) {
+            final String userId = res['user']['id'];
+            if (userId.startsWith('scorer_')) {
+              _activeScorerMatchId = userId.substring(7);
             }
-          } else {
-            _activeScorerMatchId = null;
           }
-          await loadData();
-          notifyListeners();
-          return true;
+        } else {
+          _activeScorerMatchId = null;
         }
-      } catch (e) {
-        debugPrint('tryTokenAuth online error: $e');
+        await loadData();
+        notifyListeners();
+        return true;
       }
-    }
-
-    // Restore stored user session from secure storage (works offline as well)
-    final userData = await AuthStorageService.getUserData();
-    if (userData['email'] != null && userData['email']!.isNotEmpty) {
-      _currentUserEmail = userData['email'];
-      _currentRole = userData['role'] ?? 'User';
-      _currentUserName = userData['name'] ?? 'User';
-      notifyListeners();
-      return true;
+    } catch (e) {
+      debugPrint('tryTokenAuth online error: $e');
     }
 
     return false;
   }
 
   Future<bool> login(String usernameOrEmail, String password) async {
-    if (_isOnlineMode) {
-      final res = await ApiService.login(usernameOrEmail, password);
-      if (res != null) {
-        _currentUserEmail = res['user']['email'];
-        _currentRole = res['user']['role'];
-        _currentUserName = res['user']['name'];
-        _activeScorerMatchId = res['activeScorerMatchId'];
-        await loadData();
-        return true;
-      }
-      return false;
-    }
-
-    // --- Offline Auth ---
-    if (usernameOrEmail == 'admin@gmail.com' && password == 'admin123') {
-      _currentUserEmail = 'admin@gmail.com';
-      _currentRole = 'Admin';
-      _currentUserName = 'Rajesh Kumar';
-      _activeScorerMatchId = null;
-      await AuthStorageService.saveAuthData(
-        accessToken: 'offline_token_admin',
-        userId: 'admin_1',
-        userEmail: 'admin@gmail.com',
-        userRole: 'Admin',
-        userName: 'Rajesh Kumar',
-      );
+    final res = await ApiService.login(usernameOrEmail, password);
+    if (res != null && res['user'] != null) {
+      _currentUserEmail = res['user']['email'];
+      _currentRole = res['user']['role'];
+      _currentUserName = res['user']['name'];
+      _activeScorerMatchId = res['activeScorerMatchId'];
+      await loadData();
       notifyListeners();
       return true;
     }
-
-    CricketMatch? matchScoring;
-    for (final m in _matches) {
-      if (m.scorerUsername == usernameOrEmail && m.scorerPassword == password) {
-        matchScoring = m;
-        break;
-      }
-    }
-    if (matchScoring != null) {
-      _currentUserEmail = usernameOrEmail;
-      _currentRole = 'Scorer';
-      _currentUserName = 'Official Scorer';
-      _activeScorerMatchId = null; // Land on Official Score Portal showing all assigned matches first
-      await AuthStorageService.saveAuthData(
-        accessToken: 'offline_token_scorer',
-        userId: 'scorer_1',
-        userEmail: usernameOrEmail,
-        userRole: 'Scorer',
-        userName: 'Official Scorer',
-      );
-      notifyListeners();
-      return true;
-    }
-
-    if (_users.containsKey(usernameOrEmail) && _users[usernameOrEmail] == password) {
-      _currentUserEmail = usernameOrEmail;
-      _currentRole = 'User';
-      _currentUserName = _prefs?.getString('name_$usernameOrEmail') ?? usernameOrEmail.split('@')[0];
-      _activeScorerMatchId = null;
-      await AuthStorageService.saveAuthData(
-        accessToken: 'offline_token_user',
-        userId: 'user_1',
-        userEmail: usernameOrEmail,
-        userRole: 'User',
-        userName: _currentUserName!,
-      );
-      notifyListeners();
-      return true;
-    }
-
     return false;
   }
 
   Future<bool> register(
+    String name,
     String email,
-    String password,
-    String name, {
+    String password, {
     String? confirmPassword,
   }) async {
     _lastAuthError = null;
     _lastAuthErrorField = null;
 
-    final normalizedEmail = email.trim().toLowerCase();
     final trimmedName = name.trim();
+    final normalizedEmail = email.trim().toLowerCase();
 
-    if (_isOnlineMode) {
-      final res = await ApiService.register(
-        normalizedEmail,
-        password,
-        trimmedName,
-        confirmPassword: confirmPassword,
-      );
-      if (res.isSuccess && res.data != null) {
-        _currentUserEmail = res.data!['user']['email'];
-        _currentRole = res.data!['user']['role'];
-        _currentUserName = res.data!['user']['name'];
-        await loadData();
-        return true;
-      }
-      _lastAuthError = res.errorMessage ?? 'Registration failed.';
-      _lastAuthErrorField = res.errorField;
-      return false;
-    }
-
-    // --- Offline Register ---
-    if (_users.containsKey(normalizedEmail)) {
-      _lastAuthError = 'An account with this email already exists.';
-      _lastAuthErrorField = 'email';
-      return false;
-    }
-    _users[normalizedEmail] = password;
-    _prefs?.setString('name_$normalizedEmail', trimmedName);
-    _saveUsers();
-    
-    _currentUserEmail = normalizedEmail;
-    _currentRole = 'User';
-    _currentUserName = trimmedName.isNotEmpty ? trimmedName : normalizedEmail.split('@')[0];
-    await AuthStorageService.saveAuthData(
-      accessToken: 'offline_token_user',
-      userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      userEmail: normalizedEmail,
-      userRole: 'User',
-      userName: _currentUserName!,
+    final res = await ApiService.register(
+      normalizedEmail,
+      password,
+      trimmedName,
+      confirmPassword: confirmPassword,
     );
-    notifyListeners();
-    return true;
-  }
 
-  void loginAsGuest() {
-    _currentUserEmail = 'guest@cricketverse.ai';
-    _currentRole = 'Guest';
-    _currentUserName = 'Guest Fan';
+    if (res.isSuccess && res.data != null) {
+      _currentUserEmail = res.data!['user']['email'];
+      _currentRole = res.data!['user']['role'] ?? 'User';
+      _currentUserName = res.data!['user']['name'];
+      await loadData();
+      notifyListeners();
+      return true;
+    }
+    _lastAuthError = res.errorMessage ?? 'Registration failed.';
+    _lastAuthErrorField = res.errorField;
     notifyListeners();
+    return false;
   }
 
   Future<void> logout() async {
@@ -542,167 +233,70 @@ class StorageService with ChangeNotifier {
     final prevEmail = _currentUserEmail;
     final prevRole = _currentRole;
 
-    if (_isOnlineMode) {
-      await ApiService.logout(name: prevName, email: prevEmail, role: prevRole);
-      await ApiService.clearToken();
-      SocketService.disconnect();
-    }
+    await ApiService.logout(name: prevName, email: prevEmail, role: prevRole);
+    await ApiService.clearToken();
+    SocketService.disconnect();
 
     _currentUserEmail = null;
     _currentRole = null;
     _currentUserName = null;
     _activeScorerMatchId = null;
-    
+
     await AuthStorageService.clearAuthData();
     await NotificationCacheService.clearCache();
 
     notifyListeners();
   }
 
-
   // --- Admin / CRUD Methods ---
   void adminActivateMatch(String matchId) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.adminActivateMatch(matchId);
-      if (ok) {
-        _activeScorerMatchId = matchId;
-        await loadData();
-      }
-      return;
+    final ok = await ApiService.adminActivateMatch(matchId);
+    if (ok) {
+      _activeScorerMatchId = matchId;
+      await loadData();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == matchId, orElse: () => _matches.first);
-    _activeScorerMatchId = match.id;
-    if (match.status == 'Upcoming') {
-      final batTeam = match.teamA;
-      final bowlTeam = match.teamB;
-      match.battingTeamId = batTeam.id;
-      match.tossWinner = batTeam.name;
-      match.tossDecision = 'Bat';
-      match.status = 'Live';
-      match.currentStrikerId = batTeam.players.isNotEmpty ? batTeam.players[0].id : '';
-      match.currentNonStrikerId = batTeam.players.length > 1 ? batTeam.players[1].id : '';
-      match.currentBowlerId = bowlTeam.players.isNotEmpty ? bowlTeam.players[bowlTeam.players.length - 1].id : '';
-      _saveMatches();
-    }
-    notifyListeners();
   }
 
   void addTeam(String name, String shortName, String colorHex, List<Player> players) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.addTeam(name, shortName, colorHex, players);
-      if (ok) await loadData();
-      return;
+    final ok = await ApiService.addTeam(name, shortName, colorHex, players);
+    if (ok) {
+      await loadData();
     }
-
-    final newTeam = Team(
-      id: name.toLowerCase().replaceAll(' ', '_'),
-      name: name,
-      shortName: shortName,
-      logoColorHex: colorHex,
-      players: players,
-    );
-    _teams.add(newTeam);
-    _saveTeams();
-    notifyListeners();
   }
 
   void updateTeam(String teamId, String name, String shortName, String colorHex) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.updateTeam(teamId, name, shortName, colorHex);
-      if (ok) await loadData();
-      return;
-    }
-
-    final index = _teams.indexWhere((t) => t.id == teamId);
-    if (index != -1) {
-      _teams[index].name = name;
-      _teams[index].shortName = shortName;
-      _teams[index].logoColorHex = colorHex;
-      _saveTeams();
-      notifyListeners();
+    final ok = await ApiService.updateTeam(teamId, name, shortName, colorHex);
+    if (ok) {
+      await loadData();
     }
   }
 
   void deleteTeam(String teamId) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.deleteTeam(teamId);
-      if (ok) await loadData();
-      return;
+    final ok = await ApiService.deleteTeam(teamId);
+    if (ok) {
+      await loadData();
     }
-
-    _teams.removeWhere((t) => t.id == teamId);
-    _saveTeams();
-    notifyListeners();
   }
 
   void addPlayer(String teamId, Player player) async {
-    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
-    if (player.isCaptain) {
-      player.isViceCaptain = false;
-      for (var p in team.players) {
-        if (p.id != player.id) p.isCaptain = false;
-      }
-    } else if (player.isViceCaptain) {
-      player.isCaptain = false;
-      for (var p in team.players) {
-        if (p.id != player.id) p.isViceCaptain = false;
-      }
+    final ok = await ApiService.addPlayer(teamId, player);
+    if (ok) {
+      await loadData();
     }
-
-    if (_isOnlineMode) {
-      final ok = await ApiService.addPlayer(teamId, player);
-      if (ok) await loadData();
-      return;
-    }
-
-    team.players.add(player);
-    _saveTeams();
-    notifyListeners();
   }
 
   void updatePlayer(String teamId, Player updatedPlayer) async {
-    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
-    if (updatedPlayer.isCaptain) {
-      updatedPlayer.isViceCaptain = false;
-      for (var p in team.players) {
-        if (p.id != updatedPlayer.id) p.isCaptain = false;
-      }
-    } else if (updatedPlayer.isViceCaptain) {
-      updatedPlayer.isCaptain = false;
-      for (var p in team.players) {
-        if (p.id != updatedPlayer.id) p.isViceCaptain = false;
-      }
+    final ok = await ApiService.updatePlayer(updatedPlayer);
+    if (ok) {
+      await loadData();
     }
-
-    if (_isOnlineMode) {
-      final ok = await ApiService.updatePlayer(updatedPlayer);
-      if (ok) await loadData();
-      return;
-    }
-
-    final pIndex = team.players.indexWhere((p) => p.id == updatedPlayer.id);
-    if (pIndex != -1) {
-      team.players[pIndex] = updatedPlayer;
-    } else {
-      team.players.add(updatedPlayer);
-    }
-    _saveTeams();
-    notifyListeners();
   }
 
   void removePlayer(String teamId, String playerId) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.removePlayer(playerId);
-      if (ok) await loadData();
-      return;
+    final ok = await ApiService.removePlayer(playerId);
+    if (ok) {
+      await loadData();
     }
-
-    final team = _teams.firstWhere((t) => t.id == teamId, orElse: () => _teams.first);
-    team.players.removeWhere((p) => p.id == playerId);
-    _saveTeams();
-    notifyListeners();
   }
 
   void scheduleMatch({
@@ -715,45 +309,19 @@ class StorageService with ChangeNotifier {
     required String scorerUser,
     required String scorerPass,
   }) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.scheduleMatch(
-        teamAId: teamAId,
-        teamBId: teamBId,
-        matchType: matchType,
-        venue: venue,
-        date: date,
-        time: time,
-        scorerUser: scorerUser,
-        scorerPass: scorerPass,
-      );
-      if (ok) await loadData();
-      return;
-    }
-
-    final teamA = _teams.firstWhere((t) => t.id == teamAId);
-    final teamB = _teams.firstWhere((t) => t.id == teamBId);
-    _ensureTeamHasPlayers(teamA);
-    _ensureTeamHasPlayers(teamB);
-
-    final newMatch = CricketMatch(
-      id: 'match_${DateTime.now().millisecondsSinceEpoch}',
-      teamA: teamA,
-      teamB: teamB,
+    final ok = await ApiService.scheduleMatch(
+      teamAId: teamAId,
+      teamBId: teamBId,
       matchType: matchType,
       venue: venue,
       date: date,
       time: time,
-      status: 'Upcoming',
-      playingXI_A: teamA.players,
-      playingXI_B: teamB.players,
-      scorerUsername: scorerUser,
-      scorerPassword: scorerPass,
-      balls: [],
+      scorerUser: scorerUser,
+      scorerPass: scorerPass,
     );
-
-    _matches.add(newMatch);
-    _saveMatches();
-    notifyListeners();
+    if (ok) {
+      await loadData();
+    }
   }
 
   void updateMatch({
@@ -767,110 +335,60 @@ class StorageService with ChangeNotifier {
     required String scorerUser,
     required String scorerPass,
   }) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.updateMatch(
-        matchId: matchId,
-        teamAId: teamAId,
-        teamBId: teamBId,
-        matchType: matchType,
-        venue: venue,
-        date: date,
-        time: time,
-        scorerUser: scorerUser,
-        scorerPass: scorerPass,
-      );
-      if (ok) await loadData();
-      return;
-    }
-
-    final idx = _matches.indexWhere((m) => m.id == matchId);
-    if (idx != -1) {
-      final teamA = _teams.firstWhere((t) => t.id == teamAId, orElse: () => _matches[idx].teamA);
-      final teamB = _teams.firstWhere((t) => t.id == teamBId, orElse: () => _matches[idx].teamB);
-      _ensureTeamHasPlayers(teamA);
-      _ensureTeamHasPlayers(teamB);
-
-      final match = _matches[idx];
-      match.teamA = teamA;
-      match.teamB = teamB;
-      match.matchType = matchType;
-      match.venue = venue;
-      match.date = date;
-      match.time = time;
-      match.scorerUsername = scorerUser;
-      match.scorerPassword = scorerPass;
-      match.playingXI_A = teamA.players;
-      match.playingXI_B = teamB.players;
-
-      _saveMatches();
-      notifyListeners();
+    final ok = await ApiService.updateMatch(
+      matchId: matchId,
+      teamAId: teamAId,
+      teamBId: teamBId,
+      matchType: matchType,
+      venue: venue,
+      date: date,
+      time: time,
+      scorerUser: scorerUser,
+      scorerPass: scorerPass,
+    );
+    if (ok) {
+      await loadData();
     }
   }
 
   Future<bool> deleteMatch(String matchId) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.deleteMatch(matchId);
-      if (ok) {
-        _matches.removeWhere((m) => m.id == matchId);
-        _saveMatches();
-        notifyListeners();
-        return true;
-      }
-      return false;
-    }
-
-    final initialLen = _matches.length;
-    _matches.removeWhere((m) => m.id == matchId);
-    if (_matches.length < initialLen) {
-      _saveMatches();
+    final ok = await ApiService.deleteMatch(matchId);
+    if (ok) {
+      _matches.removeWhere((m) => m.id == matchId);
       notifyListeners();
       return true;
     }
     return false;
   }
 
+  Future<void> addTournament(Tournament tournament) async {
+    await ApiService.createTournament(tournament);
+    await loadData();
+  }
+
+  Future<void> updateTournament(Tournament updated) async {
+    await ApiService.updateTournament(updated);
+    await loadData();
+  }
+
+  Future<void> deleteTournament(String id) async {
+    await ApiService.deleteTournament(id);
+    await loadData();
+  }
+
   // --- Scorer / Live Scoring Methods ---
-
   Future<bool> startMatchSetup(String matchId, String tossWinnerTeam, String decision, String firstBattingTeamId) async {
-    if (_isOnlineMode) {
-      final updated = await ApiService.startMatchSetup(matchId, tossWinnerTeam, decision, firstBattingTeamId);
-      if (updated != null) {
-        _ensureTeamHasPlayers(updated.teamA);
-        _ensureTeamHasPlayers(updated.teamB);
-        final idx = _matches.indexWhere((m) => m.id == matchId);
-        if (idx != -1) _matches[idx] = updated;
-        _activeScorerMatchId = matchId;
-        notifyListeners();
-        return true;
+    final updated = await ApiService.startMatchSetup(matchId, tossWinnerTeam, decision, firstBattingTeamId);
+    if (updated != null) {
+      _ensureTeamHasPlayers(updated.teamA);
+      _ensureTeamHasPlayers(updated.teamB);
+      final idx = _matches.indexWhere((m) => m.id == matchId);
+      if (idx != -1) {
+        _matches[idx] = updated;
+      } else {
+        _matches.add(updated);
       }
-      return false;
-    }
-
-    // --- Offline ---
-    final idx = _matches.indexWhere((m) => m.id == matchId);
-    if (idx != -1) {
-      final match = _matches[idx];
-      match.tossWinner = tossWinnerTeam;
-      match.tossDecision = decision;
-      match.battingTeamId = firstBattingTeamId;
-      match.status = 'Live';
-      
-      final batTeam = firstBattingTeamId == match.teamA.id ? match.teamA : match.teamB;
-      final bowlTeam = firstBattingTeamId == match.teamA.id ? match.teamB : match.teamA;
-
-      _ensureTeamHasPlayers(batTeam);
-      _ensureTeamHasPlayers(bowlTeam);
-
-      if (batTeam.players.isNotEmpty) {
-        match.currentStrikerId = batTeam.players[0].id;
-        match.currentNonStrikerId = batTeam.players.length > 1 ? batTeam.players[1].id : batTeam.players[0].id;
-      }
-      if (bowlTeam.players.isNotEmpty) {
-        match.currentBowlerId = bowlTeam.players.last.id;
-      }
-
       _activeScorerMatchId = matchId;
-      _saveMatches();
       notifyListeners();
       return true;
     }
@@ -884,23 +402,12 @@ class StorageService with ChangeNotifier {
 
   void swapStrikers() async {
     if (_activeScorerMatchId == null) return;
-    if (_isOnlineMode) {
-      final updated = await ApiService.swapStrikers(_activeScorerMatchId!);
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
-      }
-      return;
+    final updated = await ApiService.swapStrikers(_activeScorerMatchId!);
+    if (updated != null) {
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1) _matches[idx] = updated;
+      notifyListeners();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    final temp = match.currentStrikerId;
-    match.currentStrikerId = match.currentNonStrikerId;
-    match.currentNonStrikerId = temp;
-    _saveMatches();
-    notifyListeners();
   }
 
   void updateScore({
@@ -915,313 +422,112 @@ class StorageService with ChangeNotifier {
   }) async {
     if (_activeScorerMatchId == null) return;
 
-    if (_isOnlineMode) {
-      try {
-        final updated = await ApiService.updateScore(
-          matchId: _activeScorerMatchId!,
-          runs: runs,
-          extraType: extraType,
-          extraRuns: extraRuns,
-          isWicket: isWicket,
-          wicketType: wicketType,
-          dismissedPlayerId: dismissedPlayerId,
-          newBatsmanId: newBatsmanId,
-          newBatsmanPosition: newBatsmanPosition,
-        );
-        if (updated != null) {
-          final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-          if (idx != -1) _matches[idx] = updated;
-          notifyListeners();
-          return;
-        }
-      } catch (e) {
-        debugPrint('Online scoring error, falling back to local queue: $e');
-      }
-
-      // Queue action for automatic sync when network recovers
-      _pendingScoreQueue.add({
-        'matchId': _activeScorerMatchId!,
-        'runs': runs,
-        'extraType': extraType,
-        'extraRuns': extraRuns,
-        'isWicket': isWicket,
-        'wicketType': wicketType,
-        'dismissedPlayerId': dismissedPlayerId,
-        'newBatsmanId': newBatsmanId,
-        'newBatsmanPosition': newBatsmanPosition,
-      });
-    }
-
-    // --- Offline / Optimistic Update ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-
-    final String currentStrikerIdBefore = match.currentStrikerId;
-    final String currentNonStrikerIdBefore = match.currentNonStrikerId;
-    final String currentBowlerIdBefore = match.currentBowlerId;
-
-    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-
-    _ensureTeamHasPlayers(battingTeam);
-    _ensureTeamHasPlayers(bowlingTeam);
-
-    final striker = battingTeam.players.firstWhere(
-      (p) => p.id == match.currentStrikerId,
-      orElse: () => battingTeam.players.isNotEmpty
-          ? battingTeam.players[0]
-          : Player(id: '', name: 'Striker', role: 'Batter', nationality: ''),
-    );
-    final bowler = bowlingTeam.players.firstWhere(
-      (p) => p.id == match.currentBowlerId,
-      orElse: () => bowlingTeam.players.isNotEmpty
-          ? bowlingTeam.players.last
-          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
-    );
-
-    int ballVal = 1;
-    if (extraType == 'Wide' || extraType == 'No Ball') {
-      ballVal = 0;
-    }
-
-    int totalRunsThisBall = runs + extraRuns;
-    if (match.isFirstInnings) {
-      match.runsA += totalRunsThisBall;
-      if (isWicket && wicketType != 'Retired Hurt') match.wicketsA += 1;
-      match.oversA = _incrementOvers(match.oversA, ballVal);
-    } else {
-      match.runsB += totalRunsThisBall;
-      if (isWicket && wicketType != 'Retired Hurt') match.wicketsB += 1;
-      match.oversB = _incrementOvers(match.oversB, ballVal);
-    }
-
-    if (extraType == 'None' || extraType == 'Leg Bye') {
-      striker.runsScored += runs;
-      striker.ballsFaced += ballVal;
-    }
-    
-    bowler.runsConceded += totalRunsThisBall;
-    if (isWicket && wicketType != 'Run Out' && wicketType != 'Retired Out' && wicketType != 'Retired Hurt') {
-      bowler.wicketsTaken += 1;
-    }
-    if (ballVal > 0) {
-      bowler.oversBowled = _incrementOvers(bowler.oversBowled, 1);
-    }
-
-    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
-    final totalRuns = match.isFirstInnings ? match.runsA : match.runsB;
-    final totalWickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-
-    String commentary = AiCommentaryGenerator.generate(
-      AiCommentaryContext(
-        batsman: striker.name,
-        bowler: bowler.name,
+    try {
+      final updated = await ApiService.updateScore(
+        matchId: _activeScorerMatchId!,
         runs: runs,
         extraType: extraType,
         extraRuns: extraRuns,
         isWicket: isWicket,
         wicketType: wicketType,
-        currentOvers: currentOvers,
-        totalRuns: totalRuns,
-        totalWickets: totalWickets,
-        target: match.target > 0 ? match.target : null,
-        style: ElevenLabsService().settings.commentaryStyle,
-      ),
-    );
+        dismissedPlayerId: dismissedPlayerId,
+        newBatsmanId: newBatsmanId,
+        newBatsmanPosition: newBatsmanPosition,
+      );
+      if (updated != null) {
+        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+        if (idx != -1) _matches[idx] = updated;
 
-    // Auto-play voice commentary if enabled in ElevenLabs settings
-    final elevenSettings = ElevenLabsService().settings;
-    if (elevenSettings.autoPlayVoice) {
-      final trigger = elevenSettings.commentaryTrigger;
-      bool shouldSpeak = (trigger == 'Every Ball') ||
-          (trigger == 'Boundaries & Wickets' && (runs >= 4 || isWicket)) ||
-          (trigger == 'Over Finish' && currentOvers.toString().endsWith('.0'));
-      if (shouldSpeak) {
-        ElevenLabsService().speakCommentary(commentary);
-      }
-    }
-
-    final newBall = BallRecord(
-      run: runs,
-      extraRun: extraRuns,
-      extraType: extraType,
-      isWicket: isWicket,
-      wicketType: wicketType,
-      batsmanName: striker.name,
-      bowlerName: bowler.name,
-      commentary: commentary,
-      timestamp: DateTime.now(),
-      strikerId: currentStrikerIdBefore,
-      nonStrikerId: currentNonStrikerIdBefore,
-      bowlerId: currentBowlerIdBefore,
-    );
-    match.balls.add(newBall);
-
-    if (runs % 2 != 0 && (extraType == 'None' || extraType == 'Leg Bye')) {
-      final temp = match.currentStrikerId;
-      match.currentStrikerId = match.currentNonStrikerId;
-      match.currentNonStrikerId = temp;
-    }
-
-    if (isWicket) {
-      final currentBattedCount = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-      final partnerId = (dismissedPlayerId == match.currentStrikerId) ? match.currentNonStrikerId : match.currentStrikerId;
-
-      if (newBatsmanId != null && newBatsmanPosition != null) {
-        if (newBatsmanPosition == 'Striker') {
-          match.currentStrikerId = newBatsmanId;
-          match.currentNonStrikerId = partnerId;
-        } else {
-          match.currentStrikerId = partnerId;
-          match.currentNonStrikerId = newBatsmanId;
+        // Auto-play voice commentary if enabled in ElevenLabs settings
+        final elevenSettings = ElevenLabsService().settings;
+        if (elevenSettings.autoPlayVoice && updated.balls.isNotEmpty) {
+          final lastBall = updated.balls.last;
+          final commentary = lastBall.commentary;
+          final currentOvers = updated.isFirstInnings ? updated.oversA : updated.oversB;
+          final trigger = elevenSettings.commentaryTrigger;
+          bool shouldSpeak = (trigger == 'Every Ball') ||
+              (trigger == 'Boundaries & Wickets' && (runs >= 4 || isWicket)) ||
+              (trigger == 'Over Finish' && currentOvers.toString().endsWith('.0'));
+          if (shouldSpeak && commentary.isNotEmpty) {
+            ElevenLabsService().speakCommentary(commentary);
+          }
         }
-      } else if (currentBattedCount + 1 < battingTeam.players.length) {
-        final nextPlayer = battingTeam.players[currentBattedCount + 1];
-        if (dismissedPlayerId != null && dismissedPlayerId == match.currentNonStrikerId) {
-          match.currentNonStrikerId = nextPlayer.id;
-        } else {
-          match.currentStrikerId = nextPlayer.id;
-        }
-      } else {
-        endInningsOrMatch();
-      }
-    }
 
-    _saveMatches();
-    notifyListeners();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('updateScore error: $e');
+    }
   }
 
   void switchBowler(String newBowlerId) async {
     if (_activeScorerMatchId == null) return;
-
-    if (_isOnlineMode) {
-      final updated = await ApiService.switchBowler(_activeScorerMatchId!, newBowlerId);
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
-      }
-      return;
+    final updated = await ApiService.switchBowler(_activeScorerMatchId!, newBowlerId);
+    if (updated != null) {
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1) _matches[idx] = updated;
+      notifyListeners();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    match.currentBowlerId = newBowlerId;
-    _saveMatches();
-    notifyListeners();
   }
 
   void setStriker(String strikerId) {
     if (_activeScorerMatchId == null) return;
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    match.currentStrikerId = strikerId;
-    if (!_isOnlineMode) _saveMatches();
-    notifyListeners();
+    final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    if (idx != -1) {
+      _matches[idx].currentStrikerId = strikerId;
+      notifyListeners();
+    }
   }
 
   void setNonStriker(String nonStrikerId) {
     if (_activeScorerMatchId == null) return;
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    match.currentNonStrikerId = nonStrikerId;
-    if (!_isOnlineMode) _saveMatches();
-    notifyListeners();
+    final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    if (idx != -1) {
+      _matches[idx].currentNonStrikerId = nonStrikerId;
+      notifyListeners();
+    }
   }
 
   void endOver() {
     if (_activeScorerMatchId == null) return;
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
+    final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    if (idx != -1) {
+      final match = _matches[idx];
+      final temp = match.currentStrikerId;
+      match.currentStrikerId = match.currentNonStrikerId;
+      match.currentNonStrikerId = temp;
 
-    // Rotate strike at the end of the over
-    final temp = match.currentStrikerId;
-    match.currentStrikerId = match.currentNonStrikerId;
-    match.currentNonStrikerId = temp;
-
-    // Automatically assign next bowler (cycle backwards)
-    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-    if (bowlingTeam.players.isNotEmpty) {
-      final currentBowlerIndex = bowlingTeam.players.indexWhere((p) => p.id == match.currentBowlerId);
-      int nextBowlerIndex = (currentBowlerIndex - 1) % bowlingTeam.players.length;
-      if (nextBowlerIndex < 0) nextBowlerIndex = bowlingTeam.players.length - 1;
-      match.currentBowlerId = bowlingTeam.players[nextBowlerIndex].id;
+      final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+      if (bowlingTeam.players.isNotEmpty) {
+        final currentBowlerIndex = bowlingTeam.players.indexWhere((p) => p.id == match.currentBowlerId);
+        int nextBowlerIndex = (currentBowlerIndex - 1) % bowlingTeam.players.length;
+        if (nextBowlerIndex < 0) nextBowlerIndex = bowlingTeam.players.length - 1;
+        match.currentBowlerId = bowlingTeam.players[nextBowlerIndex].id;
+      }
+      notifyListeners();
     }
-
-    if (!_isOnlineMode) _saveMatches();
-    notifyListeners();
   }
 
   void endInningsOrMatch() async {
     if (_activeScorerMatchId == null) return;
-
-    if (_isOnlineMode) {
-      final updated = await ApiService.endInningsOrMatch(_activeScorerMatchId!);
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
-      }
-      return;
+    final updated = await ApiService.endInningsOrMatch(_activeScorerMatchId!);
+    if (updated != null) {
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1) _matches[idx] = updated;
+      notifyListeners();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-
-    if (match.isFirstInnings) {
-      match.isFirstInnings = false;
-      match.battingTeamId = match.battingTeamId == match.teamA.id ? match.teamB.id : match.teamA.id;
-      match.target = (match.runsA) + 1;
-      
-      final activeBatTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-      final activeBowlTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-      
-      _ensureTeamHasPlayers(activeBatTeam);
-      _ensureTeamHasPlayers(activeBowlTeam);
-
-      match.currentStrikerId = activeBatTeam.players.isNotEmpty ? activeBatTeam.players[0].id : '';
-      match.currentNonStrikerId = activeBatTeam.players.length > 1 ? activeBatTeam.players[1].id : match.currentStrikerId;
-      match.currentBowlerId = activeBowlTeam.players.isNotEmpty ? activeBowlTeam.players.last.id : '';
-    } else {
-      match.status = 'Completed';
-    }
-
-    _saveMatches();
-    notifyListeners();
   }
 
   void endMatchForce() async {
     if (_activeScorerMatchId == null) return;
-
-    if (_isOnlineMode) {
-      final updated = await ApiService.endMatchForce(_activeScorerMatchId!);
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
-      }
-      return;
+    final updated = await ApiService.endMatchForce(_activeScorerMatchId!);
+    if (updated != null) {
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1) _matches[idx] = updated;
+      notifyListeners();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    match.status = 'Completed';
-    _saveMatches();
-    notifyListeners();
   }
 
-  double _incrementOvers(double currentOvers, int ballsAdded) {
-    if (ballsAdded == 0) return currentOvers;
-    
-    int oversInt = currentOvers.toInt();
-    int ballsInt = ((currentOvers - oversInt) * 10).round();
-    
-    ballsInt += ballsAdded;
-    if (ballsInt >= 6) {
-      oversInt += ballsInt ~/ 6;
-      ballsInt = ballsInt % 6;
-    }
-    
-    return oversInt + (ballsInt / 10.0);
-  }
-
-  // win probability calculator
   double calculateWinProbability(CricketMatch match) {
     if (match.status == 'Upcoming') return 50.0;
     if (match.status == 'Completed') {
@@ -1240,16 +546,16 @@ class StorageService with ChangeNotifier {
       int target = match.target;
       int currentScore = match.runsB;
       int runsNeeded = target - currentScore;
-      
+
       int totalBalls = 120;
       int oversInt = match.oversB.toInt();
       int ballsInt = ((match.oversB - oversInt) * 10).round();
       int ballsBowled = (oversInt * 6) + ballsInt;
       int ballsRemaining = totalBalls - ballsBowled;
-      
+
       if (runsNeeded <= 0) return 0.0;
       if (ballsRemaining <= 0 || match.wicketsB >= 10) return 100.0;
-      
+
       double requiredRate = (runsNeeded / ballsRemaining) * 6;
       prob = 50.0 - (requiredRate - 7.5) * 7 + (10 - match.wicketsB) * 3;
     }
@@ -1258,246 +564,48 @@ class StorageService with ChangeNotifier {
   }
 
   void resetMatchToZero(String matchId) async {
-    if (_isOnlineMode) {
-      final ok = await ApiService.resetMatchToZero(matchId);
-      if (ok) await loadData();
-      return;
+    final ok = await ApiService.resetMatchToZero(matchId);
+    if (ok) {
+      await loadData();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == matchId);
-    
-    match.runsA = 0;
-    match.wicketsA = 0;
-    match.oversA = 0.0;
-    match.runsB = 0;
-    match.wicketsB = 0;
-    match.oversB = 0.0;
-    match.target = 0;
-    match.balls = [];
-    match.isFirstInnings = true;
-
-    for (var p in match.teamA.players) {
-      p.runsScored = 0;
-      p.ballsFaced = 0;
-    }
-    for (var p in match.teamB.players) {
-      p.oversBowled = 0.0;
-      p.runsConceded = 0;
-      p.wicketsTaken = 0;
-    }
-
-    _ensureTeamHasPlayers(match.teamA);
-    _ensureTeamHasPlayers(match.teamB);
-
-    match.currentStrikerId = match.teamA.players.isNotEmpty ? match.teamA.players[0].id : '';
-    match.currentNonStrikerId = match.teamA.players.length > 1 ? match.teamA.players[1].id : match.currentStrikerId;
-    match.currentBowlerId = match.teamB.players.isNotEmpty ? match.teamB.players.last.id : '';
-
-    _saveMatches();
-    notifyListeners();
-  }
-
-  double _decrementOvers(double currentOvers, int ballsRemoved) {
-    if (ballsRemoved == 0) return currentOvers;
-    
-    int oversInt = currentOvers.toInt();
-    int ballsInt = ((currentOvers - oversInt) * 10).round();
-    
-    ballsInt -= ballsRemoved;
-    if (ballsInt < 0) {
-      int oversNeeded = (ballsInt.abs() / 6).ceil();
-      oversInt -= oversNeeded;
-      ballsInt = (ballsInt + (oversNeeded * 6)) % 6;
-      if (oversInt < 0) {
-        oversInt = 0;
-        ballsInt = 0;
-      }
-    }
-    
-    return oversInt + (ballsInt / 10.0);
   }
 
   void undoLastBall() async {
     if (_activeScorerMatchId == null) return;
-
-    if (_isOnlineMode) {
-      final updated = await ApiService.undoLastBall(_activeScorerMatchId!);
-      if (updated != null) {
-        final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-        if (idx != -1) _matches[idx] = updated;
-        notifyListeners();
-      }
-      return;
+    final updated = await ApiService.undoLastBall(_activeScorerMatchId!);
+    if (updated != null) {
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1) _matches[idx] = updated;
+      notifyListeners();
     }
-
-    // --- Offline ---
-    final match = _matches.firstWhere((m) => m.id == _activeScorerMatchId);
-    if (match.balls.isEmpty) return;
-
-    final lastBall = match.balls.removeLast();
-
-    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-
-    _ensureTeamHasPlayers(battingTeam);
-    _ensureTeamHasPlayers(bowlingTeam);
-
-    if (lastBall.strikerId != null) match.currentStrikerId = lastBall.strikerId!;
-    if (lastBall.nonStrikerId != null) match.currentNonStrikerId = lastBall.nonStrikerId!;
-    if (lastBall.bowlerId != null) match.currentBowlerId = lastBall.bowlerId!;
-
-    final striker = battingTeam.players.firstWhere(
-      (p) => p.id == match.currentStrikerId,
-      orElse: () => battingTeam.players.isNotEmpty
-          ? battingTeam.players[0]
-          : Player(id: '', name: 'Striker', role: 'Batter', nationality: ''),
-    );
-    final bowler = bowlingTeam.players.firstWhere(
-      (p) => p.id == match.currentBowlerId,
-      orElse: () => bowlingTeam.players.isNotEmpty
-          ? bowlingTeam.players.last
-          : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
-    );
-
-    int ballVal = 1;
-    if (lastBall.extraType == 'Wide' || lastBall.extraType == 'No Ball') {
-      ballVal = 0;
-    }
-
-    int totalRunsThisBall = lastBall.run + lastBall.extraRun;
-
-    if (match.isFirstInnings) {
-      match.runsA -= totalRunsThisBall;
-      if (match.runsA < 0) match.runsA = 0;
-      
-      if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
-        match.wicketsA -= 1;
-        if (match.wicketsA < 0) match.wicketsA = 0;
-      }
-      
-      match.oversA = _decrementOvers(match.oversA, ballVal);
-    } else {
-      match.runsB -= totalRunsThisBall;
-      if (match.runsB < 0) match.runsB = 0;
-      
-      if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
-        match.wicketsB -= 1;
-        if (match.wicketsB < 0) match.wicketsB = 0;
-      }
-      
-      match.oversB = _decrementOvers(match.oversB, ballVal);
-    }
-
-    if (lastBall.extraType == 'None' || lastBall.extraType == 'Leg Bye') {
-      striker.runsScored -= lastBall.run;
-      if (striker.runsScored < 0) striker.runsScored = 0;
-      
-      striker.ballsFaced -= ballVal;
-      if (striker.ballsFaced < 0) striker.ballsFaced = 0;
-    }
-
-    bowler.runsConceded -= totalRunsThisBall;
-    if (bowler.runsConceded < 0) bowler.runsConceded = 0;
-
-    if (lastBall.isWicket && lastBall.wicketType != 'Run Out' && lastBall.wicketType != 'Retired Out' && lastBall.wicketType != 'Retired Hurt') {
-      bowler.wicketsTaken -= 1;
-      if (bowler.wicketsTaken < 0) bowler.wicketsTaken = 0;
-    }
-
-    if (ballVal > 0) {
-      bowler.oversBowled = _decrementOvers(bowler.oversBowled, 1);
-    }
-
-    if (match.status == 'Completed') {
-      match.status = 'Live';
-    }
-
-    _saveMatches();
-    notifyListeners();
   }
 
   void saveMatchesState() {
-    if (!_isOnlineMode) _saveMatches();
     notifyListeners();
   }
 
   // --- Profile, Password and Settings persistence helper methods ---
   Future<bool> updateProfile({String? name, String? email}) async {
-    if (_isOnlineMode) {
-      final res = await ApiService.updateProfile(name: name, email: email);
-      if (res != null) {
-        _currentUserEmail = res['user']['email'];
-        _currentUserName = res['user']['name'];
-        notifyListeners();
-        return true;
-      }
-      return false;
-    }
-
-    // --- Offline update profile ---
-    if (_currentUserEmail == null) return false;
-    
-    if (email != null && email != _currentUserEmail) {
-      if (_users.containsKey(email)) {
-        return false; // Email already in use offline
-      }
-      final pwd = _users[_currentUserEmail!];
-      _users.remove(_currentUserEmail!);
-      _users[email] = pwd ?? 'user123';
-      
-      // Update name preference key
-      final oldName = _prefs?.getString('name_$_currentUserEmail') ?? _currentUserName;
-      if (oldName != null) {
-        _prefs?.setString('name_$email', oldName);
-      }
-      _prefs?.remove('name_$_currentUserEmail');
-      
-      _currentUserEmail = email;
-    }
-
-    if (name != null) {
-      _currentUserName = name;
-      _prefs?.setString('name_$_currentUserEmail', name);
-    }
-
-    _saveUsers();
-    notifyListeners();
-    return true;
-  }
-
-  Future<String?> requestPasswordOtp() async {
-    if (_isOnlineMode) {
-      final res = await ApiService.requestPasswordOtp();
-      if (res != null && res['otp'] != null) {
-        return res['otp'].toString();
-      }
-      return null;
-    }
-
-    // --- Offline Request OTP ---
-    _offlineOtp = (1000 + Random().nextInt(9000)).toString();
-    debugPrint('Offline OTP generated: $_offlineOtp');
-    return _offlineOtp;
-  }
-
-  Future<bool> updatePassword(String otp, String newPassword) async {
-    if (_isOnlineMode) {
-      return await ApiService.updatePassword(otp, newPassword);
-    }
-
-    // --- Offline Update Password ---
-    if (_offlineOtp == null || _offlineOtp != otp) {
-      return false;
-    }
-
-    if (_currentUserEmail != null) {
-      _users[_currentUserEmail!] = newPassword;
-      _saveUsers();
-      _offlineOtp = null;
+    final res = await ApiService.updateProfile(name: name, email: email);
+    if (res != null && res['user'] != null) {
+      _currentUserEmail = res['user']['email'];
+      _currentUserName = res['user']['name'];
+      notifyListeners();
       return true;
     }
     return false;
+  }
+
+  Future<String?> requestPasswordOtp() async {
+    final res = await ApiService.requestPasswordOtp();
+    if (res != null && res['otp'] != null) {
+      return res['otp'].toString();
+    }
+    return null;
+  }
+
+  Future<bool> updatePassword(String otp, String newPassword) async {
+    return await ApiService.updatePassword(otp, newPassword);
   }
 
   // Favorites persistence
@@ -1522,7 +630,7 @@ class StorageService with ChangeNotifier {
 
   // Notification settings persistence
   bool getNotificationSetting(String settingKey) {
-    if (_currentUserEmail == null) return true; // Default to true
+    if (_currentUserEmail == null) return true;
     final key = 'notif_${settingKey}_$_currentUserEmail';
     return _prefs?.getBool(key) ?? true;
   }
@@ -1546,11 +654,10 @@ class StorageService with ChangeNotifier {
     for (var str in rawList) {
       try {
         final item = SearchHistoryItem.fromJson(json.decode(str));
-        // Enforce 1-week retention window
         if (item.timestamp.isAfter(sevenDaysAgo)) {
           validItems.add(item);
         } else {
-          needsSave = true; // Auto-purged expired entry older than 7 days
+          needsSave = true;
         }
       } catch (_) {}
     }
@@ -1563,15 +670,12 @@ class StorageService with ChangeNotifier {
 
   Future<void> addSearchHistoryItem(SearchHistoryItem newItem) async {
     List<SearchHistoryItem> currentList = getSearchHistory();
-    // Remove any duplicate matching title & category
     currentList.removeWhere((item) =>
         item.title.toLowerCase() == newItem.title.toLowerCase() &&
         item.category == newItem.category);
-    
-    // Insert newest search item at beginning
+
     currentList.insert(0, newItem);
 
-    // Limit to max 30 recent entries
     if (currentList.length > 30) {
       currentList = currentList.sublist(0, 30);
     }

@@ -775,4 +775,49 @@ class ApiService {
       return null;
     }
   }
+
+  // --- Managers / Scorers API ---
+  static Future<List<Manager>> getManagers() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/managers'), headers: _headers);
+      if (res.statusCode == 200) {
+        final List decoded = jsonDecode(res.body);
+        return decoded.map((item) => Manager.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('ApiService getManagers error: $e');
+      return [];
+    }
+  }
+
+  static Future<Manager?> createManager({
+    required String name,
+    required String username,
+    required String password,
+    String? phone,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/managers'),
+        headers: _headers,
+        body: jsonEncode({
+          'name': name.trim(),
+          'username': username.trim().toLowerCase(),
+          'password': password.trim(),
+          'phone': phone?.trim(),
+        }),
+      );
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        if (data['manager'] != null) {
+          return Manager.fromJson(data['manager']);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService createManager error: $e');
+      return null;
+    }
+  }
 }
