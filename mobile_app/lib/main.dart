@@ -22,11 +22,16 @@ void main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  // Initialize Auth storage, Hive CE notification cache, FCM push notifications, and ElevenLabs TTS
+  // Initialize core services safely and concurrently
   await ApiService.init();
-  await NotificationCacheService.init();
-  await NotificationService.init();
-  await ElevenLabsService().init();
+  Future.wait([
+    NotificationCacheService.init(),
+    NotificationService.init(),
+    ElevenLabsService().init(),
+  ]).catchError((e) {
+    debugPrint('Background service init warning: $e');
+    return <void>[];
+  });
 
   runApp(
     ChangeNotifierProvider(

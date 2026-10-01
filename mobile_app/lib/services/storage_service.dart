@@ -43,10 +43,16 @@ class StorageService with ChangeNotifier {
   }
 
   Future<void> _initStorage() async {
-    _prefs = await SharedPreferences.getInstance();
-    await ApiService.init();
-    await tryTokenAuth();
-    await loadData();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      await ApiService.init();
+      final hasSession = await AuthStorageService.hasValidSession();
+      if (hasSession) {
+        await tryTokenAuth();
+      }
+    } catch (e) {
+      debugPrint('_initStorage error: $e');
+    }
   }
 
   Future<void> toggleOnlineMode(bool val) async {
@@ -195,10 +201,10 @@ class StorageService with ChangeNotifier {
     return false;
   }
 
-  Future<bool> register(
-    String name,
-    String email,
-    String password, {
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
     String? confirmPassword,
   }) async {
     _lastAuthError = null;
@@ -208,16 +214,16 @@ class StorageService with ChangeNotifier {
     final normalizedEmail = email.trim().toLowerCase();
 
     final res = await ApiService.register(
-      normalizedEmail,
-      password,
-      trimmedName,
+      email: normalizedEmail,
+      password: password,
+      name: trimmedName,
       confirmPassword: confirmPassword,
     );
 
     if (res.isSuccess && res.data != null) {
-      _currentUserEmail = res.data!['user']['email'];
-      _currentRole = res.data!['user']['role'] ?? 'User';
-      _currentUserName = res.data!['user']['name'];
+      _currentUserEmail = res.data!['user']?['email'] ?? normalizedEmail;
+      _currentRole = res.data!['user']?['role'] ?? 'User';
+      _currentUserName = res.data!['user']?['name'] ?? trimmedName;
       await loadData();
       notifyListeners();
       return true;

@@ -36,29 +36,36 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _logoController.forward();
+    _initAndNavigate();
+  }
 
-    Timer(const Duration(seconds: 3), () async {
-      if (!mounted) return;
-      final storage = Provider.of<StorageService>(context, listen: false);
-      final isLoggedIn = await storage.tryTokenAuth();
-      if (!mounted) return;
-      
-      if (isLoggedIn) {
-        final role = storage.currentRole;
-        if (role == 'Admin') {
-          Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
-        } else if (role == 'Scorer') {
-          Navigator.pushReplacementNamed(context, AppRoutes.scorerDashboard);
-        } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
-        }
+  Future<void> _initAndNavigate() async {
+    final minSplashFuture = Future.delayed(const Duration(milliseconds: 1400));
+    final storage = Provider.of<StorageService>(context, listen: false);
+
+    bool isLoggedIn = false;
+    try {
+      isLoggedIn = await storage.tryTokenAuth();
+    } catch (_) {}
+
+    await minSplashFuture;
+    if (!mounted) return;
+
+    if (isLoggedIn) {
+      final role = storage.currentRole;
+      if (role == 'Admin') {
+        Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+      } else if (role == 'Scorer') {
+        Navigator.pushReplacementNamed(context, AppRoutes.scorerDashboard);
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
+        Navigator.pushReplacementNamed(context, AppRoutes.userDashboard);
       }
-    });
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+      );
+    }
   }
 
   @override

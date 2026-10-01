@@ -129,9 +129,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         }
 
         final success = await storage.register(
-          email,
-          pass,
-          name,
+          name: name,
+          email: email,
+          password: pass,
           confirmPassword: confirmPass,
         );
 

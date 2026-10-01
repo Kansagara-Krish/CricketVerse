@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
-
 import 'auth_storage_service.dart';
 
 class RegisterResponse {
@@ -22,20 +22,51 @@ class RegisterResponse {
 }
 
 class ApiService {
-  static const Duration defaultTimeout = Duration(seconds: 8);
+  static const Duration defaultTimeout = Duration(seconds: 6);
+  static String? _customBaseUrl;
+
+  static String get defaultHostIp => '192.168.31.253';
 
   static String get baseUrl {
+    if (_customBaseUrl != null && _customBaseUrl!.trim().isNotEmpty) {
+      return _customBaseUrl!.trim();
+    }
     if (kIsWeb) {
       return 'http://localhost:3000/api/v1';
     }
-    // Set LAN IP address for physical phone testing
-    return 'http://192.168.31.18:3000/api/v1';
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      return 'http://127.0.0.1:3000/api/v1';
+    }
+    // Physical device or emulator fallback
+    return 'http://$defaultHostIp:3000/api/v1';
+  }
+
+  static Future<void> setCustomBaseUrl(String url) async {
+    _customBaseUrl = url.trim();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cricketverse_api_base_url', _customBaseUrl!);
+    } catch (_) {}
   }
 
   static String? _token;
 
   static Future<void> init() async {
-    _token = await AuthStorageService.getAccessToken();
+    try {
+      _token = await AuthStorageService.getAccessToken();
+    } catch (e) {
+      debugPrint('ApiService.init token error: $e');
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString('cricketverse_api_base_url');
+      if (savedUrl != null && savedUrl.trim().isNotEmpty) {
+        _customBaseUrl = savedUrl.trim();
+      }
+    } catch (_) {}
   }
 
   static Map<String, String> get _headers {
@@ -88,7 +119,7 @@ class ApiService {
           'email': email,
           'role': role,
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService logout error: $e');
@@ -100,9 +131,9 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
-      );
+      ).timeout(defaultTimeout);
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -118,10 +149,10 @@ class ApiService {
     }
   }
 
-  static Future<RegisterResponse> register(
-    String email,
-    String password,
-    String name, {
+  static Future<RegisterResponse> register({
+    required String email,
+    required String password,
+    required String name,
     String? confirmPassword,
   }) async {
     try {
@@ -137,9 +168,9 @@ class ApiService {
 
       final res = await http.post(
         Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode(body),
-      );
+      ).timeout(defaultTimeout);
 
       if (res.statusCode == 201) {
         final data = jsonDecode(res.body);
@@ -174,7 +205,7 @@ class ApiService {
       return RegisterResponse(
         isSuccess: false,
         statusCode: 500,
-        errorMessage: 'Unable to connect to the server. Please check your network connection.',
+        errorMessage: 'Unable to connect to server. Please verify network or server status.',
       );
     }
   }
@@ -184,7 +215,7 @@ class ApiService {
       final res = await http.get(
         Uri.parse('$baseUrl/auth/me'),
         headers: _headers,
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
@@ -205,7 +236,7 @@ class ApiService {
         Uri.parse('$baseUrl/auth/profile'),
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(defaultTimeout);
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -226,7 +257,7 @@ class ApiService {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/password-otp'),
         headers: _headers,
-      );
+      ).timeout(defaultTimeout);
 
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
@@ -244,7 +275,7 @@ class ApiService {
         Uri.parse('$baseUrl/auth/password'),
         headers: _headers,
         body: jsonEncode({'otp': otp, 'newPassword': newPassword}),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService updatePassword error: $e');
@@ -258,7 +289,7 @@ class ApiService {
         Uri.parse('$baseUrl/auth/broadcast'),
         headers: _headers,
         body: jsonEncode({'title': title, 'message': message}),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService broadcastNotification error: $e');
@@ -269,15 +300,15 @@ class ApiService {
   // --- Teams API ---
   static Future<List<Team>> getTeams() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/teams'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/teams'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => Team.fromJson(item)).toList();
       }
-      throw Exception('Failed to fetch teams. Status code: ${res.statusCode}');
+      return [];
     } catch (e) {
       debugPrint('ApiService getTeams error: $e');
-      rethrow;
+      return [];
     }
   }
 
@@ -292,7 +323,7 @@ class ApiService {
           'logoColorHex': colorHex,
           'players': players.map((p) => p.toJson()).toList(),
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService addTeam error: $e');
@@ -310,7 +341,7 @@ class ApiService {
           'shortName': shortName,
           'logoColorHex': colorHex,
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService updateTeam error: $e');
@@ -320,7 +351,7 @@ class ApiService {
 
   static Future<bool> deleteTeam(String id) async {
     try {
-      final res = await http.delete(Uri.parse('$baseUrl/teams/$id'), headers: _headers);
+      final res = await http.delete(Uri.parse('$baseUrl/teams/$id'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService deleteTeam error: $e');
@@ -334,7 +365,7 @@ class ApiService {
         Uri.parse('$baseUrl/teams/$teamId/players'),
         headers: _headers,
         body: jsonEncode(player.toJson()),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService addPlayer error: $e');
@@ -348,7 +379,7 @@ class ApiService {
         Uri.parse('$baseUrl/teams/players/${player.id}'),
         headers: _headers,
         body: jsonEncode(player.toJson()),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService updatePlayer error: $e');
@@ -358,7 +389,7 @@ class ApiService {
 
   static Future<bool> removePlayer(String playerId) async {
     try {
-      final res = await http.delete(Uri.parse('$baseUrl/teams/players/$playerId'), headers: _headers);
+      final res = await http.delete(Uri.parse('$baseUrl/teams/players/$playerId'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService removePlayer error: $e');
@@ -369,21 +400,21 @@ class ApiService {
   // --- Matches API ---
   static Future<List<CricketMatch>> getMatches() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/matches'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/matches'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => CricketMatch.fromJson(item)).toList();
       }
-      throw Exception('Failed to fetch matches. Status code: ${res.statusCode}');
+      return [];
     } catch (e) {
       debugPrint('ApiService getMatches error: $e');
-      rethrow;
+      return [];
     }
   }
 
   static Future<CricketMatch?> getMatchById(String id) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/matches/$id'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/matches/$id'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -418,7 +449,7 @@ class ApiService {
           'scorerUser': scorerUser,
           'scorerPass': scorerPass,
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService scheduleMatch error: $e');
@@ -451,7 +482,7 @@ class ApiService {
           'scorerUser': scorerUser,
           'scorerPass': scorerPass,
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService updateMatch error: $e');
@@ -461,7 +492,7 @@ class ApiService {
 
   static Future<bool> adminActivateMatch(String id) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/matches/$id/activate'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/matches/$id/activate'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService adminActivateMatch error: $e');
@@ -471,7 +502,7 @@ class ApiService {
 
   static Future<bool> resetMatchToZero(String id) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/matches/$id/reset'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/matches/$id/reset'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService resetMatchToZero error: $e');
@@ -481,14 +512,13 @@ class ApiService {
 
   static Future<bool> deleteMatch(String id) async {
     try {
-      final res = await http.delete(Uri.parse('$baseUrl/matches/$id'), headers: _headers);
+      final res = await http.delete(Uri.parse('$baseUrl/matches/$id'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService deleteMatch error: $e');
       return false;
     }
   }
-
 
   // --- Scoring API ---
   static Future<CricketMatch?> startMatchSetup(String matchId, String tossWinner, String decision, String firstBattingTeamId) async {
@@ -501,7 +531,7 @@ class ApiService {
           'tossDecision': decision,
           'firstBattingTeamId': firstBattingTeamId,
         }),
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -537,7 +567,7 @@ class ApiService {
           'newBatsmanId': newBatsmanId,
           'newBatsmanPosition': newBatsmanPosition,
         }),
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -550,7 +580,7 @@ class ApiService {
 
   static Future<CricketMatch?> undoLastBall(String matchId) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/undo'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/undo'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -563,7 +593,7 @@ class ApiService {
 
   static Future<CricketMatch?> swapStrikers(String matchId) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/swap-strike'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/swap-strike'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -580,7 +610,7 @@ class ApiService {
         Uri.parse('$baseUrl/scoring/$matchId/switch-bowler'),
         headers: _headers,
         body: jsonEncode({'bowlerId': bowlerId}),
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -593,7 +623,7 @@ class ApiService {
 
   static Future<CricketMatch?> endInningsOrMatch(String matchId) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/end-innings'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/end-innings'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -606,7 +636,7 @@ class ApiService {
 
   static Future<CricketMatch?> endMatchForce(String matchId) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/end-match'), headers: _headers);
+      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/end-match'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }
@@ -620,7 +650,7 @@ class ApiService {
   // --- Tournaments API ---
   static Future<List<Tournament>> getTournaments() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/tournaments'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/tournaments'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => Tournament.fromJson(item)).toList();
@@ -634,7 +664,7 @@ class ApiService {
 
   static Future<Tournament?> getTournamentById(String id) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return Tournament.fromJson(jsonDecode(res.body));
       }
@@ -651,7 +681,7 @@ class ApiService {
         Uri.parse('$baseUrl/tournaments'),
         headers: _headers,
         body: jsonEncode(tournament.toJson()),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService createTournament error: $e');
@@ -665,7 +695,7 @@ class ApiService {
         Uri.parse('$baseUrl/tournaments/${tournament.id}'),
         headers: _headers,
         body: jsonEncode(tournament.toJson()),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService updateTournament error: $e');
@@ -675,7 +705,7 @@ class ApiService {
 
   static Future<bool> deleteTournament(String id) async {
     try {
-      final res = await http.delete(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers);
+      final res = await http.delete(Uri.parse('$baseUrl/tournaments/$id'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService deleteTournament error: $e');
@@ -686,7 +716,7 @@ class ApiService {
   // --- Prediction API ---
   static Future<Map<String, dynamic>?> getMatchPrediction(String matchId) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/matches/$matchId/prediction'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/matches/$matchId/prediction'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
@@ -700,7 +730,7 @@ class ApiService {
   // --- Notifications API ---
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final List decoded = jsonDecode(res.body);
         return decoded.cast<Map<String, dynamic>>();
@@ -722,7 +752,7 @@ class ApiService {
           'message': message,
           if (category != null) 'category': category,
         }),
-      );
+      ).timeout(defaultTimeout);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('ApiService createNotification error: $e');
@@ -732,7 +762,7 @@ class ApiService {
 
   static Future<bool> markNotificationRead(String notifId) async {
     try {
-      final res = await http.put(Uri.parse('$baseUrl/notifications/$notifId/read'), headers: _headers);
+      final res = await http.put(Uri.parse('$baseUrl/notifications/$notifId/read'), headers: _headers).timeout(defaultTimeout);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('ApiService markNotificationRead error: $e');
@@ -743,7 +773,7 @@ class ApiService {
   // --- Analytics API ---
   static Future<Map<String, dynamic>?> getSystemAnalytics() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/analytics/stats'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/analytics/stats'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
@@ -764,7 +794,7 @@ class ApiService {
           'text': text,
           if (voiceId != null) 'voiceId': voiceId,
         }),
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         return data['audioBase64'];
@@ -779,7 +809,7 @@ class ApiService {
   // --- Managers / Scorers API ---
   static Future<List<Manager>> getManagers() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/managers'), headers: _headers);
+      final res = await http.get(Uri.parse('$baseUrl/managers'), headers: _headers).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         final List decoded = jsonDecode(res.body);
         return decoded.map((item) => Manager.fromJson(item)).toList();
@@ -807,7 +837,7 @@ class ApiService {
           'password': password.trim(),
           'phone': phone?.trim(),
         }),
-      );
+      ).timeout(defaultTimeout);
       if (res.statusCode == 201) {
         final data = jsonDecode(res.body);
         if (data['manager'] != null) {
