@@ -695,10 +695,14 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${match.teamA.shortName} vs ${match.teamB.shortName} - ${match.matchType}',
-                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Text(
+                      '${match.teamA.shortName} vs ${match.teamB.shortName} - ${match.matchType}',
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
@@ -706,6 +710,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const CircleAvatar(radius: 2.5, backgroundColor: AppTheme.primaryGreen),
                         const SizedBox(width: 4),
@@ -1077,16 +1082,20 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                   const SizedBox(height: 1),
                   Row(
                     children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                       if (stats != null) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           stats,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF0284C7),
                           ),

@@ -202,13 +202,17 @@ export async function updateScore(req: Request, res: Response) {
     const batsmanName = striker ? striker.name : 'Striker';
     const bowlerName = bowler ? bowler.name : 'Bowler';
 
-    let ballVal = 1;
-    if (extraType === 'Wide' || extraType === 'No Ball') {
-      ballVal = 0;
-    }
+    const runsNum = Number(runs) || 0;
+    const extraRunsNum = Number(extraRuns) || 0;
+    const totalRunsThisBall = runsNum + extraRunsNum;
 
-    const totalRunsThisBall = (Number(runs) || 0) + (Number(extraRuns) || 0);
+    // Legal ball determination:
+    // Wide and No Ball are NOT legal balls for over count (ballVal = 0)
+    // None, Bye, Leg Bye ARE legal deliveries (ballVal = 1)
+    const isLegalBall = extraType !== 'Wide' && extraType !== 'No Ball';
+    const ballVal = isLegalBall ? 1 : 0;
 
+    // 1. Team Score & Over Increment
     if (match.isFirstInnings) {
       match.runsA += totalRunsThisBall;
       if (isWicket && wicketType !== 'Retired Hurt') match.wicketsA += 1;
@@ -219,20 +223,56 @@ export async function updateScore(req: Request, res: Response) {
       match.oversB = incrementOvers(match.oversB, ballVal);
     }
 
-    // Update Player Batting Stats
-    if (striker && (extraType === 'None' || extraType === 'Leg Bye')) {
-      striker.runsScored = (striker.runsScored || 0) + runs;
-      striker.ballsFaced = (striker.ballsFaced || 0) + ballVal;
+    // 2. Batsman Stats Update (MCC / ICC Rules):
+    // - Striker gets runs scored off the bat ('None' and 'No Ball' with bat runs).
+    // - Striker does NOT get runs on 'Wide', 'Bye', or 'Leg Bye'.
+    // - Striker balls faced increments on legal balls ('None', 'Bye', 'Leg Bye') and 'No Ball'.
+    // - Striker balls faced does NOT increment on 'Wide'.
+    if (striker) {
+      if (extraType === 'None' || extraType === 'No Ball') {
+        striker.runsScored = (striker.runsScored || 0) + runsNum;
+      }
+      if (extraType !== 'Wide') {
+        striker.ballsFaced = (striker.ballsFaced || 0) + 1;
+      }
     }
 
-    // Update Bowler Stats
+    // 3. Bowler Stats Update (MCC / ICC Rules):
+    // - Concedes runs scored off bat ('None'), wide penalty + runs ('Wide'), and no-ball penalty + runs ('No Ball').
+    // - Byes and Leg Byes are NOT charged to the bowler's runs conceded!
+    // - Wickets credited to bowler except Run Out, Retired Out, Retired Hurt, Timed Out, Obstructing Field.
+    // - Overs bowled increments by 1 legal ball on legal deliveries.
     if (bowler) {
-      bowler.runsConceded = (bowler.runsConceded || 0) + totalRunsThisBall;
-      if (isWicket && wicketType !== 'Run Out' && wicketType !== 'Retired Out' && wicketType !== 'Retired Hurt') {
+      if (extraType === 'None' || extraType === 'Wide' || extraType === 'No Ball') {
+        bowler.runsConceded = (bowler.runsConceded || 0) + totalRunsThisBall;
+      }
+      if (isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(wicketType)) {
         bowler.wicketsTaken = (bowler.wicketsTaken || 0) + 1;
       }
-      if (ballVal > 0) {
+      if (isLegalBall) {
         bowler.oversBowled = incrementOvers(Number(bowler.oversBowled || 0), 1);
+      }
+    }
+
+    // Sync stats into teamA and teamB subdocuments
+    if (match.teamA && Array.isArray(match.teamA.players)) {
+      if (striker) {
+        const idx = match.teamA.players.findIndex((p: any) => p.id === striker.id);
+        if (idx !== -1) match.teamA.players[idx] = { ...match.teamA.players[idx], ...striker };
+      }
+      if (bowler) {
+        const bIdx = match.teamA.players.findIndex((p: any) => p.id === bowler.id);
+        if (bIdx !== -1) match.teamA.players[bIdx] = { ...match.teamA.players[bIdx], ...bowler };
+      }
+    }
+    if (match.teamB && Array.isArray(match.teamB.players)) {
+      if (striker) {
+        const idx = match.teamB.players.findIndex((p: any) => p.id === striker.id);
+        if (idx !== -1) match.teamB.players[idx] = { ...match.teamB.players[idx], ...striker };
+      }
+      if (bowler) {
+        const bIdx = match.teamB.players.findIndex((p: any) => p.id === bowler.id);
+        if (bIdx !== -1) match.teamB.players[bIdx] = { ...match.teamB.players[bIdx], ...bowler };
       }
     }
 
@@ -243,7 +283,7 @@ export async function updateScore(req: Request, res: Response) {
     const commentary = generateAICommentary(
       batsmanName,
       bowlerName,
-      runs,
+      runsNum,
       extraType || 'None',
       isWicket || false,
       wicketType || 'None',
@@ -253,8 +293,8 @@ export async function updateScore(req: Request, res: Response) {
     );
 
     match.balls.push({
-      run: runs,
-      extraRun: extraRuns || 0,
+      run: runsNum,
+      extraRun: extraRunsNum,
       extraType: extraType || 'None',
       isWicket: Boolean(isWicket),
       wicketType: wicketType || 'None',
@@ -267,14 +307,35 @@ export async function updateScore(req: Request, res: Response) {
       bowlerId: currentBowlerId,
     });
 
+    // 4. Strike Rotation Logic:
+    // Physical runs run between wickets:
+    // - On normal hit: runsNum odd -> swap
+    // - On Bye/Leg Bye: totalRunsThisBall odd -> swap
+    // - On No Ball: runsNum odd -> swap
+    // - On Wide: runsNum odd -> swap
+    let shouldSwapStrike = false;
+    if (extraType === 'None' && runsNum % 2 !== 0) shouldSwapStrike = true;
+    else if ((extraType === 'Bye' || extraType === 'Leg Bye') && totalRunsThisBall % 2 !== 0) shouldSwapStrike = true;
+    else if (extraType === 'No Ball' && runsNum % 2 !== 0) shouldSwapStrike = true;
+    else if (extraType === 'Wide' && runsNum % 2 !== 0) shouldSwapStrike = true;
+
+    // Check if over ended on this ball (legal delivery and ball counter reaches 0 in .X notation)
+    const overBalls = Math.round((currentOvers - Math.floor(currentOvers)) * 10);
+    const overCompleted = isLegalBall && overBalls === 0 && currentOvers > 0;
+    if (overCompleted) {
+      // Over change swaps strike ends
+      shouldSwapStrike = !shouldSwapStrike;
+    }
+
     let finalStrikerId = currentStrikerId;
     let finalNonStrikerId = currentNonStrikerId;
 
-    if (runs % 2 !== 0 && (extraType === 'None' || extraType === 'Leg Bye')) {
+    if (shouldSwapStrike) {
       finalStrikerId = currentNonStrikerId;
       finalNonStrikerId = currentStrikerId;
     }
 
+    // 5. Wicket handling and incoming batsman
     if (isWicket) {
       const partnerId = dismissedPlayerId === currentStrikerId ? currentNonStrikerId : currentStrikerId;
 
@@ -329,6 +390,8 @@ export async function updateScore(req: Request, res: Response) {
 
     match.markModified('playingXI_A');
     match.markModified('playingXI_B');
+    match.markModified('teamA');
+    match.teamB && match.markModified('teamB');
     match.markModified('balls');
     await match.save();
 
@@ -356,8 +419,9 @@ export async function undoLastBall(req: Request, res: Response) {
     }
 
     const lastBall = match.balls.pop()!;
-    const ballVal = lastBall.extraType === 'Wide' || lastBall.extraType === 'No Ball' ? 0 : 1;
-    const totalRunsThisBall = lastBall.run + lastBall.extraRun;
+    const isLegalBall = lastBall.extraType !== 'Wide' && lastBall.extraType !== 'No Ball';
+    const ballVal = isLegalBall ? 1 : 0;
+    const totalRunsThisBall = (lastBall.run || 0) + (lastBall.extraRun || 0);
 
     if (match.isFirstInnings) {
       match.runsA = Math.max(0, match.runsA - totalRunsThisBall);
@@ -384,17 +448,23 @@ export async function undoLastBall(req: Request, res: Response) {
     const striker = batTeamPlayers.find((p: any) => p.id === lastBall.strikerId);
     const bowler = bowlTeamPlayers.find((p: any) => p.id === lastBall.bowlerId);
 
-    if (striker && (lastBall.extraType === 'None' || lastBall.extraType === 'Leg Bye')) {
-      striker.runsScored = Math.max(0, striker.runsScored - lastBall.run);
-      striker.ballsFaced = Math.max(0, striker.ballsFaced - ballVal);
+    if (striker) {
+      if (lastBall.extraType === 'None' || lastBall.extraType === 'No Ball') {
+        striker.runsScored = Math.max(0, (striker.runsScored || 0) - lastBall.run);
+      }
+      if (lastBall.extraType !== 'Wide') {
+        striker.ballsFaced = Math.max(0, (striker.ballsFaced || 0) - 1);
+      }
     }
 
     if (bowler) {
-      bowler.runsConceded = Math.max(0, bowler.runsConceded - totalRunsThisBall);
-      if (lastBall.isWicket && lastBall.wicketType !== 'Run Out' && lastBall.wicketType !== 'Retired Out' && lastBall.wicketType !== 'Retired Hurt') {
-        bowler.wicketsTaken = Math.max(0, bowler.wicketsTaken - 1);
+      if (lastBall.extraType === 'None' || lastBall.extraType === 'Wide' || lastBall.extraType === 'No Ball') {
+        bowler.runsConceded = Math.max(0, (bowler.runsConceded || 0) - totalRunsThisBall);
       }
-      if (ballVal > 0) {
+      if (lastBall.isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(lastBall.wicketType)) {
+        bowler.wicketsTaken = Math.max(0, (bowler.wicketsTaken || 0) - 1);
+      }
+      if (isLegalBall) {
         bowler.oversBowled = decrementOvers(Number(bowler.oversBowled || 0), 1);
       }
     }
@@ -405,6 +475,8 @@ export async function undoLastBall(req: Request, res: Response) {
 
     match.markModified('playingXI_A');
     match.markModified('playingXI_B');
+    match.markModified('teamA');
+    match.teamB && match.markModified('teamB');
     match.markModified('balls');
     await match.save();
 

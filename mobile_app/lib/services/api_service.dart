@@ -851,6 +851,19 @@ class ApiService {
     }
   }
 
+  static Future<bool> deleteManager(String id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/managers/$id'),
+        headers: _headers,
+      ).timeout(defaultTimeout);
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService deleteManager error: $e');
+      return false;
+    }
+  }
+
   // --- Forgot Password API ---
   static Future<Map<String, dynamic>> requestForgotPasswordOtp(String email) async {
     try {

@@ -111,6 +111,16 @@ class StorageService with ChangeNotifier {
     return null;
   }
 
+  Future<bool> deleteManager(String id) async {
+    final ok = await ApiService.deleteManager(id);
+    if (ok) {
+      _managers.removeWhere((m) => m.id == id);
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   // --- Real-time WebSockets Subscriptions ---
   void subscribeToMatchLiveUpdates(String matchId) {
     SocketService.connect();

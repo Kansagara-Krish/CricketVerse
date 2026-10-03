@@ -10,6 +10,7 @@ import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../core/widgets/custom_date_time_pickers.dart';
 import '../../models/models.dart';
+import 'widgets/manager_management_dialog.dart';
 
 class ScheduleMatchScreen extends StatefulWidget {
   final CricketMatch? matchToEdit;
@@ -583,43 +584,104 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
 
               const SizedBox(height: 24),
 
-              // Manager Assignment Header with Add Button
+              // Manager Assignment Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const _Label('MANAGER / SCORER CREDENTIALS'),
-                  InkWell(
-                    onTap: _showAddManagerDialog,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(8),
+                  Flexible(
+                    child: Text(
+                      'ASSIGNED MANAGER / SCORER',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textSecondary,
+                        letterSpacing: 1.1,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add_rounded, size: 16, color: AppTheme.primaryBlue),
-                          const SizedBox(width: 4),
-                          Text(
-                            'New Manager',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryBlue,
-                            ),
-                          ),
-                        ],
-                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      InkWell(
+                        onTap: () async {
+                          final selected = await ManagerManagementDialog.show(
+                            context,
+                            onSelected: (mgr) {
+                              setState(() {
+                                _selectedManagerId = mgr.id;
+                                _scorerUserCtrl.text = mgr.username;
+                                _scorerPassCtrl.text = mgr.password;
+                              });
+                            },
+                          );
+                          if (selected != null && mounted) {
+                            setState(() {
+                              _selectedManagerId = selected.id;
+                              _scorerUserCtrl.text = selected.username;
+                              _scorerPassCtrl.text = selected.password;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.manage_accounts_outlined, size: 14, color: AppTheme.textSecondary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Manage',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _showAddManagerDialog,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded, size: 15, color: AppTheme.primaryBlue),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Add New',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
-                'Select an existing manager from dropdown or tap "+ New Manager"',
-                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                'Select an existing manager or enter scorer login credentials for this match.',
+                style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 10),
 
@@ -627,11 +689,12 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
               DropdownButtonFormField<String>(
                 style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
                 initialValue: _selectedManagerId,
+                isExpanded: true,
                 decoration: inputDecorationTheme.copyWith(
                   hintText: storage.managers.isEmpty
-                      ? 'No managers found (Tap + New Manager)'
+                      ? 'No managers found (Tap Add New)'
                       : 'Choose an existing Manager',
-                  prefixIcon: const Icon(Icons.manage_accounts_outlined, color: AppTheme.primaryBlue, size: 20),
+                  prefixIcon: const Icon(Icons.shield_outlined, color: AppTheme.primaryBlue, size: 20),
                 ),
                 items: storage.managers.map((m) {
                   return DropdownMenuItem(
@@ -639,6 +702,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     child: Text(
                       '${m.name} (${m.username})',
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                       style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -670,7 +734,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _scorerUserCtrl,
-                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
                       decoration: inputDecorationTheme.copyWith(
                         labelText: 'Manager Username',
                         prefixIcon: const Icon(Icons.person_outline, color: AppTheme.textMuted, size: 18),
@@ -683,7 +747,7 @@ class _ScheduleMatchScreenState extends State<ScheduleMatchScreen> {
                     child: TextFormField(
                       controller: _scorerPassCtrl,
                       obscureText: true,
-                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
                       decoration: inputDecorationTheme.copyWith(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted, size: 18),

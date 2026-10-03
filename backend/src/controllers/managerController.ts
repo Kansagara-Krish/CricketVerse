@@ -77,7 +77,15 @@ export async function deleteManager(req: Request, res: Response) {
     if (!deleted) {
       return res.status(404).json({ error: 'Manager not found.' });
     }
-    return res.status(200).json({ message: 'Manager deleted successfully.' });
+
+    // Also remove associated user account from UserModel if created
+    try {
+      await UserModel.findOneAndDelete({ email: deleted.username.toLowerCase() });
+    } catch (uErr) {
+      console.warn('Could not remove manager from UserModel:', uErr);
+    }
+
+    return res.status(200).json({ message: 'Manager credential deleted successfully.' });
   } catch (err) {
     console.error('Error deleting manager:', err);
     return res.status(500).json({ error: 'Internal server error deleting manager.' });

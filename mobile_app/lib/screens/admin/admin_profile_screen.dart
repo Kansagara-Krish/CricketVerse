@@ -11,6 +11,7 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/custom_notification.dart';
 import 'widgets/email_settings_dialog.dart';
+import 'widgets/manager_management_dialog.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -299,6 +300,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
             const SizedBox(height: 20),
             const _SectionHeader('MORE'),
+            _SettingsTile(Icons.manage_accounts_outlined, 'Manager & Scorer Credentials', 'View, add or delete manager login credentials',
+                onTap: () => ManagerManagementDialog.show(context)),
             _SettingsTile(Icons.info_outline_rounded, 'About CricketVerse AI', 'App info and version',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.about)),
             _SettingsTile(Icons.help_outline_rounded, 'Help & FAQ', 'Get support',
@@ -327,9 +330,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentRed.withOpacity(0.15),
+                  backgroundColor: AppTheme.accentRed.withValues(alpha: 0.15),
                   foregroundColor: AppTheme.accentRed,
-                  side: BorderSide(color: AppTheme.accentRed.withOpacity(0.3)),
+                  side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.3)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
