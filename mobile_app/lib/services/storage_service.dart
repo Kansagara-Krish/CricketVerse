@@ -60,21 +60,6 @@ class StorageService with ChangeNotifier {
     notifyListeners();
   }
 
-  void _ensureTeamHasPlayers(Team team) {
-    if (team.players.isEmpty) {
-      final code = team.shortName.isNotEmpty ? team.shortName : 'T';
-      team.players.addAll([
-        Player(id: '${team.id}_p1', name: '$code Player 1', role: 'Batter', nationality: 'IN', isCaptain: true),
-        Player(id: '${team.id}_p2', name: '$code Player 2', role: 'Batter', nationality: 'IN', isViceCaptain: true),
-        Player(id: '${team.id}_p3', name: '$code Player 3', role: 'Batter', nationality: 'IN'),
-        Player(id: '${team.id}_p4', name: '$code Player 4', role: 'All-rounder', nationality: 'IN'),
-        Player(id: '${team.id}_p5', name: '$code Player 5', role: 'All-rounder', nationality: 'IN'),
-        Player(id: '${team.id}_p6', name: '$code Player 6', role: 'Bowler', nationality: 'IN'),
-        Player(id: '${team.id}_p7', name: '$code Player 7', role: 'Bowler', nationality: 'IN'),
-      ]);
-    }
-  }
-
   Future<void> loadData() async {
     try {
       final remoteTeams = await ApiService.getTeams();
@@ -88,14 +73,6 @@ class StorageService with ChangeNotifier {
 
       final remoteManagers = await ApiService.getManagers();
       _managers = remoteManagers;
-
-      for (var t in _teams) {
-        _ensureTeamHasPlayers(t);
-      }
-      for (var m in _matches) {
-        _ensureTeamHasPlayers(m.teamA);
-        _ensureTeamHasPlayers(m.teamB);
-      }
 
       notifyListeners();
     } catch (e) {
@@ -285,6 +262,13 @@ class StorageService with ChangeNotifier {
   }
 
   void addPlayer(String teamId, Player player) async {
+    for (var t in _teams) {
+      if (t.id == teamId) {
+        t.players.add(player);
+      }
+    }
+    notifyListeners();
+
     final ok = await ApiService.addPlayer(teamId, player);
     if (ok) {
       await loadData();
@@ -292,6 +276,16 @@ class StorageService with ChangeNotifier {
   }
 
   void updatePlayer(String teamId, Player updatedPlayer) async {
+    for (var t in _teams) {
+      if (t.id == teamId) {
+        final idx = t.players.indexWhere((p) => p.id == updatedPlayer.id);
+        if (idx != -1) {
+          t.players[idx] = updatedPlayer;
+        }
+      }
+    }
+    notifyListeners();
+
     final ok = await ApiService.updatePlayer(updatedPlayer);
     if (ok) {
       await loadData();
@@ -299,6 +293,21 @@ class StorageService with ChangeNotifier {
   }
 
   void removePlayer(String teamId, String playerId) async {
+    for (var t in _teams) {
+      if (t.id == teamId) {
+        t.players.removeWhere((p) => p.id == playerId);
+      }
+    }
+    for (var m in _matches) {
+      if (m.teamA.id == teamId) {
+        m.teamA.players.removeWhere((p) => p.id == playerId);
+      }
+      if (m.teamB.id == teamId) {
+        m.teamB.players.removeWhere((p) => p.id == playerId);
+      }
+    }
+    notifyListeners();
+
     final ok = await ApiService.removePlayer(playerId);
     if (ok) {
       await loadData();
@@ -386,8 +395,6 @@ class StorageService with ChangeNotifier {
   Future<bool> startMatchSetup(String matchId, String tossWinnerTeam, String decision, String firstBattingTeamId) async {
     final updated = await ApiService.startMatchSetup(matchId, tossWinnerTeam, decision, firstBattingTeamId);
     if (updated != null) {
-      _ensureTeamHasPlayers(updated.teamA);
-      _ensureTeamHasPlayers(updated.teamB);
       final idx = _matches.indexWhere((m) => m.id == matchId);
       if (idx != -1) {
         _matches[idx] = updated;
