@@ -43,16 +43,40 @@ class _ManagerManagementDialogState extends State<ManagerManagementDialog> {
     });
   }
 
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _userCtrl.dispose();
-    _passCtrl.dispose();
-    _phoneCtrl.dispose();
-    super.dispose();
+  void _submitCreateManager(StorageService storage) async {
+    if (!_createFormKey.currentState!.validate()) return;
+    final created = await storage.addManager(
+      name: _nameCtrl.text.trim(),
+      username: _userCtrl.text.trim(),
+      password: _passCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
+    );
+    if (!mounted) return;
+    if (created != null) {
+      _nameCtrl.clear();
+      _userCtrl.clear();
+      _passCtrl.clear();
+      _phoneCtrl.clear();
+      setState(() => _isCreating = false);
+      CustomNotification.show(
+        context,
+        'Manager "${created.name}" created successfully!',
+        type: NotificationType.success,
+      );
+      if (widget.onManagerSelected != null) {
+        widget.onManagerSelected!(created);
+        Navigator.pop(context, created);
+      }
+    } else {
+      CustomNotification.show(
+        context,
+        'Failed to create manager. Username might already exist.',
+        type: NotificationType.error,
+      );
+    }
   }
 
-  void _showDeleteConfirmDialog(BuildContext context, Manager manager) {
+  void _showDeleteConfirmDialog(Manager manager) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -257,38 +281,7 @@ class _ManagerManagementDialogState extends State<ManagerManagementDialog> {
                         Expanded(
                           flex: 2,
                           child: ElevatedButton.icon(
-                            onPressed: () async {
-                              if (!_createFormKey.currentState!.validate()) return;
-                              final created = await storage.addManager(
-                                name: _nameCtrl.text.trim(),
-                                username: _userCtrl.text.trim(),
-                                password: _passCtrl.text.trim(),
-                                phone: _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
-                              );
-                              if (!mounted) return;
-                              if (created != null) {
-                                _nameCtrl.clear();
-                                _userCtrl.clear();
-                                _passCtrl.clear();
-                                _phoneCtrl.clear();
-                                setState(() => _isCreating = false);
-                                CustomNotification.show(
-                                  context,
-                                  'Manager "${created.name}" created successfully!',
-                                  type: NotificationType.success,
-                                );
-                                if (widget.onManagerSelected != null) {
-                                  widget.onManagerSelected!(created);
-                                  Navigator.pop(context, created);
-                                }
-                              } else {
-                                CustomNotification.show(
-                                  context,
-                                  'Failed to create manager. Username might already exist.',
-                                  type: NotificationType.error,
-                                );
-                              }
-                            },
+                            onPressed: () => _submitCreateManager(storage),
                             icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
                             label: Text(
                               'Save Manager',
@@ -474,7 +467,7 @@ class _ManagerManagementDialogState extends State<ManagerManagementDialog> {
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed, size: 20),
                     tooltip: 'Revoke / Delete Credential',
-                    onPressed: () => _showDeleteConfirmDialog(context, manager),
+                    onPressed: () => _showDeleteConfirmDialog(manager),
                   ),
                 ],
               ),
