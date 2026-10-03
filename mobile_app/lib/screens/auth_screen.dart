@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../core/widgets/exit_app_dialog.dart';
 import '../core/widgets/custom_notification.dart';
 import '../core/widgets/app_notification.dart';
+import '../core/widgets/forgot_password_sheet.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -624,10 +625,15 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         if (!_isSignUp)
                                           GestureDetector(
                                             onTap: () {
-                                              AppNotification.info(
+                                              ForgotPasswordSheet.show(
                                                 context,
-                                                title: 'Password Recovery',
-                                                message: 'Password recovery link simulated!',
+                                                initialEmail: _emailController.text.trim(),
+                                                onSuccess: (resetEmail, newPassword) {
+                                                  setState(() {
+                                                    _emailController.text = resetEmail;
+                                                    _passwordController.text = newPassword;
+                                                  });
+                                                },
                                               );
                                             },
                                             child: Text(

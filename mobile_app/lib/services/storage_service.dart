@@ -621,6 +621,57 @@ class StorageService with ChangeNotifier {
     return await ApiService.updatePassword(otp, newPassword);
   }
 
+  // --- Forgot Password Methods ---
+  Future<Map<String, dynamic>> requestForgotPasswordOtp(String email) async {
+    return await ApiService.requestForgotPasswordOtp(email);
+  }
+
+  Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
+    return await ApiService.verifyForgotPasswordOtp(email, otp);
+  }
+
+  Future<Map<String, dynamic>> resetForgotPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    String? confirmPassword,
+  }) async {
+    return await ApiService.resetForgotPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+  }
+
+  // --- Admin Email Sender & App Password Configuration Methods ---
+  Future<Map<String, dynamic>?> getEmailConfig() async {
+    return await ApiService.getEmailConfig();
+  }
+
+  Future<Map<String, dynamic>> updateEmailConfig({
+    required String senderEmail,
+    String? appPassword,
+    String? senderName,
+    String? host,
+    int? port,
+    bool? secure,
+  }) async {
+    return await ApiService.updateEmailConfig(
+      senderEmail: senderEmail,
+      appPassword: appPassword,
+      senderName: senderName,
+      host: host,
+      port: port,
+      secure: secure,
+    );
+  }
+
+  Future<Map<String, dynamic>> testEmailConfig(String targetEmail) async {
+    return await ApiService.testEmailConfig(targetEmail);
+  }
+
+
   // Favorites persistence
   List<String> getFavoriteTeams() {
     if (_currentUserEmail == null) return [];

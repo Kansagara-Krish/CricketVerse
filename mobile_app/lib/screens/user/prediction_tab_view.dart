@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/team_logo.dart';
+import '../../services/storage_service.dart';
 import 'widgets/probability_gauge.dart';
 import 'widgets/momentum_chart.dart';
 import 'widgets/score_projection.dart';
 import 'widgets/prediction_indicators.dart';
 
 class PredictionTabView extends StatefulWidget {
-  final CricketMatch match;
+  final CricketMatch? match;
+  final String? initialMatchId;
 
   const PredictionTabView({
     super.key,
-    required this.match,
+    this.match,
+    this.initialMatchId,
   });
 
   @override
@@ -21,6 +25,8 @@ class PredictionTabView extends StatefulWidget {
 }
 
 class _PredictionTabViewState extends State<PredictionTabView> {
+  CricketMatch? _currentMatch;
+
   // Simulator State
   late int _wickets;
   late int _runsRequired;
@@ -30,41 +36,64 @@ class _PredictionTabViewState extends State<PredictionTabView> {
   @override
   void initState() {
     super.initState();
-    _resetToActuals();
+    _currentMatch = widget.match;
+    if (_currentMatch != null) {
+      _resetToActuals();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PredictionTabView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.match != null && widget.match?.id != _currentMatch?.id) {
+      setState(() {
+        _currentMatch = widget.match;
+        _resetToActuals();
+      });
+    }
+  }
+
+  void _selectMatch(CricketMatch match) {
+    setState(() {
+      _currentMatch = match;
+      _resetToActuals();
+    });
   }
 
   void _resetToActuals() {
+    if (_currentMatch == null) return;
     setState(() {
-      final m = widget.match;
+      final m = _currentMatch!;
       _wickets = m.isFirstInnings ? m.wicketsA : m.wicketsB;
       // Default runs needed to chase if target set, otherwise a mock scenario
       _runsRequired = m.target > 0 ? (m.target - m.runsB).clamp(1, 300) : 110;
-      _oversRemaining = m.isFirstInnings 
-          ? (20 - m.oversA.toInt()).clamp(1, 20) 
+      _oversRemaining = m.isFirstInnings
+          ? (20 - m.oversA.toInt()).clamp(1, 20)
           : (20 - m.oversB.toInt()).clamp(1, 20);
       _isSimulatorActive = false;
     });
   }
 
   double _calculateSimulatedProbability() {
+    if (_currentMatch == null) return 50.0;
     // Standard cricket base probability (e.g. 50% split)
     double scoreFactor = 50.0;
-    
+
     // Wickets penalty: Chasing team loses ~8.5% win probability per wicket lost
     double wicketPenalty = _wickets * 8.5;
-    
+
     // Required Run Rate calculations
     double rrr = _oversRemaining > 0 ? _runsRequired / _oversRemaining : 36.0;
-    
+
     // An RRR of 8 is considered neutral. Deviations scale probability.
     double rrrDiff = rrr - 8.0;
     double rrrImpact = rrrDiff * 6.5;
 
     // Simulated probability for the batting team
     double simulatedBattingProb = (scoreFactor + 20.0 - wicketPenalty - rrrImpact).clamp(2.0, 98.0);
-    
+
     // Determine whether Team A or Team B is batting
-    bool isTeamABatting = widget.match.battingTeamId == widget.match.teamA.id;
+    bool isTeamABatting = _currentMatch!.battingTeamId == _currentMatch!.teamA.id;
     if (isTeamABatting) {
       return simulatedBattingProb;
     } else {
@@ -74,6 +103,52 @@ class _PredictionTabViewState extends State<PredictionTabView> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = Provider.of<StorageService>(context);
+    final allMatches = storage.matches;
+    final liveMatches = allMatches.where((m) => m.status == 'Live').toList();
+    final otherMatches = allMatches.where((m) => m.status != 'Live').toList();
+    final availableMatches = [...liveMatches, ...otherMatches];
+
+    // Auto-select match if current is null or match id requested
+    if (_currentMatch == null && availableMatches.isNotEmpty) {
+      if (widget.initialMatchId != null) {
+        final found = availableMatches.where((m) => m.id == widget.initialMatchId).toList();
+        _currentMatch = found.isNotEmpty ? found.first : availableMatches.first;
+      } else {
+        _currentMatch = availableMatches.first;
+      }
+      _resetToActuals();
+    }
+
+    if (_currentMatch == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.online_prediction, size: 48, color: AppTheme.textMuted),
+              const SizedBox(height: 16),
+              Text(
+                'No Match Available for Prediction',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'When matches are scheduled or in play, AI Win Predictions will appear here.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final simulatedWinProb = _calculateSimulatedProbability();
 
     return SingleChildScrollView(
@@ -81,13 +156,19 @@ class _PredictionTabViewState extends State<PredictionTabView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Match Header Title
-          _buildMatchHeaderCard(),
+          // Match Selector Bar (if more than 1 match is available)
+          if (availableMatches.length > 1) ...[
+            _buildMatchSelectorBar(availableMatches),
+            const SizedBox(height: 16),
+          ],
+
+          // Match Header Title Card
+          _buildMatchHeaderCard(_currentMatch!),
           const SizedBox(height: 20),
 
           // Win Probability gauge
           ProbabilityGauge(
-            match: widget.match,
+            match: _currentMatch!,
             winProbability: simulatedWinProb,
           ),
           const SizedBox(height: 20),
@@ -97,11 +178,11 @@ class _PredictionTabViewState extends State<PredictionTabView> {
           const SizedBox(height: 20),
 
           // Score Projection Widget
-          ScoreProjection(match: widget.match),
+          ScoreProjection(match: _currentMatch!),
           const SizedBox(height: 20),
 
           // Momentum chart
-          MomentumChart(match: widget.match),
+          MomentumChart(match: _currentMatch!),
           const SizedBox(height: 20),
 
           // Prediction Indicators
@@ -126,7 +207,105 @@ class _PredictionTabViewState extends State<PredictionTabView> {
     );
   }
 
-  Widget _buildMatchHeaderCard() {
+  Widget _buildMatchSelectorBar(List<CricketMatch> matches) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'SELECT MATCH FOR PREDICTION',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textSecondary,
+                letterSpacing: 0.8,
+              ),
+            ),
+            Text(
+              '${matches.length} Matches',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: matches.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final m = matches[index];
+              final isSelected = m.id == _currentMatch?.id;
+              final isLive = m.status == 'Live';
+
+              return GestureDetector(
+                onTap: () => _selectMatch(m),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryBlue : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.primaryBlue
+                          : isLive
+                              ? AppTheme.accentRed.withValues(alpha: 0.4)
+                              : AppTheme.bgSurface,
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      if (isLive) ...[
+                        CircleAvatar(
+                          radius: 3,
+                          backgroundColor: isSelected ? Colors.white : AppTheme.accentRed,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        '${m.teamA.shortName} vs ${m.teamB.shortName}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? Colors.white : AppTheme.textPrimary,
+                        ),
+                      ),
+                      if (isLive) ...[
+                        const SizedBox(width: 4),
+                        const Text(
+                          '🔴',
+                          style: TextStyle(fontSize: 8),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMatchHeaderCard(CricketMatch match) {
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -139,14 +318,14 @@ class _PredictionTabViewState extends State<PredictionTabView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TeamLogo(
-              teamName: widget.match.teamA.name,
-              shortName: widget.match.teamA.shortName,
-              logoColorHex: widget.match.teamA.logoColorHex,
+              teamName: match.teamA.name,
+              shortName: match.teamA.shortName,
+              logoColorHex: match.teamA.logoColorHex,
               size: 26,
             ),
             const SizedBox(width: 10),
             Text(
-              widget.match.teamA.shortName,
+              match.teamA.shortName,
               style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             Padding(
@@ -161,14 +340,14 @@ class _PredictionTabViewState extends State<PredictionTabView> {
               ),
             ),
             Text(
-              widget.match.teamB.shortName,
+              match.teamB.shortName,
               style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             const SizedBox(width: 10),
             TeamLogo(
-              teamName: widget.match.teamB.name,
-              shortName: widget.match.teamB.shortName,
-              logoColorHex: widget.match.teamB.logoColorHex,
+              teamName: match.teamB.name,
+              shortName: match.teamB.shortName,
+              logoColorHex: match.teamB.logoColorHex,
               size: 26,
             ),
           ],
@@ -190,8 +369,8 @@ class _PredictionTabViewState extends State<PredictionTabView> {
         ),
         boxShadow: [
           BoxShadow(
-            color: _isSimulatorActive 
-                ? AppTheme.primaryBlue.withValues(alpha: 0.03) 
+            color: _isSimulatorActive
+                ? AppTheme.primaryBlue.withValues(alpha: 0.03)
                 : Colors.black.withValues(alpha: 0.01),
             blurRadius: 16,
             offset: const Offset(0, 8),

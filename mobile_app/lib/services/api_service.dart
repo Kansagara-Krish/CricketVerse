@@ -850,4 +850,146 @@ class ApiService {
       return null;
     }
   }
+
+  // --- Forgot Password API ---
+  static Future<Map<String, dynamic>> requestForgotPasswordOtp(String email) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password/request-otp'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({'email': email.trim().toLowerCase()}),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'OTP sent to your email.', 'devOtp': data['devOtp']};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Failed to request OTP.'};
+    } catch (e) {
+      debugPrint('ApiService requestForgotPasswordOtp error: $e');
+      return {'success': false, 'error': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password/verify-otp'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({'email': email.trim().toLowerCase(), 'otp': otp.trim()}),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'OTP verified.'};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Invalid OTP code.'};
+    } catch (e) {
+      debugPrint('ApiService verifyForgotPasswordOtp error: $e');
+      return {'success': false, 'error': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetForgotPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    String? confirmPassword,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password/reset-password'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword ?? newPassword,
+        }),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'Password reset successfully.'};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Failed to reset password.'};
+    } catch (e) {
+      debugPrint('ApiService resetForgotPassword error: $e');
+      return {'success': false, 'error': 'Network error. Please try again.'};
+    }
+  }
+
+  // --- Admin Email Sender & App Password Configuration API ---
+  static Future<Map<String, dynamic>?> getEmailConfig() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/auth/email-config'),
+        headers: _headers,
+      ).timeout(defaultTimeout);
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['config'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getEmailConfig error: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateEmailConfig({
+    required String senderEmail,
+    String? appPassword,
+    String? senderName,
+    String? host,
+    int? port,
+    bool? secure,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'senderEmail': senderEmail.trim(),
+        if (appPassword != null && appPassword.trim().isNotEmpty) 'appPassword': appPassword.trim(),
+        if (senderName != null) 'senderName': senderName.trim(),
+        if (host != null) 'host': host.trim(),
+        if (port != null) 'port': port,
+        if (secure != null) 'secure': secure,
+      };
+
+      final res = await http.put(
+        Uri.parse('$baseUrl/auth/email-config'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'Email configuration saved.', 'config': data['config']};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Failed to update email configuration.'};
+    } catch (e) {
+      debugPrint('ApiService updateEmailConfig error: $e');
+      return {'success': false, 'error': 'Network error updating email configuration.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> testEmailConfig(String targetEmail) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/email-config/test'),
+        headers: _headers,
+        body: jsonEncode({'targetEmail': targetEmail.trim()}),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'Test email sent successfully.'};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Failed to send test email.'};
+    } catch (e) {
+      debugPrint('ApiService testEmailConfig error: $e');
+      return {'success': false, 'error': 'Network error sending test email.'};
+    }
+  }
 }
+

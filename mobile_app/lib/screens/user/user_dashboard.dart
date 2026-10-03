@@ -1,19 +1,15 @@
-import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../../services/storage_service.dart';
-import '../../core/routes/app_routes.dart';
+import 'package:flutter/services.dart';
+import '../../core/theme/app_theme.dart';
 import '../../services/socket_service.dart';
-import 'match_details_screen.dart';
 import '../../core/widgets/custom_notification.dart';
-import 'prediction_tab_view.dart';
-import 'profile_tab_view.dart';
+import '../../core/widgets/exit_app_dialog.dart';
 import 'home_tab_view.dart';
 import 'schedules_tab_view.dart';
-
-import 'package:flutter/services.dart';
-import '../../core/widgets/exit_app_dialog.dart';
+import 'prediction_tab_view.dart';
+import 'live_tab_view.dart';
+import 'profile_tab_view.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -25,6 +21,7 @@ class UserDashboard extends StatefulWidget {
 class _UserDashboardState extends State<UserDashboard> {
   int _currentIndex = 0; // Default to Home
   final List<int> _tabHistory = [0];
+  String? _selectedPredictionMatchId;
 
   @override
   void initState() {
@@ -42,16 +39,36 @@ class _UserDashboardState extends State<UserDashboard> {
     });
   }
 
+  void _navigateToTab(int index) {
+    if (_currentIndex != index) {
+      setState(() {
+        _tabHistory.remove(index);
+        _tabHistory.add(index);
+        _currentIndex = index;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final storage = Provider.of<StorageService>(context);
-
     final List<Widget> views = [
       const HomeTabView(),
       const SchedulesTabView(),
-      _buildAIWinPredictionView(storage),
-      _buildLiveRedirectView(storage),
-      _buildProfileView(storage),
+      PredictionTabView(
+        initialMatchId: _selectedPredictionMatchId,
+      ),
+      LiveTabView(
+        onOpenPrediction: (matchId) {
+          setState(() {
+            _selectedPredictionMatchId = matchId;
+            _navigateToTab(2); // Switch to Prediction Tab with this match
+          });
+        },
+        onViewSchedule: () {
+          _navigateToTab(1); // Switch to Matches / Schedules tab
+        },
+      ),
+      const ProfileTabView(),
     ];
 
     return PopScope(
@@ -92,35 +109,10 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           child: BottomNavigationBar(
             currentIndex: _currentIndex,
-            onTap: (index) {
-              if (index == 3) {
-                final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
-                if (liveMatches.isNotEmpty) {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.userMatchDetails,
-                    arguments: liveMatches.first.id,
-                  );
-                } else {
-                  CustomNotification.show(
-                    context,
-                    'No active Live match right now.',
-                    type: NotificationType.warning,
-                  );
-                }
-                return;
-              }
-              if (_currentIndex != index) {
-                setState(() {
-                  _tabHistory.remove(index);
-                  _tabHistory.add(index);
-                  _currentIndex = index;
-                });
-              }
-            },
+            onTap: _navigateToTab,
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF854D0E), // Gold-brown selection matching screenshot
+            selectedItemColor: const Color(0xFF854D0E), // Gold-brown selection matching theme
             unselectedItemColor: AppTheme.textSecondary,
             selectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
             unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11),
@@ -136,36 +128,4 @@ class _UserDashboardState extends State<UserDashboard> {
       ),
     );
   }
-
-
-
-  // --- View 3: Win predictions dashboard ---
-  Widget _buildAIWinPredictionView(StorageService storage) {
-    final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
-    if (liveMatches.isEmpty) {
-      return Center(
-        child: Text(
-          'No active Live matches for AI analytics.',
-          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 14),
-        ),
-      );
-    }
-    final match = liveMatches.first;
-    return PredictionTabView(match: match);
-  }
-
-  // --- View 4: Live redirect button ---
-  Widget _buildLiveRedirectView(StorageService storage) {
-    final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
-    if (liveMatches.isEmpty) {
-      return const Center(child: Text('No active Live match right now.', style: TextStyle(color: AppTheme.textPrimary)));
-    }
-    return MatchDetailsScreen(matchId: liveMatches.first.id);
-  }
-
-  // --- View 5: Profile & Settings ---
-  Widget _buildProfileView(StorageService storage) {
-    return const ProfileTabView();
-  }
 }
-

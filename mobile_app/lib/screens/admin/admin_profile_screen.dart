@@ -10,6 +10,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/custom_notification.dart';
+import 'widgets/email_settings_dialog.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -302,6 +303,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 onTap: () => Navigator.pushNamed(context, AppRoutes.about)),
             _SettingsTile(Icons.help_outline_rounded, 'Help & FAQ', 'Get support',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.help)),
+            _SettingsTile(Icons.mark_email_read_outlined, 'Email & App Password Settings', 'Manage sender email & Google app password',
+                onTap: () => EmailSettingsDialog.show(context)),
             _SettingsTile(Icons.auto_awesome_rounded, 'AI Settings', 'Configure AI features',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.aiSettings)),
 

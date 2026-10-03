@@ -26,10 +26,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   late TabController _tabController;
   late AnimationController _livePulseController;
   late Animation<double> _livePulseAnimation;
-  final TextEditingController _chatController = TextEditingController();
-  final List<Map<String, String>> _chatMessages = [
-    {'sender': 'ai', 'text': 'Hello! I am your AI Match Assistant. Ask me anything about the live match!'}
-  ];
   bool _isPlayingVoice = false;
   int _playingVoiceIndex = -1;
   late FlutterTts _flutterTts;
@@ -37,7 +33,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _livePulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -73,66 +69,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     _flutterTts.stop();
     _livePulseController.dispose();
     _tabController.dispose();
-    _chatController.dispose();
     super.dispose();
-  }
-
-  void _sendChatMessage(String userQuery, CricketMatch match, StorageService storage) {
-    if (userQuery.trim().isEmpty) return;
-    setState(() {
-      _chatMessages.add({'sender': 'user', 'text': userQuery});
-    });
-    _chatController.clear();
-
-    final runs = match.isFirstInnings ? match.runsA : match.runsB;
-    final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-    final overs = match.isFirstInnings ? match.oversA : match.oversB;
-    final winProb = storage.calculateWinProbability(match);
-
-    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-
-    final striker = battingTeam.players.firstWhere(
-      (p) => p.id == match.currentStrikerId,
-      orElse: () => battingTeam.players.isNotEmpty ? battingTeam.players[0] : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
-    );
-    final nonStriker = battingTeam.players.firstWhere(
-      (p) => p.id == match.currentNonStrikerId,
-      orElse: () => battingTeam.players.length > 1 ? battingTeam.players[1] : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
-    );
-    final bowler = bowlingTeam.players.firstWhere(
-      (p) => p.id == match.currentBowlerId,
-      orElse: () => bowlingTeam.players.isNotEmpty ? bowlingTeam.players[bowlingTeam.players.length - 1] : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
-    );
-
-    String reply = "I'm analyzing the match data...";
-    final query = userQuery.toLowerCase();
-
-    if (query.contains('who is winning') || query.contains('win probability')) {
-      reply = "According to our CricketVerse AI engine, ${match.teamA.name} (${match.teamA.shortName}) has a ${winProb.toStringAsFixed(0)}% probability of winning, while ${match.teamB.name} (${match.teamB.shortName}) stands at ${(100 - winProb).toStringAsFixed(0)}%.";
-    } else if (query.contains('score') || query.contains('current score')) {
-      reply = "The current score is ${battingTeam.shortName} $runs/$wickets in ${overs.toStringAsFixed(1)} overs.";
-    } else if (query.contains('last ball') || query.contains('last over')) {
-      if (match.balls.isNotEmpty) {
-        reply = "The last event was: '${match.balls.last.commentary}' by bowler ${match.balls.last.bowlerName} to batsman ${match.balls.last.batsmanName}.";
-      } else {
-        reply = "No balls have been bowled yet in this match.";
-      }
-    } else if (query.contains('batter') || query.contains('batsman') || query.contains('striker') || query.contains('kohli')) {
-      reply = "${striker.name} is currently batting on ${striker.runsScored}* runs off ${striker.ballsFaced} balls. ${nonStriker.name} is at the non-striker's end with ${nonStriker.runsScored} runs off ${nonStriker.ballsFaced} balls.";
-    } else if (query.contains('summary') || query.contains('highlights')) {
-      reply = "Match Summary: ${match.teamA.shortName} vs ${match.teamB.shortName}. ${battingTeam.shortName} is currently batting at $runs/$wickets in ${overs.toStringAsFixed(1)} overs. The current run rate is ${(runs / (overs > 0 ? overs : 0.1)).toStringAsFixed(1)} runs per over. The active bowler is ${bowler.name}.";
-    } else {
-      reply = "The current run rate is ${(runs / (overs > 0 ? overs : 0.1)).toStringAsFixed(1)} runs per over, and the AI Win Predictor shows the win probability for ${match.teamA.shortName} is ${winProb.toStringAsFixed(0)}%.";
-    }
-
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        setState(() {
-          _chatMessages.add({'sender': 'ai', 'text': reply});
-        });
-      }
-    });
   }
 
   void _playVoiceCommentary(int index, String text) async {
@@ -607,7 +544,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 Tab(text: 'Live Details'),
                 Tab(text: 'AI Commentary'),
                 Tab(text: 'Analytics'),
-                Tab(text: 'AI Chat'),
               ],
             ),
           ),
@@ -623,8 +559,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 _buildCommentaryFeed(match),
                 // 3. Analytics
                 _buildAnalyticsView(match),
-                // 4. AI Chat Assistant
-                _buildChatView(match, storage),
               ],
             ),
           ),
@@ -1723,72 +1657,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           ],
         ),
       ),
-    );
-  }
-
-  // --- 4. AI Chat Assistant ---
-  Widget _buildChatView(CricketMatch match, StorageService storage) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _chatMessages.length,
-            itemBuilder: (context, index) {
-              final msg = _chatMessages[index];
-              final isAi = msg['sender'] == 'ai';
-              return Align(
-                alignment: isAi ? Alignment.centerLeft : Alignment.centerRight,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isAi ? Colors.black.withValues(alpha: 0.05) : const Color(0xFF0F4C81),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: isAi ? const Radius.circular(0) : const Radius.circular(16),
-                      bottomRight: isAi ? const Radius.circular(16) : const Radius.circular(0),
-                    ),
-                    border: Border.all(color: isAi ? Colors.white10 : Colors.transparent),
-                  ),
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                  child: Text(
-                    msg['text'] ?? '',
-                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, height: 1.4),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        
-        // Input bar
-        Container(
-          padding: const EdgeInsets.all(12),
-          color: const Color(0xFF1E293B),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _chatController,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                  decoration: const InputDecoration(
-                    hintText: 'Ask: Who is winning? What happened in last over?',
-                    hintStyle: TextStyle(color: Color(0x4D0F172A), fontSize: 12),
-                    border: InputBorder.none,
-                  ),
-                  onSubmitted: (val) => _sendChatMessage(val, match, storage),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.send, color: AppTheme.primaryBlue),
-                onPressed: () => _sendChatMessage(_chatController.text, match, storage),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
