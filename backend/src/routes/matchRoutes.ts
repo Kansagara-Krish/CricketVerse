@@ -21,6 +21,6 @@ router.post('/', authenticateJWT, requireRole(['Admin']), scheduleMatch);
 router.put('/:id', authenticateJWT, requireRole(['Admin']), updateMatch);
 router.delete('/:id', authenticateJWT, requireRole(['Admin']), deleteMatch);
 router.post('/:id/activate', authenticateJWT, requireRole(['Admin']), adminActivateMatch);
-router.post('/:id/reset', authenticateJWT, requireRole(['Admin']), resetMatch);
+router.post('/:id/reset', authenticateJWT, requireRole(['Admin', 'Scorer']), resetMatch);
 
 export default router;

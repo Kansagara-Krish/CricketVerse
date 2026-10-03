@@ -28,6 +28,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   late Animation<double> _livePulseAnimation;
   bool _isPlayingVoice = false;
   int _playingVoiceIndex = -1;
+  int _selectedInnings = 0;
   late FlutterTts _flutterTts;
 
   @override
@@ -567,15 +568,16 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     );
   }
 
-  // --- Live Details View Matching Reference Image ---
+  // --- Live Details View with Full Batting & Bowling Scorecard ---
   Widget _buildLiveDetailsView(CricketMatch match, StorageService storage, Player striker, Player nonStriker, Player bowler, double winProb) {
-    final runsA = striker.runsScored;
-    final ballsA = striker.ballsFaced;
-    final srA = ballsA > 0 ? ((runsA / ballsA) * 100).toStringAsFixed(1) : '0.0';
+    // Current Active Live stats
+    final runsStriker = striker.runsScored;
+    final ballsStriker = striker.ballsFaced;
+    final srStriker = ballsStriker > 0 ? ((runsStriker / ballsStriker) * 100).toStringAsFixed(1) : '0.0';
 
-    final runsB = nonStriker.runsScored;
-    final ballsB = nonStriker.ballsFaced;
-    final srB = ballsB > 0 ? ((runsB / ballsB) * 100).toStringAsFixed(1) : '0.0';
+    final runsNonStriker = nonStriker.runsScored;
+    final ballsNonStriker = nonStriker.ballsFaced;
+    final srNonStriker = ballsNonStriker > 0 ? ((runsNonStriker / ballsNonStriker) * 100).toStringAsFixed(1) : '0.0';
 
     final bowlerEco = bowler.oversBowled > 0 ? (bowler.runsConceded / bowler.oversBowled).toStringAsFixed(1) : '0.0';
 
@@ -589,9 +591,39 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final teamAWin = winProb.round().clamp(1, 99);
     final teamBWin = 100 - teamAWin;
 
-    final partRuns = runsA + runsB;
-    final partBalls = ballsA + ballsB;
-    final partFlexA = partRuns > 0 ? (runsA / partRuns * 100).round() : 50;
+    final partRuns = runsStriker + runsNonStriker;
+    final partBalls = ballsStriker + ballsNonStriker;
+
+    // Selected Innings Data for full scorecard:
+    // Innings 0 = Team A Batting, Team B Bowling
+    // Innings 1 = Team B Batting, Team A Bowling
+    final isInn1 = _selectedInnings == 0;
+    final innBatTeam = isInn1 ? match.teamA : match.teamB;
+    final innBowlTeam = isInn1 ? match.teamB : match.teamA;
+    final innBatPlayers = isInn1
+        ? (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players)
+        : (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players);
+    final innBowlPlayers = isInn1
+        ? (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players)
+        : (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players);
+
+    final innRuns = isInn1 ? match.runsA : match.runsB;
+    final innWickets = isInn1 ? match.wicketsA : match.wicketsB;
+    final innOvers = isInn1 ? match.oversA : match.oversB;
+    final innCrr = innOvers > 0 ? (innRuns / innOvers).toStringAsFixed(2) : '0.00';
+
+    // Calculate Extras breakdown from match.balls
+    int wides = 0;
+    int noBalls = 0;
+    int legByes = 0;
+    int byes = 0;
+    for (var b in match.balls) {
+      if (b.extraType == 'Wide') wides += (b.extraRun > 0 ? b.extraRun : 1);
+      if (b.extraType == 'No Ball') noBalls += (b.extraRun > 0 ? b.extraRun : 1);
+      if (b.extraType == 'Leg Bye') legByes += (b.extraRun > 0 ? b.extraRun : 1);
+      if (b.extraType == 'Bye') byes += (b.extraRun > 0 ? b.extraRun : 1);
+    }
+    final totalExtras = wides + noBalls + legByes + byes;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
@@ -634,7 +666,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                       ],
                     ),
                     Text(
-                      'Team A $teamAWin% | Team B $teamBWin%',
+                      '${match.teamA.shortName} $teamAWin% | ${match.teamB.shortName} $teamBWin%',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
@@ -711,7 +743,574 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           ),
           const SizedBox(height: 12),
 
-          // 2. CURRENT PARTNERSHIP Card
+          // 2. CURRENT ACTIVE BATTERS & BOWLER LIVE MINI-CARD
+          if (match.status == 'Live') ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.015),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ON STRIKE & LIVE ACTION',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: const Color(0xFF047857),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Partnership: $partRuns ($partBalls b)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.sports_cricket, size: 14, color: Color(0xFF028A6B)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      '${striker.name} *',
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12.5, color: const Color(0xFF0F172A)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$runsStriker ($ballsStriker) • SR $srStriker',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF028A6B), fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.directions_run, size: 14, color: Color(0xFF64748B)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      nonStriker.name,
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12.5, color: const Color(0xFF0F172A)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$runsNonStriker ($ballsNonStriker) • SR $srNonStriker',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.flash_on_rounded, color: Color(0xFF2563EB), size: 15),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Bowler: ${bowler.name}',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E3A8A)),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '${bowler.oversBowled.toStringAsFixed(1)} ov • ${bowler.wicketsTaken}/${bowler.runsConceded} (Eco: $bowlerEco)',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF2563EB)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // 3. INNINGS SELECTOR PILL TABS
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedInnings = 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isInn1 ? const Color(0xFF028A6B) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isInn1 ? const Color(0xFF028A6B) : const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        if (isInn1)
+                          BoxShadow(
+                            color: const Color(0xFF028A6B).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${match.teamA.shortName} (${match.runsA}/${match.wicketsA})',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: isInn1 ? Colors.white : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedInnings = 1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: !isInn1 ? const Color(0xFF028A6B) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: !isInn1 ? const Color(0xFF028A6B) : const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        if (!isInn1)
+                          BoxShadow(
+                            color: const Color(0xFF028A6B).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${match.teamB.shortName} (${match.runsB}/${match.wicketsB})',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: !isInn1 ? Colors.white : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // 4. BATTING SCORECARD CARD (Full List of Players with Score & Status)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.015),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header Row
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          '${innBatTeam.name.toUpperCase()} BATTING',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('B', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('4s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('6s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 2, child: Text('SR', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                    ],
+                  ),
+                ),
+
+                // Full Batters List
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: innBatPlayers.length,
+                  separatorBuilder: (ctx, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  itemBuilder: (ctx, i) {
+                    final p = innBatPlayers[i];
+                    final isCurrentStriker = p.id == match.currentStrikerId && match.status == 'Live';
+                    final isCurrentNonStriker = p.id == match.currentNonStrikerId && match.status == 'Live';
+
+                    // Compute runs and boundaries from match balls or player object
+                    final pBalls = match.balls.where((b) => b.strikerId == p.id).toList();
+                    final fours = pBalls.where((b) => b.run == 4 && (b.extraType == 'None' || b.extraType == 'No Ball')).length;
+                    final sixes = pBalls.where((b) => b.run == 6 && (b.extraType == 'None' || b.extraType == 'No Ball')).length;
+                    final runsScored = p.runsScored;
+                    final ballsFaced = p.ballsFaced;
+                    final sr = ballsFaced > 0 ? ((runsScored / ballsFaced) * 100).toStringAsFixed(1) : '0.0';
+
+                    // Determine dismissal status
+                    String statusText = 'Yet to bat';
+                    Color statusColor = const Color(0xFF94A3B8);
+                    final dismissalBall = match.balls.reversed.firstWhere(
+                      (b) => b.isWicket && (b.strikerId == p.id || b.batsmanName == p.name),
+                      orElse: () => BallRecord(run: 0, extraRun: 0, extraType: '', isWicket: false, wicketType: '', batsmanName: '', bowlerName: '', commentary: '', timestamp: DateTime.now()),
+                    );
+
+                    if (isCurrentStriker) {
+                      statusText = 'batting (striker) *';
+                      statusColor = const Color(0xFF047857);
+                    } else if (isCurrentNonStriker) {
+                      statusText = 'batting (non-striker) *';
+                      statusColor = const Color(0xFF059669);
+                    } else if (dismissalBall.isWicket) {
+                      statusText = dismissalBall.wicketType.isNotEmpty
+                          ? '${dismissalBall.wicketType} b ${dismissalBall.bowlerName}'
+                          : 'out';
+                      statusColor = const Color(0xFFEF4444);
+                    } else if (runsScored > 0 || ballsFaced > 0) {
+                      statusText = 'not out *';
+                      statusColor = const Color(0xFF047857);
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (isCurrentStriker || isCurrentNonStriker)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 5),
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF10B981),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    Flexible(
+                                      child: Text(
+                                        p.name,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: (isCurrentStriker || isCurrentNonStriker) ? FontWeight.bold : FontWeight.w600,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (p.isCaptain) ...[
+                                      const SizedBox(width: 4),
+                                      Text('(c)', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                                    ] else if (p.isViceCaptain) ...[
+                                      const SizedBox(width: 4),
+                                      Text('(vc)', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: const Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  statusText,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10.5,
+                                    color: statusColor,
+                                    fontWeight: (isCurrentStriker || isCurrentNonStriker) ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Text(
+                              (runsScored > 0 || ballsFaced > 0 || isCurrentStriker || isCurrentNonStriker) ? '$runsScored' : '-',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: (isCurrentStriker || isCurrentNonStriker) ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          Expanded(flex: 1, child: Text((runsScored > 0 || ballsFaced > 0 || isCurrentStriker || isCurrentNonStriker) ? '$ballsFaced' : '-', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
+                          Expanded(flex: 1, child: Text((runsScored > 0 || ballsFaced > 0 || isCurrentStriker || isCurrentNonStriker) ? '$fours' : '-', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
+                          Expanded(flex: 1, child: Text((runsScored > 0 || ballsFaced > 0 || isCurrentStriker || isCurrentNonStriker) ? '$sixes' : '-', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              (runsScored > 0 || ballsFaced > 0 || isCurrentStriker || isCurrentNonStriker) ? sr : '-',
+                              textAlign: TextAlign.right,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
+                // Extras & Total Footer
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Extras', style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                          Text(
+                            '$totalExtras (b $byes, lb $legByes, w $wides, nb $noBalls)',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total Score', style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                          Text(
+                            '$innRuns/$innWickets ($innOvers ov, RR: $innCrr)',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF028A6B)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 5. BOWLERS SCORECARD CARD (Full List of Bowlers)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.015),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header Row
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          '${innBowlTeam.name.toUpperCase()} BOWLING',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Expanded(flex: 1, child: Text('O', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('M', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 1, child: Text('W', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                      Expanded(flex: 2, child: Text('ECO', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
+                    ],
+                  ),
+                ),
+
+                // Bowlers List
+                Builder(
+                  builder: (context) {
+                    final bowlersWhoBowled = innBowlPlayers.where((b) {
+                      return b.oversBowled > 0 || b.runsConceded > 0 || b.wicketsTaken > 0 || (b.id == match.currentBowlerId && match.status == 'Live');
+                    }).toList();
+
+                    final displayBowlers = bowlersWhoBowled.isNotEmpty ? bowlersWhoBowled : innBowlPlayers.take(4).toList();
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayBowlers.length,
+                      separatorBuilder: (ctx, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      itemBuilder: (ctx, i) {
+                        final b = displayBowlers[i];
+                        final isLiveBowler = b.id == match.currentBowlerId && match.status == 'Live';
+                        final eco = b.oversBowled > 0 ? (b.runsConceded / b.oversBowled).toStringAsFixed(1) : '0.0';
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: Row(
+                                  children: [
+                                    if (isLiveBowler)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 5),
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF2563EB),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    Flexible(
+                                      child: Text(
+                                        '${b.name}${isLiveBowler ? " *" : ""}',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: isLiveBowler ? FontWeight.bold : FontWeight.w600,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(flex: 1, child: Text(b.oversBowled.toStringAsFixed(1), textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
+                              Expanded(flex: 1, child: Text('0', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
+                              Expanded(flex: 1, child: Text('${b.runsConceded}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  '${b.wicketsTaken}',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  eco,
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 6. SQUADS / PLAYING XI SECTION
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -727,353 +1326,113 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
               ],
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.link_rounded, color: Color(0xFF028A6B), size: 16),
-                        const SizedBox(width: 6),
+                        const Icon(Icons.groups_rounded, color: Color(0xFF028A6B), size: 18),
+                        const SizedBox(width: 8),
                         Text(
-                          'CURRENT PARTNERSHIP',
+                          'PLAYING XI & SQUADS',
                           style: GoogleFonts.plusJakartaSans(
-                            color: const Color(0xFF64748B),
+                            color: const Color(0xFF0F172A),
                             fontWeight: FontWeight.w800,
-                            fontSize: 11,
+                            fontSize: 12,
                             letterSpacing: 0.5,
                           ),
                         ),
                       ],
                     ),
                     Text(
-                      '$partRuns runs ($partBalls b)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: SizedBox(
-                    height: 7,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: partFlexA.clamp(1, 99),
-                          child: Container(color: const Color(0xFF10B981)),
-                        ),
-                        Expanded(
-                          flex: (100 - partFlexA).clamp(1, 99),
-                          child: Container(color: const Color(0xFFCBD5E1)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '12 $runsA ($ballsA)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: const Color(0xFF059669),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '12 $runsB ($ballsB)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: const Color(0xFF64748B),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 3. BATTERS Table Card
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.015),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Header Row
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          'BATTERS',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('B', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('4s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('6s', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 2, child: Text('SR', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                    ],
-                  ),
-                ),
-
-                // Striker Row (12 Player 1 *)
-                _buildBatterItemRow(
-                  context,
-                  badgeNum: '12',
-                  name: striker.name.isNotEmpty ? striker.name : 'Player 1',
-                  isStriker: true,
-                  runs: runsA,
-                  balls: ballsA,
-                  fours: 0,
-                  sixes: 0,
-                  sr: srA,
-                ),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-
-                // Non-Striker Row (12 Player 2)
-                _buildBatterItemRow(
-                  context,
-                  badgeNum: '12',
-                  name: nonStriker.name.isNotEmpty ? nonStriker.name : 'Player 2',
-                  isStriker: false,
-                  runs: runsB,
-                  balls: ballsB,
-                  fours: 0,
-                  sixes: 0,
-                  sr: srB,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 4. BOWLERS Table Card
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.015),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Header Row
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          'BOWLERS',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      Expanded(flex: 1, child: Text('O', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('M', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('W', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 2, child: Text('ECO', textAlign: TextAlign.right, style: GoogleFonts.plusJakartaSans(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF64748B)))),
-                    ],
-                  ),
-                ),
-
-                // Bowler Item Row (krish)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          bowler.name.isNotEmpty ? bowler.name : 'krish',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Expanded(flex: 1, child: Text(bowler.oversBowled.toStringAsFixed(1), textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF0F172A)))),
-                      Expanded(flex: 1, child: Text('0', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
-                      Expanded(flex: 1, child: Text('${bowler.runsConceded}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF0F172A)))),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          '${bowler.wicketsTaken}',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFEF4444),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          bowlerEco,
-                          textAlign: TextAlign.right,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 5. RECENT EVENTS Card
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.015),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'RECENT EVENTS',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: const Color(0xFF64748B),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          'View All',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: const Color(0xFF059669),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11.5,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF059669), size: 16),
-                      ],
+                      '${match.teamA.shortName} vs ${match.teamB.shortName}',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: const Color(0xFF64748B), fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Event Tile
+                // Team Squads Grid
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE6F4EA),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    // Team A Playing XI
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Match started',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0F172A),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE6F4EA),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              match.teamA.name,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF047857)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Good luck to both teams!',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
+                          const SizedBox(height: 6),
+                          ...((match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players).map((p) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.5),
+                                child: Row(
+                                  children: [
+                                    const Text('• ', style: TextStyle(color: Color(0xFF028A6B), fontSize: 12)),
+                                    Expanded(
+                                      child: Text(
+                                        '${p.name}${p.isCaptain ? " (c)" : p.isViceCaptain ? " (vc)" : ""}',
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ))),
                         ],
                       ),
                     ),
-                    Text(
-                      '7:30 PM',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11.5,
-                        color: const Color(0xFF94A3B8),
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    // Team B Playing XI
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              match.teamB.name,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF1D4ED8)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ...((match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players).map((p) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.5),
+                                child: Row(
+                                  children: [
+                                    const Text('• ', style: TextStyle(color: Color(0xFF2563EB), fontSize: 12)),
+                                    Expanded(
+                                      child: Text(
+                                        '${p.name}${p.isCaptain ? " (c)" : p.isViceCaptain ? " (vc)" : ""}',
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ))),
+                        ],
                       ),
                     ),
                   ],
@@ -1081,99 +1440,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
               ],
             ),
           ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBatterItemRow(
-    BuildContext context, {
-    required String badgeNum,
-    required String name,
-    required bool isStriker,
-    required int runs,
-    required int balls,
-    required int fours,
-    required int sixes,
-    required String sr,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Row(
-              children: [
-                if (isStriker)
-                  Container(
-                    margin: const EdgeInsets.only(right: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF028A6B).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    badgeNum,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF028A6B),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '$name${isStriker ? " *" : ""}',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: isStriker ? FontWeight.bold : FontWeight.w600,
-                      color: const Color(0xFF0F172A),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              '$runs',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
-                color: isStriker ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
-              ),
-            ),
-          ),
-          Expanded(flex: 1, child: Text('$balls', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
-          Expanded(flex: 1, child: Text('$fours', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
-          Expanded(flex: 1, child: Text('$sixes', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
-          Expanded(
-            flex: 2,
-            child: Text(
-              sr,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: isStriker ? FontWeight.bold : FontWeight.w600,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

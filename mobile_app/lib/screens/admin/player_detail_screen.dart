@@ -17,19 +17,28 @@ class PlayerDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final battingAvg = player.ballsFaced > 0 && player.matchesPlayed > 0
-        ? (player.runsScored / player.matchesPlayed).toStringAsFixed(1)
+    final storage = Provider.of<StorageService>(context);
+    // Find latest player instance if available by ID or name to get real-time aggregated stats
+    final p = storage.teams
+        .expand((t) => t.players)
+        .firstWhere(
+          (item) => item.id == player.id || item.name.toLowerCase() == player.name.toLowerCase(),
+          orElse: () => player,
+        );
+
+    final battingAvg = p.ballsFaced > 0 && p.matchesPlayed > 0
+        ? (p.runsScored / p.matchesPlayed).toStringAsFixed(1)
         : '0.0';
-    final strikeRate = player.ballsFaced > 0
-        ? ((player.runsScored / player.ballsFaced) * 100).toStringAsFixed(1)
+    final strikeRate = p.ballsFaced > 0
+        ? ((p.runsScored / p.ballsFaced) * 100).toStringAsFixed(1)
         : '0.0';
-    final bowlingAvg = player.wicketsTaken > 0
-        ? (player.runsConceded / player.wicketsTaken).toStringAsFixed(1)
+    final bowlingAvg = p.wicketsTaken > 0
+        ? (p.runsConceded / p.wicketsTaken).toStringAsFixed(1)
         : '-';
-    final economy = player.oversBowled > 0
-        ? (player.runsConceded / player.oversBowled).toStringAsFixed(1)
+    final economy = p.oversBowled > 0
+        ? (p.runsConceded / p.oversBowled).toStringAsFixed(1)
         : '-';
-    final bestBowling = player.wicketsTaken > 0 ? '${player.wicketsTaken}/24' : '-';
+    final bestBowling = p.wicketsTaken > 0 ? '${p.wicketsTaken}/24' : '-';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F9F6),
@@ -132,7 +141,7 @@ class PlayerDetailScreen extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            player.name.isNotEmpty ? player.name[0].toLowerCase() : 'p',
+                            p.name.isNotEmpty ? p.name[0].toLowerCase() : 'p',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 38,
                               fontWeight: FontWeight.w800,
@@ -143,7 +152,7 @@ class PlayerDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        player.name,
+                        p.name,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -165,7 +174,7 @@ class PlayerDetailScreen extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              player.role,
+                              p.role,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 color: const Color(0xFF028A6B),
@@ -175,7 +184,7 @@ class PlayerDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '|  ${player.matchesPlayed} matches',
+                            '|  ${p.matchesPlayed} matches',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: AppTheme.textSecondary,
@@ -245,7 +254,7 @@ class PlayerDetailScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            _StatBox(label: 'Runs', value: '${player.runsScored}'),
+                            _StatBox(label: 'Runs', value: '${p.runsScored}'),
                             const SizedBox(width: 10),
                             _StatBox(label: 'Average', value: battingAvg),
                             const SizedBox(width: 10),
@@ -255,9 +264,9 @@ class PlayerDetailScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            _StatBox(label: 'Balls Faced', value: '${player.ballsFaced}'),
+                            _StatBox(label: 'Balls Faced', value: '${p.ballsFaced}'),
                             const SizedBox(width: 10),
-                            _StatBox(label: 'Matches', value: '${player.matchesPlayed}'),
+                            _StatBox(label: 'Matches', value: '${p.matchesPlayed}'),
                             const SizedBox(width: 10),
                             const _StatBox(label: 'Not Outs', value: '0'),
                           ],
@@ -324,7 +333,7 @@ class PlayerDetailScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            _StatBox(label: 'Wickets', value: '${player.wicketsTaken}'),
+                            _StatBox(label: 'Wickets', value: '${p.wicketsTaken}'),
                             const SizedBox(width: 10),
                             _StatBox(label: 'Average', value: bowlingAvg),
                             const SizedBox(width: 10),
@@ -334,9 +343,9 @@ class PlayerDetailScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            _StatBox(label: 'Overs', value: player.oversBowled.toStringAsFixed(1)),
+                            _StatBox(label: 'Overs', value: p.oversBowled.toStringAsFixed(1)),
                             const SizedBox(width: 10),
-                            _StatBox(label: 'Runs Given', value: '${player.runsConceded}'),
+                            _StatBox(label: 'Runs Given', value: '${p.runsConceded}'),
                             const SizedBox(width: 10),
                             _StatBox(label: 'Best', value: bestBowling),
                           ],
@@ -415,7 +424,9 @@ class PlayerDetailScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'No career highlights yet.',
+                                      (p.runsScored > 0 || p.wicketsTaken > 0 || p.matchesPlayed > 0)
+                                          ? '${p.name}\'s Highlights'
+                                          : 'No career highlights yet.',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.bold,
@@ -424,7 +435,9 @@ class PlayerDetailScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Stats will appear here as matches are played.',
+                                      (p.runsScored > 0 || p.wicketsTaken > 0 || p.matchesPlayed > 0)
+                                          ? '${p.runsScored} Runs • ${p.wicketsTaken} Wickets • ${p.matchesPlayed} Matches'
+                                          : 'Stats will appear here as matches are played.',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11.5,
                                         color: AppTheme.textSecondary,

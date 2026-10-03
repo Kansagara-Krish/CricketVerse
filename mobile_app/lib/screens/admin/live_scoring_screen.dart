@@ -411,7 +411,14 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('↩️ Last ball undone')));
+                            final storage = Provider.of<StorageService>(context, listen: false);
+                            storage.undoLastBall();
+                            if (_currentOverBalls.isNotEmpty) {
+                              setState(() {
+                                _currentOverBalls.removeLast();
+                              });
+                            }
+                            CustomNotification.show(context, '↩️ Last ball undone', type: NotificationType.info);
                           },
                           icon: const Icon(Icons.undo_rounded, size: 18),
                           label: const Text('Undo'),

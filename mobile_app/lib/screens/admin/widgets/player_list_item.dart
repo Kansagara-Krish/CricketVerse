@@ -149,27 +149,72 @@ class PlayerListItem extends StatelessWidget {
                   const SizedBox(width: 10),
 
                   // Score / Stats representation
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        player.role == 'Bowler' ? '${player.wicketsTaken}' : '${player.runsScored}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: player.role == 'Bowler' ? AppTheme.accentRed : AppTheme.primaryBlue,
+                  if (player.role == 'All-rounder')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${player.runsScored}R • ${player.wicketsTaken}W',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFFD97706),
+                          ),
                         ),
-                      ),
-                      Text(
-                        player.role == 'Bowler' ? 'wickets' : 'runs',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          'all-round stats',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            color: AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else if (player.role == 'Bowler')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${player.wicketsTaken}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.accentRed,
+                          ),
+                        ),
+                        Text(
+                          'wickets',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            color: AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${player.runsScored}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                        Text(
+                          'runs',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            color: AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(width: 6),
                   if (onDelete != null)
                     IconButton(

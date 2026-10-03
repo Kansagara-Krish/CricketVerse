@@ -406,7 +406,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           ],
         ),
         actions: [
-          if (match.status == 'Live') ...[
+          if (match.status == 'Live' || match.status == 'Completed' || match.balls.isNotEmpty) ...[
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
               tooltip: 'Reset Score to 0/0',

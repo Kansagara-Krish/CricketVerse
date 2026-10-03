@@ -419,9 +419,12 @@ export async function undoLastBall(req: Request, res: Response) {
     }
 
     const lastBall = match.balls.pop()!;
+    const runsNum = Number(lastBall.run) || 0;
+    const extraRunsNum = Number(lastBall.extraRun) || 0;
+    const totalRunsThisBall = runsNum + extraRunsNum;
+
     const isLegalBall = lastBall.extraType !== 'Wide' && lastBall.extraType !== 'No Ball';
     const ballVal = isLegalBall ? 1 : 0;
-    const totalRunsThisBall = (lastBall.run || 0) + (lastBall.extraRun || 0);
 
     if (match.isFirstInnings) {
       match.runsA = Math.max(0, match.runsA - totalRunsThisBall);
@@ -441,34 +444,59 @@ export async function undoLastBall(req: Request, res: Response) {
       match.status = 'Live';
     }
 
-    // Revert player batting & bowling stats
-    const batTeamPlayers = match.battingTeamId === match.teamAId ? match.playingXI_A : match.playingXI_B;
-    const bowlTeamPlayers = match.battingTeamId === match.teamAId ? match.playingXI_B : match.playingXI_A;
+    // Helper to revert batsman stats on any matching player objects in array
+    const revertStrikerStats = (playersArr: any[]) => {
+      if (!Array.isArray(playersArr)) return;
+      for (const p of playersArr) {
+        const isMatch =
+          (lastBall.strikerId && (p.id === lastBall.strikerId || (p._id && p._id.toString() === lastBall.strikerId))) ||
+          (lastBall.batsmanName && p.name && p.name.trim().toLowerCase() === lastBall.batsmanName.trim().toLowerCase());
 
-    const striker = batTeamPlayers.find((p: any) => p.id === lastBall.strikerId);
-    const bowler = bowlTeamPlayers.find((p: any) => p.id === lastBall.bowlerId);
+        if (isMatch) {
+          if (lastBall.extraType === 'None' || lastBall.extraType === 'No Ball') {
+            p.runsScored = Math.max(0, (p.runsScored || 0) - runsNum);
+          }
+          if (lastBall.extraType !== 'Wide') {
+            p.ballsFaced = Math.max(0, (p.ballsFaced || 0) - 1);
+          }
+        }
+      }
+    };
 
-    if (striker) {
-      if (lastBall.extraType === 'None' || lastBall.extraType === 'No Ball') {
-        striker.runsScored = Math.max(0, (striker.runsScored || 0) - lastBall.run);
-      }
-      if (lastBall.extraType !== 'Wide') {
-        striker.ballsFaced = Math.max(0, (striker.ballsFaced || 0) - 1);
-      }
-    }
+    // Helper to revert bowler stats on any matching player objects in array
+    const revertBowlerStats = (playersArr: any[]) => {
+      if (!Array.isArray(playersArr)) return;
+      for (const p of playersArr) {
+        const isMatch =
+          (lastBall.bowlerId && (p.id === lastBall.bowlerId || (p._id && p._id.toString() === lastBall.bowlerId))) ||
+          (lastBall.bowlerName && p.name && p.name.trim().toLowerCase() === lastBall.bowlerName.trim().toLowerCase());
 
-    if (bowler) {
-      if (lastBall.extraType === 'None' || lastBall.extraType === 'Wide' || lastBall.extraType === 'No Ball') {
-        bowler.runsConceded = Math.max(0, (bowler.runsConceded || 0) - totalRunsThisBall);
+        if (isMatch) {
+          if (lastBall.extraType === 'None' || lastBall.extraType === 'Wide' || lastBall.extraType === 'No Ball') {
+            p.runsConceded = Math.max(0, (p.runsConceded || 0) - totalRunsThisBall);
+          }
+          if (lastBall.isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(lastBall.wicketType)) {
+            p.wicketsTaken = Math.max(0, (p.wicketsTaken || 0) - 1);
+          }
+          if (isLegalBall) {
+            p.oversBowled = decrementOvers(Number(p.oversBowled || 0), 1);
+          }
+        }
       }
-      if (lastBall.isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(lastBall.wicketType)) {
-        bowler.wicketsTaken = Math.max(0, (bowler.wicketsTaken || 0) - 1);
-      }
-      if (isLegalBall) {
-        bowler.oversBowled = decrementOvers(Number(bowler.oversBowled || 0), 1);
-      }
-    }
+    };
 
+    // Revert across all player arrays
+    revertStrikerStats(match.playingXI_A);
+    revertStrikerStats(match.playingXI_B);
+    if (match.teamA && match.teamA.players) revertStrikerStats(match.teamA.players);
+    if (match.teamB && match.teamB.players) revertStrikerStats(match.teamB.players);
+
+    revertBowlerStats(match.playingXI_A);
+    revertBowlerStats(match.playingXI_B);
+    if (match.teamA && match.teamA.players) revertBowlerStats(match.teamA.players);
+    if (match.teamB && match.teamB.players) revertBowlerStats(match.teamB.players);
+
+    // Restore striker, non-striker and bowler to pre-ball snapshot
     if (lastBall.strikerId) match.currentStrikerId = lastBall.strikerId;
     if (lastBall.nonStrikerId) match.currentNonStrikerId = lastBall.nonStrikerId;
     if (lastBall.bowlerId) match.currentBowlerId = lastBall.bowlerId;

@@ -5,43 +5,69 @@ import { redis } from '../config/redis';
 
 export async function getTeams(req: Request, res: Response) {
   try {
-    let cached = null;
-    if (redis) {
-      const cacheVal = await redis.get('teams:all');
-      if (cacheVal) {
-        cached = JSON.parse(cacheVal);
-      }
-    }
-
-    if (cached) {
-      return res.status(200).json(cached);
-    }
-
     const teams = await TeamModel.find().lean();
+    const matches = await MatchModel.find().lean();
+
+    // Map of aggregated player stats from matches
+    const statsMap: Record<string, { runsScored: number; ballsFaced: number; wicketsTaken: number; runsConceded: number; legalBallsBowled: number; matchesPlayed: number }> = {};
+
+    matches.forEach((m: any) => {
+      const matchPlayerIds = new Set<string>();
+
+      const processPlayerList = (list: any[]) => {
+        if (!Array.isArray(list)) return;
+        list.forEach((p: any) => {
+          if (!p || !p.id) return;
+          matchPlayerIds.add(p.id);
+          if (!statsMap[p.id]) {
+            statsMap[p.id] = { runsScored: 0, ballsFaced: 0, wicketsTaken: 0, runsConceded: 0, legalBallsBowled: 0, matchesPlayed: 0 };
+          }
+          statsMap[p.id].runsScored += Number(p.runsScored || 0);
+          statsMap[p.id].ballsFaced += Number(p.ballsFaced || 0);
+          statsMap[p.id].wicketsTaken += Number(p.wicketsTaken || 0);
+          statsMap[p.id].runsConceded += Number(p.runsConceded || 0);
+          const overs = Number(p.oversBowled || 0);
+          const balls = Math.floor(overs) * 6 + Math.round((overs - Math.floor(overs)) * 10);
+          statsMap[p.id].legalBallsBowled += balls;
+        });
+      };
+
+      processPlayerList(m.playingXI_A);
+      processPlayerList(m.playingXI_B);
+
+      matchPlayerIds.forEach((pId) => {
+        if (statsMap[pId]) statsMap[pId].matchesPlayed += 1;
+      });
+    });
+
     const formatted = teams.map((t: any) => ({
       id: t.id,
       name: t.name,
       shortName: t.shortName,
       logoColorHex: t.logoColorHex,
-      players: (t.players || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        role: p.role,
-        nationality: p.nationality || 'IND',
-        isCaptain: p.isCaptain ?? false,
-        isViceCaptain: p.isViceCaptain ?? false,
-        runsScored: p.runsScored ?? 0,
-        ballsFaced: p.ballsFaced ?? 0,
-        wicketsTaken: p.wicketsTaken ?? 0,
-        runsConceded: p.runsConceded ?? 0,
-        oversBowled: Number(p.oversBowled ?? 0),
-        matchesPlayed: p.matchesPlayed ?? 0,
-      })),
-    }));
+      players: (t.players || []).map((p: any) => {
+        const agg = statsMap[p.id];
+        const baseOvers = Number(p.oversBowled || 0);
+        const baseLegalBalls = Math.floor(baseOvers) * 6 + Math.round((baseOvers - Math.floor(baseOvers)) * 10);
+        const totalLegalBalls = baseLegalBalls + (agg ? agg.legalBallsBowled : 0);
+        const totalOversFormatted = parseFloat((Math.floor(totalLegalBalls / 6) + (totalLegalBalls % 6) / 10).toFixed(1));
 
-    if (redis) {
-      await redis.set('teams:all', JSON.stringify(formatted), 'EX', 86400);
-    }
+        return {
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          nationality: p.nationality || 'IND',
+          isCaptain: p.isCaptain ?? false,
+          isViceCaptain: p.isViceCaptain ?? false,
+          runsScored: (p.runsScored || 0) + (agg ? agg.runsScored : 0),
+          ballsFaced: (p.ballsFaced || 0) + (agg ? agg.ballsFaced : 0),
+          wicketsTaken: (p.wicketsTaken || 0) + (agg ? agg.wicketsTaken : 0),
+          runsConceded: (p.runsConceded || 0) + (agg ? agg.runsConceded : 0),
+          oversBowled: totalOversFormatted,
+          matchesPlayed: Math.max(p.matchesPlayed || 0, agg ? agg.matchesPlayed : 0),
+        };
+      }),
+    }));
 
     return res.status(200).json(formatted);
   } catch (err) {
@@ -57,7 +83,58 @@ export async function getTeamById(req: Request, res: Response) {
     if (!team) {
       return res.status(404).json({ error: 'Team not found.' });
     }
-    return res.status(200).json(team);
+
+    const matches = await MatchModel.find().lean();
+    const statsMap: Record<string, { runsScored: number; ballsFaced: number; wicketsTaken: number; runsConceded: number; legalBallsBowled: number; matchesPlayed: number }> = {};
+
+    matches.forEach((m: any) => {
+      const matchPlayerIds = new Set<string>();
+      const processPlayerList = (list: any[]) => {
+        if (!Array.isArray(list)) return;
+        list.forEach((p: any) => {
+          if (!p || !p.id) return;
+          matchPlayerIds.add(p.id);
+          if (!statsMap[p.id]) {
+            statsMap[p.id] = { runsScored: 0, ballsFaced: 0, wicketsTaken: 0, runsConceded: 0, legalBallsBowled: 0, matchesPlayed: 0 };
+          }
+          statsMap[p.id].runsScored += Number(p.runsScored || 0);
+          statsMap[p.id].ballsFaced += Number(p.ballsFaced || 0);
+          statsMap[p.id].wicketsTaken += Number(p.wicketsTaken || 0);
+          statsMap[p.id].runsConceded += Number(p.runsConceded || 0);
+          const overs = Number(p.oversBowled || 0);
+          const balls = Math.floor(overs) * 6 + Math.round((overs - Math.floor(overs)) * 10);
+          statsMap[p.id].legalBallsBowled += balls;
+        });
+      };
+      processPlayerList(m.playingXI_A);
+      processPlayerList(m.playingXI_B);
+      matchPlayerIds.forEach((pId) => {
+        if (statsMap[pId]) statsMap[pId].matchesPlayed += 1;
+      });
+    });
+
+    const formattedTeam = {
+      ...team,
+      players: (team.players || []).map((p: any) => {
+        const agg = statsMap[p.id];
+        const baseOvers = Number(p.oversBowled || 0);
+        const baseLegalBalls = Math.floor(baseOvers) * 6 + Math.round((baseOvers - Math.floor(baseOvers)) * 10);
+        const totalLegalBalls = baseLegalBalls + (agg ? agg.legalBallsBowled : 0);
+        const totalOversFormatted = parseFloat((Math.floor(totalLegalBalls / 6) + (totalLegalBalls % 6) / 10).toFixed(1));
+
+        return {
+          ...p,
+          runsScored: (p.runsScored || 0) + (agg ? agg.runsScored : 0),
+          ballsFaced: (p.ballsFaced || 0) + (agg ? agg.ballsFaced : 0),
+          wicketsTaken: (p.wicketsTaken || 0) + (agg ? agg.wicketsTaken : 0),
+          runsConceded: (p.runsConceded || 0) + (agg ? agg.runsConceded : 0),
+          oversBowled: totalOversFormatted,
+          matchesPlayed: Math.max(p.matchesPlayed || 0, agg ? agg.matchesPlayed : 0),
+        };
+      }),
+    };
+
+    return res.status(200).json(formattedTeam);
   } catch (err) {
     console.error('Error fetching team by id:', err);
     return res.status(500).json({ error: 'Internal server error.' });

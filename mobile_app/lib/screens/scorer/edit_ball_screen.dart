@@ -17,24 +17,71 @@ class _EditBallScreenState extends State<EditBallScreen> {
   bool _isPaused = false;
 
   void _deleteBall(CricketMatch match, int index) {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    if (index == match.balls.length - 1) {
+      storage.undoLastBall();
+      if (mounted) setState(() {});
+      CustomNotification.show(
+        context,
+        'Last ball undone successfully.',
+        type: NotificationType.info,
+      );
+      return;
+    }
+
     setState(() {
       final ball = match.balls.removeAt(index);
+      final runsNum = ball.run;
+      final extraRunsNum = ball.extraRun;
+      final totalRuns = runsNum + extraRunsNum;
+      final isLegal = ball.extraType != 'Wide' && ball.extraType != 'No Ball';
       
       // Deduct from totals
       if (match.isFirstInnings) {
-        match.runsA -= (ball.run + ball.extraRun);
-        if (match.runsA < 0) match.runsA = 0;
-        if (ball.isWicket) match.wicketsA -= 1;
-        match.oversA = _decrementOvers(match.oversA);
+        match.runsA = (match.runsA - totalRuns).clamp(0, 9999);
+        if (ball.isWicket && ball.wicketType != 'Retired Hurt') {
+          match.wicketsA = (match.wicketsA - 1).clamp(0, 10);
+        }
+        if (isLegal) match.oversA = _decrementOvers(match.oversA);
       } else {
-        match.runsB -= (ball.run + ball.extraRun);
-        if (match.runsB < 0) match.runsB = 0;
-        if (ball.isWicket) match.wicketsB -= 1;
-        match.oversB = _decrementOvers(match.oversB);
+        match.runsB = (match.runsB - totalRuns).clamp(0, 9999);
+        if (ball.isWicket && ball.wicketType != 'Retired Hurt') {
+          match.wicketsB = (match.wicketsB - 1).clamp(0, 10);
+        }
+        if (isLegal) match.oversB = _decrementOvers(match.oversB);
+      }
+
+      // Revert batsman
+      final batPlayers = match.isFirstInnings ? match.teamA.players : match.teamB.players;
+      for (var p in batPlayers) {
+        if (p.id == ball.strikerId || p.name == ball.batsmanName) {
+          if (ball.extraType == 'None' || ball.extraType == 'No Ball') {
+            p.runsScored = (p.runsScored - runsNum).clamp(0, 9999);
+          }
+          if (ball.extraType != 'Wide') {
+            p.ballsFaced = (p.ballsFaced - 1).clamp(0, 9999);
+          }
+        }
+      }
+
+      // Revert bowler
+      final bowlPlayers = match.isFirstInnings ? match.teamB.players : match.teamA.players;
+      for (var p in bowlPlayers) {
+        if (p.id == ball.bowlerId || p.name == ball.bowlerName) {
+          if (ball.extraType == 'None' || ball.extraType == 'Wide' || ball.extraType == 'No Ball') {
+            p.runsConceded = (p.runsConceded - totalRuns).clamp(0, 9999);
+          }
+          if (ball.isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].contains(ball.wicketType)) {
+            p.wicketsTaken = (p.wicketsTaken - 1).clamp(0, 999);
+          }
+          if (isLegal) {
+            p.oversBowled = _decrementOvers(p.oversBowled);
+          }
+        }
       }
     });
 
-    Provider.of<StorageService>(context, listen: false).saveMatchesState();
+    storage.saveMatchesState();
     CustomNotification.show(
       context,
       'Ball deleted. Scores updated.',

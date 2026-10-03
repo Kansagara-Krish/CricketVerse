@@ -74,9 +74,72 @@ class StorageService with ChangeNotifier {
       final remoteManagers = await ApiService.getManagers();
       _managers = remoteManagers;
 
+      _recalculatePlayerStats();
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading online data from MongoDB: $e');
+    }
+  }
+
+  void _recalculatePlayerStats() {
+    if (_teams.isEmpty) return;
+
+    final Map<String, int> runsMap = {};
+    final Map<String, int> ballsMap = {};
+    final Map<String, int> wicketsMap = {};
+    final Map<String, int> concededMap = {};
+    final Map<String, int> legalBallsMap = {};
+    final Map<String, int> matchesCountMap = {};
+
+    for (var m in _matches) {
+      final matchPlayers = <String>{};
+
+      for (var p in m.playingXI_A) {
+        matchPlayers.add(p.id);
+        runsMap[p.id] = (runsMap[p.id] ?? 0) + p.runsScored;
+        ballsMap[p.id] = (ballsMap[p.id] ?? 0) + p.ballsFaced;
+        wicketsMap[p.id] = (wicketsMap[p.id] ?? 0) + p.wicketsTaken;
+        concededMap[p.id] = (concededMap[p.id] ?? 0) + p.runsConceded;
+        final o = p.oversBowled;
+        final balls = (o.floor() * 6) + ((o - o.floor()) * 10).round();
+        legalBallsMap[p.id] = (legalBallsMap[p.id] ?? 0) + balls;
+      }
+
+      for (var p in m.playingXI_B) {
+        matchPlayers.add(p.id);
+        runsMap[p.id] = (runsMap[p.id] ?? 0) + p.runsScored;
+        ballsMap[p.id] = (ballsMap[p.id] ?? 0) + p.ballsFaced;
+        wicketsMap[p.id] = (wicketsMap[p.id] ?? 0) + p.wicketsTaken;
+        concededMap[p.id] = (concededMap[p.id] ?? 0) + p.runsConceded;
+        final o = p.oversBowled;
+        final balls = (o.floor() * 6) + ((o - o.floor()) * 10).round();
+        legalBallsMap[p.id] = (legalBallsMap[p.id] ?? 0) + balls;
+      }
+
+      for (var pId in matchPlayers) {
+        matchesCountMap[pId] = (matchesCountMap[pId] ?? 0) + 1;
+      }
+    }
+
+    for (var team in _teams) {
+      for (var player in team.players) {
+        final r = runsMap[player.id];
+        final b = ballsMap[player.id];
+        final w = wicketsMap[player.id];
+        final c = concededMap[player.id];
+        final lb = legalBallsMap[player.id];
+        final mc = matchesCountMap[player.id];
+
+        if (r != null && r > player.runsScored) player.runsScored = r;
+        if (b != null && b > player.ballsFaced) player.ballsFaced = b;
+        if (w != null && w > player.wicketsTaken) player.wicketsTaken = w;
+        if (c != null && c > player.runsConceded) player.runsConceded = c;
+        if (lb != null) {
+          final totalOvers = (lb ~/ 6) + (lb % 6) / 10.0;
+          if (totalOvers > player.oversBowled) player.oversBowled = totalOvers;
+        }
+        if (mc != null && mc > player.matchesPlayed) player.matchesPlayed = mc;
+      }
     }
   }
 
@@ -461,6 +524,8 @@ class StorageService with ChangeNotifier {
         final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
         if (idx != -1) _matches[idx] = updated;
 
+        _recalculatePlayerStats();
+
         // Auto-play voice commentary if enabled in ElevenLabs settings
         final elevenSettings = ElevenLabsService().settings;
         if (elevenSettings.autoPlayVoice && updated.balls.isNotEmpty) {
@@ -590,6 +655,40 @@ class StorageService with ChangeNotifier {
     final ok = await ApiService.resetMatchToZero(matchId);
     if (ok) {
       await loadData();
+    } else {
+      final idx = _matches.indexWhere((m) => m.id == matchId);
+      if (idx != -1) {
+        final match = _matches[idx];
+        match.runsA = 0;
+        match.wicketsA = 0;
+        match.oversA = 0.0;
+        match.runsB = 0;
+        match.wicketsB = 0;
+        match.oversB = 0.0;
+        match.target = 0;
+        match.status = 'Upcoming';
+        match.isFirstInnings = true;
+        match.tossWinner = '';
+        match.tossDecision = '';
+        match.battingTeamId = '';
+        match.balls.clear();
+        for (final p in match.teamA.players) {
+          p.runsScored = 0;
+          p.ballsFaced = 0;
+          p.wicketsTaken = 0;
+          p.runsConceded = 0;
+          p.oversBowled = 0.0;
+        }
+        for (final p in match.teamB.players) {
+          p.runsScored = 0;
+          p.ballsFaced = 0;
+          p.wicketsTaken = 0;
+          p.runsConceded = 0;
+          p.oversBowled = 0.0;
+        }
+        _recalculatePlayerStats();
+        notifyListeners();
+      }
     }
   }
 
@@ -599,11 +698,68 @@ class StorageService with ChangeNotifier {
     if (updated != null) {
       final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
       if (idx != -1) _matches[idx] = updated;
+      _recalculatePlayerStats();
       notifyListeners();
+    } else {
+      // Offline fallback: Revert locally
+      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (idx != -1 && _matches[idx].balls.isNotEmpty) {
+        final match = _matches[idx];
+        final lastBall = match.balls.removeLast();
+        final runsNum = lastBall.run;
+        final extraRunsNum = lastBall.extraRun;
+        final totalRunsThisBall = runsNum + extraRunsNum;
+        final isLegalBall = lastBall.extraType != 'Wide' && lastBall.extraType != 'No Ball';
+
+        if (match.isFirstInnings) {
+          match.runsA = (match.runsA - totalRunsThisBall).clamp(0, 9999);
+          if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
+            match.wicketsA = (match.wicketsA - 1).clamp(0, 10);
+          }
+          if (isLegalBall) match.oversA = _decrementOvers(match.oversA);
+        } else {
+          match.runsB = (match.runsB - totalRunsThisBall).clamp(0, 9999);
+          if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
+            match.wicketsB = (match.wicketsB - 1).clamp(0, 10);
+          }
+          if (isLegalBall) match.oversB = _decrementOvers(match.oversB);
+        }
+
+        if (lastBall.strikerId != null && lastBall.strikerId!.isNotEmpty) {
+          match.currentStrikerId = lastBall.strikerId!;
+        }
+        if (lastBall.nonStrikerId != null && lastBall.nonStrikerId!.isNotEmpty) {
+          match.currentNonStrikerId = lastBall.nonStrikerId!;
+        }
+        if (lastBall.bowlerId != null && lastBall.bowlerId!.isNotEmpty) {
+          match.currentBowlerId = lastBall.bowlerId!;
+        }
+
+        _recalculatePlayerStats();
+        notifyListeners();
+      }
     }
   }
 
+  double _decrementOvers(double currentOvers) {
+    int oversInt = currentOvers.toInt();
+    int ballsInt = ((currentOvers - oversInt) * 10).round();
+
+    ballsInt -= 1;
+    if (ballsInt < 0) {
+      if (oversInt > 0) {
+        oversInt -= 1;
+        ballsInt = 5;
+      } else {
+        ballsInt = 0;
+      }
+    }
+
+    return oversInt + (ballsInt / 10.0);
+  }
+
   void saveMatchesState() {
+    _recalculatePlayerStats();
     notifyListeners();
   }
 

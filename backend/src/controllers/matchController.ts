@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { MatchModel } from '../models/Match';
 import { TeamModel } from '../models/Team';
 import { getCachedMatch, setCachedMatch, invalidateCachedMatch } from '../config/redis';
-import { broadcastNotification } from '../sockets/socketHandler';
+import { broadcastNotification, broadcastMatchUpdate } from '../sockets/socketHandler';
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -248,10 +248,35 @@ export async function resetMatch(req: Request, res: Response) {
     match.currentBowlerId = bowlerId;
     match.balls = [];
 
+    // Reset all player stats within this match
+    const resetPlayerStats = (arr: any[]) => {
+      if (!Array.isArray(arr)) return;
+      for (const p of arr) {
+        p.runsScored = 0;
+        p.ballsFaced = 0;
+        p.wicketsTaken = 0;
+        p.runsConceded = 0;
+        p.oversBowled = 0;
+      }
+    };
+
+    resetPlayerStats(match.playingXI_A);
+    resetPlayerStats(match.playingXI_B);
+    if (match.teamA && match.teamA.players) resetPlayerStats(match.teamA.players);
+    if (match.teamB && match.teamB.players) resetPlayerStats(match.teamB.players);
+
+    match.markModified('playingXI_A');
+    match.markModified('playingXI_B');
+    match.markModified('teamA');
+    match.teamB && match.markModified('teamB');
+    match.markModified('balls');
+
     await match.save();
     await invalidateCachedMatch(id);
 
     const updated = await getFullMatchData(id);
+    broadcastMatchUpdate(id, 'match_update', updated);
+
     return res.status(200).json({ message: 'Match reset successfully.', match: updated });
   } catch (err) {
     console.error('Error resetting match:', err);
