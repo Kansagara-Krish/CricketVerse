@@ -22,10 +22,10 @@ class RegisterResponse {
 }
 
 class ApiService {
-  static const Duration defaultTimeout = Duration(seconds: 6);
+  static const Duration defaultTimeout = Duration(seconds: 15);
   static String? _customBaseUrl;
 
-  static String get defaultHostIp => '192.168.31.253';
+  static String get defaultHostIp => '10.201.145.231';
 
   static String get baseUrl {
     if (_customBaseUrl != null && _customBaseUrl!.trim().isNotEmpty) {
@@ -39,8 +39,8 @@ class ApiService {
         defaultTargetPlatform == TargetPlatform.linux) {
       return 'http://127.0.0.1:3000/api/v1';
     }
-    // Physical device or emulator fallback
-    return 'http://$defaultHostIp:3000/api/v1';
+    // Render live backend - accessible anywhere across all devices
+    return 'https://cricketverse-n103.onrender.com/api/v1';
   }
 
   static Future<void> setCustomBaseUrl(String url) async {

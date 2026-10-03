@@ -8,6 +8,7 @@ class PlayerListItem extends StatelessWidget {
   final String teamShort;
   final String teamColorHex;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   const PlayerListItem({
     super.key,
@@ -15,6 +16,7 @@ class PlayerListItem extends StatelessWidget {
     required this.teamShort,
     required this.teamColorHex,
     required this.onTap,
+    this.onDelete,
   });
 
   @override
@@ -169,7 +171,16 @@ class PlayerListItem extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
+                  if (onDelete != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: 'Delete Player',
+                      onPressed: onDelete,
+                    )
+                  else
+                    const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
                 ],
               ),
             ),

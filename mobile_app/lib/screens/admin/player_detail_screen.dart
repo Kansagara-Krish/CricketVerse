@@ -73,21 +73,42 @@ class PlayerDetailScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      InkWell(
-                        onTap: () => _showEditSheet(context),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFDCFCE7),
-                            shape: BoxShape.circle,
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () => _confirmDeletePlayer(context),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFEE2E2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: AppTheme.accentRed,
+                                size: 20,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            color: Color(0xFF028A6B),
-                            size: 20,
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditSheet(context),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDCFCE7),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit_rounded,
+                                color: Color(0xFF028A6B),
+                                size: 20,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -473,6 +494,37 @@ class PlayerDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _confirmDeletePlayer(BuildContext context) async {
+    final storage = Provider.of<StorageService>(context, listen: false);
+    Team? currentTeam;
+    for (final t in storage.teams) {
+      if (t.players.any((p) => p.id == player.id)) {
+        currentTeam = t;
+        break;
+      }
+    }
+
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Delete Player',
+      message: 'Are you sure you want to delete "${player.name}"? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      confirmColor: AppTheme.accentRed,
+    );
+
+    if (confirmed == true && context.mounted) {
+      if (currentTeam != null) {
+        storage.removePlayer(currentTeam.id, player.id);
+      }
+      Navigator.pop(context);
+      CustomNotification.show(
+        context,
+        'Player "${player.name}" deleted successfully.',
+        type: NotificationType.success,
+      );
+    }
   }
 
   void _showEditSheet(BuildContext context) {

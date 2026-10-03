@@ -29,6 +29,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String _knockoutType = 'Single Elimination';
   final List<String> _selectedTeams = [];
   bool _isEdit = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -364,66 +365,85 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (_startCtrl.text.isEmpty || _endCtrl.text.isEmpty) {
-                        CustomNotification.show(
-                          context,
-                          'Please select both Start Date and End Date!',
-                          type: NotificationType.warning,
-                        );
-                        return;
-                      }
-                      if (!_formKey.currentState!.validate()) return;
-                      if (_selectedTeams.isEmpty) {
-                        CustomNotification.show(
-                          context,
-                          'Please select at least one participating team!',
-                          type: NotificationType.warning,
-                        );
-                        return;
-                      }
+                    onPressed: _isSubmitting
+                        ? null
+                        : () async {
+                            if (_startCtrl.text.isEmpty || _endCtrl.text.isEmpty) {
+                              CustomNotification.show(
+                                context,
+                                'Please select both Start Date and End Date!',
+                                type: NotificationType.warning,
+                              );
+                              return;
+                            }
+                            if (!_formKey.currentState!.validate()) return;
+                            if (_selectedTeams.isEmpty) {
+                              CustomNotification.show(
+                                context,
+                                'Please select at least one participating team!',
+                                type: NotificationType.warning,
+                              );
+                              return;
+                            }
 
-                      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-                      if (_isEdit) {
-                        final tournId = args?['id']?.toString() ?? 'tourn_${DateTime.now().millisecondsSinceEpoch}';
-                        final updated = Tournament(
-                          id: tournId,
-                          name: _nameCtrl.text.trim(),
-                          format: _format,
-                          status: args?['status']?.toString() ?? 'Upcoming',
-                          teamsCount: _selectedTeams.length,
-                          matchesCount: int.tryParse(args?['matches']?.toString() ?? '0') ?? 0,
-                          startDate: _startCtrl.text.trim(),
-                          endDate: _endCtrl.text.trim(),
-                          participatingTeamIds: List.from(_selectedTeams),
-                        );
-                        storage.updateTournament(updated);
-                      } else {
-                        final newTourn = Tournament(
-                          id: 'tourn_${DateTime.now().millisecondsSinceEpoch}',
-                          name: _nameCtrl.text.trim(),
-                          format: _format,
-                          status: 'Upcoming',
-                          teamsCount: _selectedTeams.length,
-                          matchesCount: 0,
-                          startDate: _startCtrl.text.trim(),
-                          endDate: _endCtrl.text.trim(),
-                          participatingTeamIds: List.from(_selectedTeams),
-                        );
-                        storage.addTournament(newTourn);
-                      }
+                            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                            setState(() => _isSubmitting = true);
+                            try {
+                              if (_isEdit) {
+                                final tournId = args?['id']?.toString() ?? 'tourn_${DateTime.now().millisecondsSinceEpoch}';
+                                final updated = Tournament(
+                                  id: tournId,
+                                  name: _nameCtrl.text.trim(),
+                                  format: _format,
+                                  status: args?['status']?.toString() ?? 'Upcoming',
+                                  teamsCount: _selectedTeams.length,
+                                  matchesCount: int.tryParse(args?['matches']?.toString() ?? '0') ?? 0,
+                                  startDate: _startCtrl.text.trim(),
+                                  endDate: _endCtrl.text.trim(),
+                                  participatingTeamIds: List.from(_selectedTeams),
+                                );
+                                await storage.updateTournament(updated);
+                              } else {
+                                final newTourn = Tournament(
+                                  id: 'tourn_${DateTime.now().millisecondsSinceEpoch}',
+                                  name: _nameCtrl.text.trim(),
+                                  format: _format,
+                                  status: 'Upcoming',
+                                  teamsCount: _selectedTeams.length,
+                                  matchesCount: 0,
+                                  startDate: _startCtrl.text.trim(),
+                                  endDate: _endCtrl.text.trim(),
+                                  participatingTeamIds: List.from(_selectedTeams),
+                                );
+                                await storage.addTournament(newTourn);
+                              }
 
-                      CustomNotification.show(
-                        context,
-                        _isEdit
-                            ? 'Tournament "${_nameCtrl.text}" updated successfully!'
-                            : 'Tournament "${_nameCtrl.text}" created successfully!',
-                        type: NotificationType.success,
-                      );
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.emoji_events_rounded, size: 18),
-                    label: Text(_isEdit ? 'Save Changes' : 'Create Tournament'),
+                              if (mounted) {
+                                CustomNotification.show(
+                                  context,
+                                  _isEdit
+                                      ? 'Tournament "${_nameCtrl.text}" updated successfully!'
+                                      : 'Tournament "${_nameCtrl.text}" created successfully!',
+                                  type: NotificationType.success,
+                                );
+                                Navigator.pop(context);
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isSubmitting = false);
+                              }
+                            }
+                          },
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.emoji_events_rounded, size: 18),
+                    label: Text(_isSubmitting
+                        ? (_isEdit ? 'Saving...' : 'Creating...')
+                        : (_isEdit ? 'Save Changes' : 'Create Tournament')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentPurple,
                       foregroundColor: Colors.white,

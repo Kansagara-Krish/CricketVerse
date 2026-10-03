@@ -1,7 +1,13 @@
+import dns from 'dns';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+// Use reliable public DNS for Atlas SRV record resolution across all local ISPs
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (_) {}
 
 import { initDatabase } from './config/db';
 import { initSocketIO } from './sockets/socketHandler';

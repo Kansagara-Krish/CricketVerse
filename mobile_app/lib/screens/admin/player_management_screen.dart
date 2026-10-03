@@ -9,6 +9,8 @@ import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/confirm_dialog.dart';
+import '../../core/widgets/custom_notification.dart';
 import 'widgets/player_list_item.dart';
 import 'widgets/add_player_sheet.dart';
 
@@ -25,11 +27,30 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
 
   final _roles = ['All', 'Batter', 'All-rounder', 'Bowler'];
 
+  void _confirmDeletePlayer(BuildContext context, StorageService storage, _PlayerWithTeam pw) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Delete Player',
+      message: 'Are you sure you want to delete "${pw.player.name}"? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      confirmColor: AppTheme.accentRed,
+    );
+
+    if (confirmed == true && context.mounted) {
+      storage.removePlayer(pw.teamId, pw.player.id);
+      CustomNotification.show(
+        context,
+        'Player "${pw.player.name}" deleted successfully.',
+        type: NotificationType.success,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
     final allPlayers = storage.teams
-        .expand((t) => t.players.map((p) => _PlayerWithTeam(p, t.shortName, t.logoColorHex)))
+        .expand((t) => t.players.map((p) => _PlayerWithTeam(p, t.id, t.shortName, t.logoColorHex)))
         .where((pw) {
       final matchesSearch = pw.player.name.toLowerCase().contains(_search.toLowerCase()) ||
           pw.player.nationality.toLowerCase().contains(_search.toLowerCase());
@@ -176,6 +197,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                           AppRoutes.playerDetail,
                           arguments: pw.player,
                         ),
+                        onDelete: () => _confirmDeletePlayer(context, storage, pw),
                       );
                     },
                   ),
@@ -188,7 +210,8 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
 
 class _PlayerWithTeam {
   final Player player;
+  final String teamId;
   final String teamShort;
   final String teamColorHex;
-  const _PlayerWithTeam(this.player, this.teamShort, this.teamColorHex);
+  const _PlayerWithTeam(this.player, this.teamId, this.teamShort, this.teamColorHex);
 }
