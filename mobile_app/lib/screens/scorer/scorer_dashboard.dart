@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/routes/app_routes.dart';
@@ -9,11 +10,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/team_logo.dart';
-import 'package:flutter/services.dart';
 import '../../core/widgets/exit_app_dialog.dart';
 import '../../core/widgets/card_entrance_animation.dart';
 import '../../services/socket_service.dart';
-import '../../core/widgets/custom_drawer.dart';
 import '../../core/widgets/network_status_bar.dart';
 import '../../services/network_connectivity_service.dart';
 
@@ -24,15 +23,11 @@ class ScorerDashboard extends StatefulWidget {
   State<ScorerDashboard> createState() => _ScorerDashboardState();
 }
 
-class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProviderStateMixin {
+class _ScorerDashboardState extends State<ScorerDashboard> {
   String? _tossWinner;
   String _tossDecision = 'Bat';
   bool _isAutoCommentary = true;
   bool _isSubmittingToss = false;
-  int _currentViewIndex = 0; // 0: Live Scoring, 1: Profile
-
-  late AnimationController _drawerAnimationController;
-  bool _isDrawerOpen = false;
 
   @override
   void initState() {
@@ -50,10 +45,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       }
     });
 
-    _drawerAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storage = Provider.of<StorageService>(context, listen: false);
       if (storage.activeScorerMatchId != null) {
@@ -68,19 +59,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     if (storage.activeScorerMatchId != null) {
       storage.unsubscribeFromMatchLiveUpdates(storage.activeScorerMatchId!);
     }
-    _drawerAnimationController.dispose();
     super.dispose();
-  }
-
-  void _toggleDrawer() {
-    setState(() {
-      _isDrawerOpen = !_isDrawerOpen;
-      if (_isDrawerOpen) {
-        _drawerAnimationController.forward();
-      } else {
-        _drawerAnimationController.reverse();
-      }
-    });
   }
 
   void _logout() async {
@@ -94,136 +73,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
     }
   }
 
-  Widget _buildMenuDrawer(BuildContext context, CricketMatch? match) {
-    final storage = Provider.of<StorageService>(context, listen: false);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.only(left: 24.0, top: 24.0, bottom: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Profile Header
-            const DrawerProfileHeader(
-              initials: 'MS',
-              name: 'Match Scorer',
-              role: 'Official Manager',
-            ),
-            const SizedBox(height: 32),
-
-            // Menu Items
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    AnimatedDrawerTile(
-                      icon: Icons.grid_view_rounded,
-                      title: 'Dashboard',
-                      isSelected: _currentViewIndex == 0,
-                      onTap: () {
-                        setState(() => _currentViewIndex = 0);
-                        _toggleDrawer();
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.assignment_turned_in_rounded,
-                      title: 'Assigned Matches',
-                      onTap: () {
-                        _toggleDrawer();
-                        if (match != null) {
-                          CustomNotification.show(
-                            context,
-                            'Active Match: ${match.teamA.shortName} vs ${match.teamB.shortName}',
-                            type: NotificationType.info,
-                          );
-                        } else {
-                          CustomNotification.show(
-                            context,
-                            'No match currently assigned.',
-                            type: NotificationType.warning,
-                          );
-                        }
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.offline_bolt_rounded,
-                      title: 'Live Scoring',
-                      onTap: () {
-                        setState(() => _currentViewIndex = 0);
-                        _toggleDrawer();
-                        if (match == null || match.status != 'Live') {
-                          CustomNotification.show(
-                            context,
-                            'No active live match to score. Set up toss first.',
-                            type: NotificationType.warning,
-                          );
-                        }
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.comment_bank_rounded,
-                      title: 'Commentary',
-                      onTap: () {
-                        _toggleDrawer();
-                        if (match != null) {
-                          Navigator.pushNamed(context, AppRoutes.aiCommentary, arguments: match);
-                        } else {
-                          CustomNotification.show(
-                            context,
-                            'Start a match to view AI Commentary.',
-                            type: NotificationType.warning,
-                          );
-                        }
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.bar_chart_rounded,
-                      title: 'Statistics',
-                      onTap: () {
-                        _toggleDrawer();
-                        Navigator.pushNamed(context, AppRoutes.statistics);
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.notifications_none_rounded,
-                      title: 'Notifications',
-                      badgeCount: storage.unreadNotificationCount > 0 ? storage.unreadNotificationCount : 3,
-                      onTap: () {
-                        _toggleDrawer();
-                        Navigator.pushNamed(context, AppRoutes.notifications);
-                      },
-                    ),
-                    AnimatedDrawerTile(
-                      icon: Icons.person_rounded,
-                      title: 'Profile',
-                      isSelected: _currentViewIndex == 1,
-                      onTap: () {
-                        setState(() => _currentViewIndex = 1);
-                        _toggleDrawer();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Logout Button
-            AnimatedDrawerTile(
-              icon: Icons.logout_rounded,
-              title: 'Logout',
-              isLogout: true,
-              onTap: () {
-                _toggleDrawer();
-                _logout();
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
@@ -234,25 +83,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        // 1. If currently scoring a match, exit back to assigned matches list
+        // 1. If currently on a specific match score update page, pressing back returns to Assigned Matches List
         if (storage.activeScorerMatchId != null) {
           storage.setActiveScorerMatchId(null);
           return;
         }
 
-        // 2. If drawer is open, close drawer
-        if (_isDrawerOpen) {
-          _toggleDrawer();
-          return;
-        }
-
-        // 3. If on Profile view, switch back to Scoring view
-        if (_currentViewIndex != 0) {
-          setState(() => _currentViewIndex = 0);
-          return;
-        }
-
-        // 4. On the LAST page -> confirm exit
+        // 2. On Assigned Matches List -> confirm exit
         final shouldExit = await ExitAppDialog.show(context);
         if (shouldExit) {
           SystemNavigator.pop();
@@ -260,78 +97,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
       },
       child: matchId == null
           ? _buildAssignedMatchesListView(storage)
-          : Builder(
-              builder: (context) {
-                final match = storage.matches.firstWhere((m) => m.id == matchId);
-
-                return Drawer3DWrapper(
-                  animationController: _drawerAnimationController,
-                  drawerMenu: _buildMenuDrawer(context, match),
-                  onTapOutsideToClose: _toggleDrawer,
-                  child: Scaffold(
-                    backgroundColor: AppTheme.bgDark,
-                    appBar: AppBar(
-                      backgroundColor: Colors.white,
-                      elevation: 0,
-                      leading: IconButton(
-                        icon: AnimatedIcon(
-                          icon: AnimatedIcons.menu_close,
-                          progress: _drawerAnimationController,
-                          color: AppTheme.textPrimary,
-                        ),
-                        onPressed: _toggleDrawer,
-                      ),
-                            title: Text(
-                              _currentViewIndex == 0 ? 'Official Scorer Portal' : 'My Profile',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            actions: [
-                              if (_currentViewIndex == 0 && match.status == 'Live') ...[
-                                IconButton(
-                                  icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
-                                  tooltip: 'Reset Score to 0/0',
-                                  onPressed: () => _showResetConfirmation(context, storage, match.id),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_note, color: AppTheme.accentGold),
-                                  onPressed: () {
-                                    Navigator.pushNamed(context, AppRoutes.editBall);
-                                  },
-                                ),
-                              ],
-                              IconButton(
-                                icon: const Icon(Icons.logout, color: AppTheme.accentRed),
-                                onPressed: _logout,
-                              ),
-                            ],
-                          ),
-                          body: Column(
-                            children: [
-                              NetworkStatusBar(
-                                pendingCount: storage.pendingScoreCount,
-                                onRetry: () => NetworkConnectivityService().checkConnectivity(),
-                              ),
-                              Expanded(
-                                child: _currentViewIndex == 1
-                                    ? _buildProfileView()
-                                    : ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
-                                        ? _buildSetupView(match, storage)
-                                        : _buildScoringView(match, storage)),
-                              ),
-                            ],
-                          ),
-                        ),
-                );
-              },
-            ),
+          : _buildMatchScoreUpdatePage(storage, matchId),
     );
   }
 
-  // --- Assigned Matches Dashboard List View ---
+  // ===========================================================================
+  // PAGE 1: ASSIGNED MATCHES LIST
+  // ===========================================================================
   Widget _buildAssignedMatchesListView(StorageService storage) {
     final assignedMatches = storage.matches.where((m) {
       if (storage.currentUserEmail == null || storage.currentUserEmail!.isEmpty) return true;
@@ -349,16 +121,17 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Official Scorer Portal',
+          'Assigned Matches',
           style: GoogleFonts.plusJakartaSans(
             color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            fontSize: 17,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: AppTheme.accentRed),
+            icon: const Icon(Icons.logout_rounded, color: AppTheme.accentRed),
+            tooltip: 'Logout',
             onPressed: _logout,
           ),
         ],
@@ -372,21 +145,43 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
           Expanded(
             child: assignedMatches.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.sports_cricket_rounded, size: 48, color: AppTheme.textMuted),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No Matches Assigned to You',
-                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Contact administrator to get scoring matches.',
-                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12),
-                        ),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.bgSurface,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.assignment_turned_in_outlined,
+                              size: 44,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Matches Assigned',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppTheme.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Matches assigned to your manager/scorer account will appear here.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -394,152 +189,255 @@ class _ScorerDashboardState extends State<ScorerDashboard> with SingleTickerProv
                     itemCount: assignedMatches.length,
                     itemBuilder: (context, i) {
                       final match = assignedMatches[i];
-                final statusColor = AppTheme.statusColor(match.status);
-                
-                return CardEntranceAnimation(
-                  index: i,
-                  child: GestureDetector(
-                    onTap: () {
-                      storage.setActiveScorerMatchId(match.id);
-                      CustomNotification.show(
-                        context,
-                        'Opened scoring for ${match.teamA.shortName} vs ${match.teamB.shortName}',
-                        type: NotificationType.info,
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(16),
-                      decoration: AppTheme.glassCard,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                                ),
-                                child: Text(
-                                  match.status == 'Live' ? '● LIVE' : match.status.toUpperCase(),
-                                  style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: statusColor, fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                              Text(
-                                '${match.matchType} • ${match.date}',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Row(
+                      final statusColor = AppTheme.statusColor(match.status);
+
+                      return CardEntranceAnimation(
+                        index: i,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(16),
+                          decoration: AppTheme.glassCard,
+                          child: InkWell(
+                            onTap: () {
+                              storage.setActiveScorerMatchId(match.id);
+                            },
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    TeamLogo(
-                                      teamName: match.teamA.name,
-                                      shortName: match.teamA.shortName,
-                                      logoColorHex: match.teamA.logoColorHex,
-                                      size: 32,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Text(
+                                        match.status == 'Live' ? '● LIVE' : match.status.toUpperCase(),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 9.5,
+                                          color: statusColor,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${match.matchType} • ${match.date}',
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      child: Row(
                                         children: [
-                                          Text(
-                                            match.teamA.shortName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                          TeamLogo(
+                                            teamName: match.teamA.name,
+                                            shortName: match.teamA.shortName,
+                                            logoColorHex: match.teamA.logoColorHex,
+                                            size: 32,
                                           ),
-                                          if (match.status != 'Upcoming')
-                                            Text('${match.runsA}/${match.wicketsA} (${match.oversA})', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  match.teamA.shortName,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textPrimary,
+                                                  ),
+                                                ),
+                                                if (match.status != 'Upcoming')
+                                                  Text(
+                                                    '${match.runsA}/${match.wicketsA} (${match.oversA})',
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 12,
+                                                      color: AppTheme.textSecondary,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      child: Text(
+                                        'VS',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  match.teamB.shortName,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textPrimary,
+                                                  ),
+                                                ),
+                                                if (match.status != 'Upcoming')
+                                                  Text(
+                                                    '${match.runsB}/${match.wicketsB} (${match.oversB})',
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 12,
+                                                      color: AppTheme.textSecondary,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          TeamLogo(
+                                            teamName: match.teamB.name,
+                                            shortName: match.teamB.shortName,
+                                            logoColorHex: match.teamB.logoColorHex,
+                                            size: 32,
+                                          ),
                                         ],
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              Text('VS', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
-                              Expanded(
-                                child: Row(
+                                const SizedBox(height: 12),
+                                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                const SizedBox(height: 8),
+                                Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            match.teamB.shortName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                                          ),
-                                          if (match.status != 'Upcoming')
-                                            Text('${match.runsB}/${match.wicketsB} (${match.oversB})', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-                                        ],
+                                    Text(
+                                      'Tap to Update Score',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11.5,
+                                        color: AppTheme.primaryBlue,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    TeamLogo(
-                                      teamName: match.teamB.name,
-                                      shortName: match.teamB.shortName,
-                                      logoColorHex: match.teamB.logoColorHex,
-                                      size: 32,
-                                    ),
+                                    const SizedBox(width: 2),
+                                    const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppTheme.primaryBlue),
                                   ],
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Tap to open Scoring Portal',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
-                              ),
-                              const Icon(Icons.chevron_right_rounded, size: 14, color: AppTheme.primaryBlue),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
     );
   }
 
-  // --- Profile View ---
-  Widget _buildProfileView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.12),
-            radius: 36,
-            child: const Icon(Icons.sports_cricket_rounded, color: AppTheme.primaryGreen, size: 40),
+  // ===========================================================================
+  // PAGE 2: SPECIFIC MATCH SCORE UPDATE PAGE
+  // ===========================================================================
+  Widget _buildMatchScoreUpdatePage(StorageService storage, String matchId) {
+    final matches = storage.matches.where((m) => m.id == matchId).toList();
+    if (matches.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppTheme.bgDark,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => storage.setActiveScorerMatchId(null),
           ),
-          const SizedBox(height: 16),
-          Text('Match Official Portal', style: GoogleFonts.plusJakartaSans(fontSize: 18, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-          Text('scorer1@cricketverse.ai', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary)),
-          const SizedBox(height: 24),
-          Text('Role: Match Official Manager', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.bold)),
+          title: const Text('Match Not Found'),
+        ),
+        body: const Center(child: Text('Assigned match not found.')),
+      );
+    }
+
+    final match = matches.first;
+
+    return Scaffold(
+      backgroundColor: AppTheme.bgDark,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
+          tooltip: 'Back to Assigned Matches',
+          onPressed: () => storage.setActiveScorerMatchId(null),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${match.teamA.shortName} vs ${match.teamB.shortName}',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            Text(
+              'Score Update Control',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.primaryBlue,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (match.status == 'Live') ...[
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
+              tooltip: 'Reset Score to 0/0',
+              onPressed: () => _showResetConfirmation(context, storage, match.id),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_note_rounded, color: AppTheme.accentGold),
+              tooltip: 'Undo / Edit Ball',
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.editBall);
+              },
+            ),
+          ],
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppTheme.accentRed),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          NetworkStatusBar(
+            pendingCount: storage.pendingScoreCount,
+            onRetry: () => NetworkConnectivityService().checkConnectivity(),
+          ),
+          Expanded(
+            child: ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
+                ? _buildSetupView(match, storage)
+                : _buildScoringView(match, storage)),
+          ),
         ],
       ),
     );
