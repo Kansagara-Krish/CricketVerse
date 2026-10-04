@@ -43,7 +43,7 @@ class ElevenLabsSettings {
     this.similarityBoost = 0.8,
     this.style = 0.35,
     this.useSpeakerBoost = true,
-    this.autoPlayVoice = false,
+    this.autoPlayVoice = true,
     this.commentaryStyle = 'Hype / Energetic',
     this.commentaryTrigger = 'Every Ball',
   });

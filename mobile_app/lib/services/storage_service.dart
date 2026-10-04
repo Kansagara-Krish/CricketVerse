@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ class StorageService with ChangeNotifier {
   List<CricketMatch> _matches = [];
   List<Tournament> _tournaments = [];
   List<Manager> _managers = [];
+  Timer? _delayedCommentaryTimer;
 
   // App Session State
   String? _currentUserEmail;
@@ -526,7 +528,8 @@ class StorageService with ChangeNotifier {
 
         _recalculatePlayerStats();
 
-        // Auto-play voice commentary if enabled in ElevenLabs settings
+        // Auto-play voice commentary with 3-second delay after manager updates score
+        _delayedCommentaryTimer?.cancel();
         final elevenSettings = ElevenLabsService().settings;
         if (elevenSettings.autoPlayVoice && updated.balls.isNotEmpty) {
           final lastBall = updated.balls.last;
@@ -537,7 +540,10 @@ class StorageService with ChangeNotifier {
               (trigger == 'Boundaries & Wickets' && (runs >= 4 || isWicket)) ||
               (trigger == 'Over Finish' && currentOvers.toString().endsWith('.0'));
           if (shouldSpeak && commentary.isNotEmpty) {
-            ElevenLabsService().speakCommentary(commentary);
+            _delayedCommentaryTimer = Timer(const Duration(seconds: 3), () {
+              // Ensure it speaks only the latest ball commentary
+              ElevenLabsService().speakCommentary(commentary);
+            });
           }
         }
 
@@ -693,6 +699,8 @@ class StorageService with ChangeNotifier {
   }
 
   void undoLastBall() async {
+    _delayedCommentaryTimer?.cancel();
+    ElevenLabsService().stopAudio();
     if (_activeScorerMatchId == null) return;
     final updated = await ApiService.undoLastBall(_activeScorerMatchId!);
     if (updated != null) {

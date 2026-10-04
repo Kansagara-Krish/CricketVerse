@@ -20,7 +20,6 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   late TextEditingController _apiKeyController;
   late TextEditingController _customVoiceIdController;
 
-  bool _obscureApiKey = true;
   bool _isTestingConnection = false;
   String? _connectionStatusMessage;
   bool? _isConnectionValid;
@@ -44,7 +43,6 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   bool _winPrediction = true;
   bool _smartAlerts = true;
   bool _playerInsights = true;
-  String _predictionModel = 'Advanced ML';
 
   @override
   void initState() {
@@ -214,33 +212,33 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
           children: [
             // AI Header Banner
             Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                  colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   )
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 30),
+                    child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 20),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,36 +246,26 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         Text(
                           'ElevenLabs AI Voice Commentary',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         Text(
-                          'Broadcast-quality voice narration & smart match intelligence',
+                          'Voice narration & match commentary configuration',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11.5,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 11,
+                            color: Colors.white70,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('v2.5 Pro',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
             // Section 1: ELEVENLABS CREDENTIALS & VOICE
             const _SectionLabel('ELEVENLABS API & VOICE ENGINE'),
@@ -323,7 +311,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _apiKeyController,
-                    obscureText: _obscureApiKey,
+                    obscureText: true,
                     style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'e.g. sk_1234567890abcdef...',
@@ -335,29 +323,19 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                       ),
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              _obscureApiKey ? Icons.visibility_off : Icons.visibility,
-                              color: AppTheme.textMuted,
-                              size: 18,
-                            ),
-                            onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
-                          ),
-                          TextButton(
-                            onPressed: _isTestingConnection ? null : _testElevenLabsKey,
-                            child: Text(
-                              'Test Key',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppTheme.accentGold,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: TextButton(
+                          onPressed: _isTestingConnection ? null : _testElevenLabsKey,
+                          child: Text(
+                            'Test Key',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppTheme.accentGold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -598,20 +576,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               AppTheme.accentOrange,
             ),
 
-            const SizedBox(height: 10),
-
-            _DropdownTile(
-              'Prediction ML Algorithm',
-              _predictionModel,
-              const [
-                DropdownMenuItem(value: 'Simple Average', child: Text('Simple Average')),
-                DropdownMenuItem(value: 'Advanced ML', child: Text('Advanced ML (Ensemble Model)')),
-                DropdownMenuItem(value: 'Historical + Live', child: Text('Historical + Live Conditions')),
-              ],
-              (v) => setState(() => _predictionModel = v),
-            ),
-
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Final Save Button
             SizedBox(

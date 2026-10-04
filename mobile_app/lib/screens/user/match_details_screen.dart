@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +31,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   int _playingVoiceIndex = -1;
   int _selectedInnings = 0;
   late FlutterTts _flutterTts;
+  bool _isLiveAudioActive = false;
+  int _lastHandledBallCount = 0;
+  Timer? _liveCommentaryDelayTimer;
 
   @override
   void initState() {
@@ -66,6 +70,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
 
   @override
   void dispose() {
+    _liveCommentaryDelayTimer?.cancel();
     Provider.of<StorageService>(context, listen: false).unsubscribeFromMatchLiveUpdates(widget.matchId);
     _flutterTts.stop();
     _livePulseController.dispose();
@@ -121,20 +126,80 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   }
 
   void _togglePlayAllCommentary(CricketMatch match) async {
-    if (_isPlayingVoice) {
+    if (_isLiveAudioActive) {
+      _liveCommentaryDelayTimer?.cancel();
       await ElevenLabsService().stopAudio();
       await _flutterTts.stop();
+      if (mounted) {
+        setState(() {
+          _isLiveAudioActive = false;
+          _isPlayingVoice = false;
+          _playingVoiceIndex = -1;
+        });
+        CustomNotification.show(context, '🔇 Live AI Commentary Stopped', type: NotificationType.warning);
+      }
+    } else {
+      _liveCommentaryDelayTimer?.cancel();
+      if (mounted) {
+        setState(() {
+          _isLiveAudioActive = true;
+          _lastHandledBallCount = match.balls.length;
+        });
+      }
+
+      final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
+      final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+      final runs = match.isFirstInnings ? match.runsA : match.runsB;
+      final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
+      final overs = match.isFirstInnings ? match.oversA : match.oversB;
+
+      String latestBallText = '';
+      if (match.balls.isNotEmpty) {
+        latestBallText = ' Latest update: ${match.balls.last.commentary}';
+      }
+
+      final welcomeText =
+          'Welcome to CricketVerse AI Live Commentary! ${battingTeam.name} is currently $runs for $wickets in $overs overs playing against ${bowlingTeam.name}.$latestBallText';
+
+      _playVoiceCommentary(-99, welcomeText);
+    }
+  }
+
+  void _checkAndHandleIncomingBall(CricketMatch match) {
+    if (!_isLiveAudioActive) {
+      _lastHandledBallCount = match.balls.length;
+      return;
+    }
+    if (_lastHandledBallCount == 0 && match.balls.isNotEmpty) {
+      _lastHandledBallCount = match.balls.length;
+      return;
+    }
+    if (match.balls.length > _lastHandledBallCount) {
+      final targetBallCount = match.balls.length;
+      _lastHandledBallCount = targetBallCount;
+      _liveCommentaryDelayTimer?.cancel();
+      _liveCommentaryDelayTimer = Timer(const Duration(seconds: 3), () {
+        if (!mounted || !_isLiveAudioActive) return;
+        final curStorage = Provider.of<StorageService>(context, listen: false);
+        final curMatch = curStorage.matches.firstWhere((m) => m.id == widget.matchId, orElse: () => match);
+        // Ensure ball count hasn't decreased due to undo and speak only latest commentary
+        if (curMatch.balls.length >= targetBallCount && curMatch.balls.isNotEmpty) {
+          final latestBall = curMatch.balls.last;
+          _playVoiceCommentary(-99, latestBall.commentary);
+        }
+      });
+    } else if (match.balls.length < _lastHandledBallCount) {
+      // Manager performed an undo
+      _liveCommentaryDelayTimer?.cancel();
+      _lastHandledBallCount = match.balls.length;
+      ElevenLabsService().stopAudio();
+      _flutterTts.stop();
       if (mounted) {
         setState(() {
           _isPlayingVoice = false;
           _playingVoiceIndex = -1;
         });
-        CustomNotification.show(context, '🔇 AI Voice Sound Paused', type: NotificationType.warning);
       }
-    } else {
-      if (match.balls.isEmpty) return;
-      final fullText = match.balls.reversed.take(3).map((b) => b.commentary).join(". ");
-      _playVoiceCommentary(-99, fullText);
     }
   }
 
@@ -142,6 +207,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
     final match = storage.matches.firstWhere((m) => m.id == widget.matchId, orElse: () => storage.matches[0]);
+    _checkAndHandleIncomingBall(match);
 
     final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
     final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
@@ -239,10 +305,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A), size: 22),
-            onPressed: () {},
-          ),
           InkWell(
             onTap: () {
               Navigator.pushNamed(
@@ -1456,23 +1518,22 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
       itemCount: match.balls.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          // Top AI Audio Commentary Option Control Card
-          final isGlobalPlaying = _isPlayingVoice && _playingVoiceIndex == -99;
+          // Top Compact AI Audio Commentary Control Card
           return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF0F4C81), AppTheme.primaryBlue],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.18),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -1483,7 +1544,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
@@ -1491,22 +1552,33 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                         child: Icon(
                           _isPlayingVoice ? Icons.graphic_eq : Icons.volume_up_rounded,
                           color: Colors.white,
-                          size: 22,
+                          size: 16,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'AI Sound Commentary',
-                              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                              'AI Commentary',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            const SizedBox(height: 2),
                             Text(
-                              _isPlayingVoice ? 'Broadcasting live voice sound...' : 'Listen to audio match commentary',
-                              style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 11),
+                              _isLiveAudioActive
+                                  ? (_isPlayingVoice ? 'Speaking latest ball...' : 'Live audio active • Auto-syncing')
+                                  : 'Listen to AI live voice',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white70,
+                                fontSize: 10.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1514,16 +1586,35 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _togglePlayAllCommentary(match),
-                  icon: Icon(_isPlayingVoice ? Icons.pause : Icons.play_arrow_rounded, size: 18),
-                  label: Text(isGlobalPlaying ? 'Stop' : (_isPlayingVoice ? 'Pause' : 'Play Sound')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _togglePlayAllCommentary(match),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isLiveAudioActive ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded,
+                          color: AppTheme.primaryBlue,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _isLiveAudioActive ? 'Stop' : 'Play Sound',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: AppTheme.primaryBlue,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

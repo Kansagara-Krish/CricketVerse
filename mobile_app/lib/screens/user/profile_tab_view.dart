@@ -6,7 +6,6 @@ import '../../core/widgets/logout_dialog.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/routes/app_routes.dart';
 import '../../services/storage_service.dart';
-import 'widgets/profile_dialogs.dart';
 
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
@@ -206,12 +205,6 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   @override
   Widget build(BuildContext context) {
     final storage = Provider.of<StorageService>(context);
-    final favTeamsList = storage.getFavoriteTeams();
-    final favTeamIds = favTeamsList.toSet();
-
-    final notifMatchStart = storage.getNotificationSetting('match_start');
-    final notifWickets = storage.getNotificationSetting('wickets');
-    final notifCommentary = storage.getNotificationSetting('commentary');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
@@ -226,7 +219,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           const SizedBox(height: 24),
 
           // 3. Settings Category: Account Settings
-          _buildCategoryHeader('ACCOUNT & PREFERENCES'),
+          _buildCategoryHeader('ACCOUNT SETTINGS'),
           const SizedBox(height: 8),
           _buildProfileTile(
             icon: Icons.edit_rounded,
@@ -240,51 +233,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             subtitle: 'Secure your account',
             onTap: () => _changePassword(storage),
           ),
-          _buildProfileTile(
-            icon: Icons.favorite_border,
-            title: 'Favorite Teams',
-            subtitle: '${favTeamIds.length} selected',
-            onTap: () => ProfileDialogs.showFavoriteTeams(context, storage, favTeamIds, () => setState(() {})),
-          ),
-          _buildProfileTile(
-            icon: Icons.notifications_none,
-            title: 'Notification Settings',
-            subtitle: _getNotificationSummary(notifMatchStart, notifWickets, notifCommentary),
-            onTap: () => ProfileDialogs.showNotifications(
-              context,
-              notifMatchStart,
-              notifWickets,
-              notifCommentary,
-              (m, w, c) async {
-                await storage.setNotificationSetting('match_start', m);
-                await storage.setNotificationSetting('wickets', w);
-                await storage.setNotificationSetting('commentary', c);
-                setState(() {});
-              },
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // 4. Settings Category: Support & Legal
-          _buildCategoryHeader('SUPPORT & LEGAL'),
-          const SizedBox(height: 8),
-          _buildProfileTile(
-            icon: Icons.help_outline,
-            title: 'Help & Feedback',
-            subtitle: 'Get assistance or submit ideas',
-            onTap: () => CustomNotification.show(context, 'Support desk is online!', type: NotificationType.success),
-          ),
-          _buildProfileTile(
-            icon: Icons.info_outline,
-            title: 'About CricketVerse',
-            subtitle: 'Version 1.0.0 (Stable)',
-            onTap: () => ProfileDialogs.showAboutApp(context),
-          ),
 
           const SizedBox(height: 32),
 
-          // 5. Sign Out Button
+          // 4. Sign Out Button
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -328,9 +280,24 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       ),
       child: Column(
         children: [
-          const CircleAvatar(
-            radius: 46,
-            backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop'),
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.primaryGreen.withOpacity(0.12),
+              border: Border.all(
+                color: AppTheme.primaryGreen.withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.person_rounded,
+                size: 48,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -472,13 +439,5 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         ),
       ),
     );
-  }
-
-  String _getNotificationSummary(bool matchStart, bool wickets, bool commentary) {
-    int count = 0;
-    if (matchStart) count++;
-    if (wickets) count++;
-    if (commentary) count++;
-    return '$count of 3 active';
   }
 }

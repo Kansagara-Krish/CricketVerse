@@ -21,9 +21,6 @@ class AdminProfileScreen extends StatefulWidget {
 }
 
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
-  bool _notifications = true;
-  bool _liveUpdates = true;
-
   void _editProfile() {
     final storage = Provider.of<StorageService>(context, listen: false);
     final nameCtrl = TextEditingController(text: storage.currentUserName);
@@ -285,30 +282,16 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
             // Settings Section
             const _SectionHeader('ACCOUNT'),
-            _SettingsTile(Icons.edit_rounded, 'Edit Profile', 'Update name, email, bio', onTap: _editProfile),
+            _SettingsTile(Icons.edit_rounded, 'Edit Profile', 'Update name, email, organization', onTap: _editProfile),
             _SettingsTile(Icons.lock_outline_rounded, 'Change Password', 'Update your login password', onTap: _changePassword),
-            _SettingsTile(Icons.shield_outlined, 'Privacy & Security', 'Manage privacy settings', onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Privacy settings')));
-            }),
 
             const SizedBox(height: 20),
-            const _SectionHeader('PREFERENCES'),
-            _SwitchTile(Icons.notifications_outlined, 'Push Notifications', 'Match alerts and updates', _notifications,
-                (v) => setState(() => _notifications = v)),
-            _SwitchTile(Icons.live_tv_outlined, 'Live Score Updates', 'Real-time score notifications', _liveUpdates,
-                (v) => setState(() => _liveUpdates = v)),
-
-            const SizedBox(height: 20),
-            const _SectionHeader('MORE'),
+            const _SectionHeader('SYSTEM & SETTINGS'),
             _SettingsTile(Icons.manage_accounts_outlined, 'Manager & Scorer Credentials', 'View, add or delete manager login credentials',
                 onTap: () => ManagerManagementDialog.show(context)),
-            _SettingsTile(Icons.info_outline_rounded, 'About CricketVerse AI', 'App info and version',
-                onTap: () => Navigator.pushNamed(context, AppRoutes.about)),
-            _SettingsTile(Icons.help_outline_rounded, 'Help & FAQ', 'Get support',
-                onTap: () => Navigator.pushNamed(context, AppRoutes.help)),
             _SettingsTile(Icons.mark_email_read_outlined, 'Email & App Password Settings', 'Manage sender email & Google app password',
                 onTap: () => EmailSettingsDialog.show(context)),
-            _SettingsTile(Icons.auto_awesome_rounded, 'AI Settings', 'Configure AI features',
+            _SettingsTile(Icons.auto_awesome_rounded, 'AI Settings', 'Configure voice and commentary features',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.aiSettings)),
 
             const SizedBox(height: 32),
@@ -399,35 +382,3 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-class _SwitchTile extends StatelessWidget {
-  final IconData icon;
-  final String title, subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  const _SwitchTile(this.icon, this.title, this.subtitle, this.value, this.onChanged);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: AppTheme.glassCardSmall,
-      child: Row(
-        children: [
-          Icon(icon, color: AppTheme.primaryBlue, size: 22),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: AppTheme.primaryGreen),
-        ],
-      ),
-    );
-  }
-}
