@@ -1004,5 +1004,76 @@ class ApiService {
       return {'success': false, 'error': 'Network error sending test email.'};
     }
   }
+
+  // --- Centralized ElevenLabs & AI Config API ---
+  static Future<Map<String, dynamic>?> getAiConfig() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/ai/config'),
+        headers: _headers,
+      ).timeout(defaultTimeout);
+
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getAiConfig error: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateAiConfig(Map<String, dynamic> configData) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ai/config'),
+        headers: _headers,
+        body: jsonEncode(configData),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'AI config saved.', 'config': data['config']};
+      }
+      return {'success': false, 'error': data['error'] ?? 'Failed to update AI config.'};
+    } catch (e) {
+      debugPrint('ApiService updateAiConfig error: $e');
+      return {'success': false, 'error': 'Network error updating AI configuration.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> testElevenLabsKey(String apiKey) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ai/test-key'),
+        headers: _headers,
+        body: jsonEncode({'apiKey': apiKey.trim()}),
+      ).timeout(defaultTimeout);
+
+      final data = jsonDecode(res.body);
+      return data is Map<String, dynamic> ? data : {'success': false, 'message': 'Unknown response'};
+    } catch (e) {
+      debugPrint('ApiService testElevenLabsKey error: $e');
+      return {'success': false, 'message': 'Network error reaching ElevenLabs server: $e'};
+    }
+  }
+
+  // --- Tournament Live Standings API ---
+  static Future<Map<String, dynamic>?> getTournamentStandings(String tournamentId) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/tournaments/$tournamentId/standings'),
+        headers: _headers,
+      ).timeout(defaultTimeout);
+
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ApiService getTournamentStandings error: $e');
+      return null;
+    }
+  }
 }
 

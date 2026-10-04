@@ -53,6 +53,9 @@ async function getFullMatchData(matchId: string) {
       bowlerId: b.bowlerId,
     })),
     isFirstInnings: match.isFirstInnings ?? true,
+    winnerTeamId: match.winnerTeamId || '',
+    winnerName: match.winnerName || '',
+    resultText: match.resultText || '',
   };
 }
 
@@ -88,6 +91,9 @@ export async function getMatches(req: Request, res: Response) {
       currentBowlerId: match.currentBowlerId || '',
       balls: match.balls || [],
       isFirstInnings: match.isFirstInnings ?? true,
+      winnerTeamId: match.winnerTeamId || '',
+      winnerName: match.winnerName || '',
+      resultText: match.resultText || '',
     }));
     return res.status(200).json(formatted);
   } catch (err) {

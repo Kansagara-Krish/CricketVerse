@@ -67,6 +67,9 @@ export interface IMatch extends Document {
   currentBowlerId: string;
   isFirstInnings: boolean;
   balls: IBallRecord[];
+  winnerTeamId?: string;
+  winnerName?: string;
+  resultText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -103,6 +106,9 @@ const MatchSchema = new Schema<IMatch>(
     currentBowlerId: { type: String, default: '' },
     isFirstInnings: { type: Boolean, default: true },
     balls: { type: [BallRecordSchema], default: [] },
+    winnerTeamId: { type: String, default: '' },
+    winnerName: { type: String, default: '' },
+    resultText: { type: String, default: '' },
   },
   {
     timestamps: true,

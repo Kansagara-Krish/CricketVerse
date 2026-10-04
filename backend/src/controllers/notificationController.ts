@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { NotificationModel } from '../models/Notification';
-import { broadcastNotification } from '../sockets/socketHandler';
+import { broadcastNotification, sendUserNotification } from '../sockets/socketHandler';
 
 export async function getNotifications(req: any, res: Response) {
   try {
@@ -27,21 +27,28 @@ export async function createNotification(req: Request, res: Response) {
   }
 
   try {
+    const targetUserId = userId || 'global';
     const notifId = `notif_${Date.now()}`;
     const notification = await NotificationModel.create({
       id: notifId,
-      userId: userId || 'global',
+      userId: targetUserId,
       title: title.trim(),
       message: message.trim(),
       category: category || 'General',
       readBy: [],
     });
 
-    broadcastNotification({
+    const payload = {
       title: notification.title,
       message: notification.message,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    if (targetUserId === 'global') {
+      broadcastNotification(payload);
+    } else {
+      sendUserNotification(targetUserId, payload);
+    }
 
     return res.status(201).json({ message: 'Notification created.', notification });
   } catch (err) {

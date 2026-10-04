@@ -1337,17 +1337,22 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
     String dismissedId = striker.id;
     String wicketType = 'Bowled';
 
-    // Helper to calculate remaining batsmen who have not yet batted
+    // Helper to calculate remaining batsmen who have not yet batted or been dismissed
     List<Player> getRemainingBatsmen(CricketMatch match, Team battingTeam) {
-      final Set<String> battedPlayerNames = {};
+      final Set<String> dismissedNames = {};
+      final Set<String> dismissedIds = {};
       for (var ball in match.balls) {
-        battedPlayerNames.add(ball.batsmanName);
+        if (ball.isWicket) {
+          if (ball.batsmanName.isNotEmpty) dismissedNames.add(ball.batsmanName.trim().toLowerCase());
+          if (ball.strikerId != null && ball.strikerId!.isNotEmpty) dismissedIds.add(ball.strikerId!);
+        }
       }
       return battingTeam.players.where((p) {
-        if (p.id == match.currentStrikerId || p.id == match.currentNonStrikerId) {
+        if (p.isOut) return false;
+        if (p.id == match.currentStrikerId || p.id == match.currentNonStrikerId || p.id == dismissedId) {
           return false;
         }
-        if (battedPlayerNames.contains(p.name)) {
+        if (dismissedNames.contains(p.name.trim().toLowerCase()) || dismissedIds.contains(p.id)) {
           return false;
         }
         return true;
@@ -1859,14 +1864,130 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
   void _postBallCheck(StorageService storage) {
     if (storage.activeScorerMatchId == null) return;
     final match = storage.matches.firstWhere((m) => m.id == storage.activeScorerMatchId);
+
+    // 1. Check if match has finished
+    if (match.status == 'Completed') {
+      _showMatchCompletedDialog(context, match);
+      return;
+    }
+
     final overs = match.isFirstInnings ? match.oversA : match.oversB;
 
+    // 2. Check if over is completed
     if (overs > 0 && (overs * 10).round() % 10 == 0) {
       final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
       if (bowlingTeam.players.isNotEmpty) {
         _showOverCompletedDialog(context, bowlingTeam.players, storage, (overs).round());
       }
     }
+  }
+
+  void _showMatchCompletedDialog(BuildContext context, CricketMatch match) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'MatchCompletedDialog',
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final double scale = Tween<double>(begin: 0.8, end: 1.0)
+            .animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutBack))
+            .value;
+
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5 * anim1.value, sigmaY: 5 * anim1.value),
+          child: Opacity(
+            opacity: anim1.value,
+            child: Transform.scale(
+              scale: scale,
+              child: AlertDialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                title: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.emoji_events_rounded, color: AppTheme.primaryGreen, size: 36),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'MATCH FINISHED',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      match.resultText.isNotEmpty ? match.resultText : 'Match has concluded.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(match.teamA.name, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text('${match.runsA}/${match.wicketsA} (${match.oversA} ov)', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(match.teamB.name, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text('${match.runsB}/${match.wicketsB} (${match.oversB} ov)', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                      ),
+                      child: Text('Close Summary', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showOverCompletedDialog(

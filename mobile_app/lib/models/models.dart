@@ -13,6 +13,8 @@ class Player {
   int runsConceded;
   double oversBowled;
   int matchesPlayed;
+  bool isOut;
+  String dismissalInfo;
 
   Player({
     required this.id,
@@ -27,6 +29,8 @@ class Player {
     this.runsConceded = 0,
     this.oversBowled = 0.0,
     this.matchesPlayed = 0,
+    this.isOut = false,
+    this.dismissalInfo = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +46,8 @@ class Player {
         'runsConceded': runsConceded,
         'oversBowled': oversBowled,
         'matchesPlayed': matchesPlayed,
+        'isOut': isOut,
+        'dismissalInfo': dismissalInfo,
       };
 
   factory Player.fromJson(Map<String, dynamic> json) => Player(
@@ -57,6 +63,8 @@ class Player {
         runsConceded: json['runsConceded'] ?? 0,
         oversBowled: (json['oversBowled'] as num?)?.toDouble() ?? 0.0,
         matchesPlayed: json['matchesPlayed'] ?? 0,
+        isOut: json['isOut'] ?? false,
+        dismissalInfo: json['dismissalInfo'] ?? '',
       );
 }
 
@@ -157,6 +165,7 @@ class BallRecord {
 
 class CricketMatch {
   final String id;
+  String? tournamentId;
   Team teamA;
   Team teamB;
   String matchType; // "T20" or "ODI"
@@ -191,9 +200,13 @@ class CricketMatch {
 
   List<BallRecord> balls;
   bool isFirstInnings;
+  String winnerTeamId;
+  String winnerName;
+  String resultText;
 
   CricketMatch({
     required this.id,
+    this.tournamentId,
     required this.teamA,
     required this.teamB,
     required this.matchType,
@@ -220,10 +233,14 @@ class CricketMatch {
     this.currentBowlerId = "",
     required this.balls,
     this.isFirstInnings = true,
+    this.winnerTeamId = "",
+    this.winnerName = "",
+    this.resultText = "",
   });
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'tournamentId': tournamentId,
         'teamA': teamA.toJson(),
         'teamB': teamB.toJson(),
         'matchType': matchType,
@@ -250,10 +267,14 @@ class CricketMatch {
         'currentBowlerId': currentBowlerId,
         'balls': balls.map((b) => b.toJson()).toList(),
         'isFirstInnings': isFirstInnings,
+        'winnerTeamId': winnerTeamId,
+        'winnerName': winnerName,
+        'resultText': resultText,
       };
 
   factory CricketMatch.fromJson(Map<String, dynamic> json) => CricketMatch(
         id: json['id'],
+        tournamentId: json['tournamentId'],
         teamA: Team.fromJson(json['teamA']),
         teamB: Team.fromJson(json['teamB']),
         matchType: json['matchType'],
@@ -286,6 +307,9 @@ class CricketMatch {
             .map((b) => BallRecord.fromJson(b))
             .toList(),
         isFirstInnings: json['isFirstInnings'] ?? true,
+        winnerTeamId: json['winnerTeamId'] ?? '',
+        winnerName: json['winnerName'] ?? '',
+        resultText: json['resultText'] ?? '',
       );
 }
 

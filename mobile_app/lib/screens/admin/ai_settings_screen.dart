@@ -60,6 +60,25 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     _similarityBoost = s.similarityBoost;
     _styleExaggeration = s.style;
     _useSpeakerBoost = s.useSpeakerBoost;
+
+    // Refresh from centralized backend database
+    _elevenLabsService.loadSettings().then((remote) {
+      if (mounted) {
+        setState(() {
+          _apiKeyController.text = remote.apiKey;
+          _customVoiceIdController.text = remote.voiceId;
+          _autoPlayVoice = remote.autoPlayVoice;
+          _selectedVoiceId = remote.voiceId;
+          _selectedModel = remote.modelId;
+          _commentaryStyle = remote.commentaryStyle;
+          _commentaryTrigger = remote.commentaryTrigger;
+          _stability = remote.stability;
+          _similarityBoost = remote.similarityBoost;
+          _styleExaggeration = remote.style;
+          _useSpeakerBoost = remote.useSpeakerBoost;
+        });
+      }
+    });
   }
 
   @override

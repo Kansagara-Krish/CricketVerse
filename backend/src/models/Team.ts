@@ -13,6 +13,8 @@ export interface IPlayer {
   runsConceded: number;
   oversBowled: number;
   matchesPlayed: number;
+  isOut?: boolean;
+  dismissalInfo?: string;
 }
 
 export const PlayerSchema = new Schema<IPlayer>(
@@ -29,6 +31,8 @@ export const PlayerSchema = new Schema<IPlayer>(
     runsConceded: { type: Number, default: 0 },
     oversBowled: { type: Number, default: 0.0 },
     matchesPlayed: { type: Number, default: 0 },
+    isOut: { type: Boolean, default: false },
+    dismissalInfo: { type: String, default: '' },
   },
   { _id: false }
 );

@@ -643,18 +643,8 @@ export async function logout(req: any, res: Response) {
     }
 
     const { name, email, role } = req.body || {};
-
-    const displayName = user?.name || name || user?.email?.split('@')[0] || (email ? email.split('@')[0] : 'A user');
-    const userEmail = user?.email || email || '';
-    const userRole = user?.role || role || 'User';
-
-    const identifierText = userEmail ? `${displayName} (${userEmail})` : `${displayName} (${userRole})`;
-
-    broadcastNotification({
-      title: 'User Signed Out',
-      message: `${identifierText} has signed out of CricketVerse.`,
-      timestamp: new Date().toISOString(),
-    });
+    const displayName = user?.name || name || user?.email?.split('@')[0] || (email ? email.split('@')[0] : 'User');
+    console.log(`User logged out: ${displayName} (${user?.id || 'anonymous'})`);
 
     return res.status(200).json({ message: 'Successfully logged out.' });
   } catch (err) {

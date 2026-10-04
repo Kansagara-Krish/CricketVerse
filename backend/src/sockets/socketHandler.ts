@@ -26,6 +26,7 @@ export function initSocketIO(server: any) {
   io.on('connection', (socket: Socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
+    // Join / leave match room
     socket.on('join_match', (data: { matchId: string }) => {
       if (data && data.matchId) {
         socket.join(`match:${data.matchId}`);
@@ -37,6 +38,21 @@ export function initSocketIO(server: any) {
       if (data && data.matchId) {
         socket.leave(`match:${data.matchId}`);
         console.log(`Socket ${socket.id} left room match:${data.matchId}`);
+      }
+    });
+
+    // Join / leave user-specific private room
+    socket.on('join_user', (data: { userId: string }) => {
+      if (data && data.userId) {
+        socket.join(`user:${data.userId}`);
+        console.log(`Socket ${socket.id} joined room user:${data.userId}`);
+      }
+    });
+
+    socket.on('leave_user', (data: { userId: string }) => {
+      if (data && data.userId) {
+        socket.leave(`user:${data.userId}`);
+        console.log(`Socket ${socket.id} left room user:${data.userId}`);
       }
     });
 
@@ -64,5 +80,14 @@ export function broadcastNotification(payload: { title: string; message: string;
     console.log(`Broadcasted global notification: ${payload.title}`);
   } else {
     console.warn('Socket.IO instance not initialized. Broadcast skipped.');
+  }
+}
+
+export function sendUserNotification(userId: string, payload: { title: string; message: string; timestamp?: string }) {
+  if (ioInstance) {
+    ioInstance.to(`user:${userId}`).emit('user_notification', payload);
+    console.log(`Sent targeted notification to user:${userId} -> ${payload.title}`);
+  } else {
+    console.warn('Socket.IO instance not initialized. User notification skipped.');
   }
 }

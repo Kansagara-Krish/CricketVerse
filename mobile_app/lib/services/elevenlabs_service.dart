@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class ElevenLabsVoicePreset {
   final String id;
@@ -183,6 +184,20 @@ class ElevenLabsService {
         final decoded = jsonDecode(jsonStr);
         _settings = ElevenLabsSettings.fromJson(decoded);
       }
+
+      // Fetch centralized config from backend database
+      try {
+        final remoteConfig = await ApiService.getAiConfig();
+        if (remoteConfig != null) {
+          _settings = ElevenLabsSettings.fromJson(remoteConfig);
+          await prefs.setString(
+            'cricketverse_elevenlabs_settings_v1',
+            jsonEncode(_settings.toJson()),
+          );
+        }
+      } catch (remoteErr) {
+        debugPrint('Could not sync remote ElevenLabs config: $remoteErr');
+      }
     } catch (e) {
       debugPrint('Error loading ElevenLabs settings: $e');
     }
@@ -197,6 +212,14 @@ class ElevenLabsService {
         'cricketverse_elevenlabs_settings_v1',
         jsonEncode(_settings.toJson()),
       );
+
+      // Persist to centralized backend database
+      try {
+        await ApiService.updateAiConfig(_settings.toJson());
+      } catch (remoteErr) {
+        debugPrint('Could not persist ElevenLabs config to database: $remoteErr');
+      }
+
       return true;
     } catch (e) {
       debugPrint('Error saving ElevenLabs settings: $e');
@@ -214,6 +237,13 @@ class ElevenLabsService {
     }
 
     try {
+      // First try via backend centralized validator
+      final serverRes = await ApiService.testElevenLabsKey(apiKey);
+      if (serverRes['success'] == true) {
+        return serverRes;
+      }
+
+      // Direct fallback
       final res = await http.get(
         Uri.parse('https://api.elevenlabs.io/v1/user/subscription'),
         headers: {
@@ -241,7 +271,7 @@ class ElevenLabsService {
         } catch (_) {}
         return {
           'success': false,
-          'message': 'Connection failed: $errorDetail',
+          'message': serverRes['message'] ?? 'Connection failed: $errorDetail',
         };
       }
     } catch (e) {
