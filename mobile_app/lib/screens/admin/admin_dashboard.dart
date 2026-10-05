@@ -789,8 +789,8 @@ class _MatchCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (match.runsA > 0)
-                              Text('${match.runsA}/${match.wicketsA} (${match.oversA})',
+                            if (match.status != 'Upcoming' && (match.runsA > 0 || match.oversA > 0 || match.battingTeamId == match.teamA.id || match.status == 'Completed'))
+                              Text('${match.runsA}/${match.wicketsA} (${match.oversA} ov)',
                                   style: GoogleFonts.plusJakartaSans(
                                       fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           ],
@@ -829,8 +829,8 @@ class _MatchCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.end,
                             ),
-                            if (match.runsB > 0)
-                              Text('${match.runsB}/${match.wicketsB} (${match.oversB})',
+                            if (match.status != 'Upcoming' && (match.runsB > 0 || match.oversB > 0 || match.battingTeamId == match.teamB.id || !match.isFirstInnings || match.status == 'Completed'))
+                              Text('${match.runsB}/${match.wicketsB} (${match.oversB} ov)',
                                   style: GoogleFonts.plusJakartaSans(
                                       fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                           ],
@@ -848,6 +848,28 @@ class _MatchCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (match.status == 'Completed' && (match.resultText as String? ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  match.resultText,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 4),
           ],
         ),

@@ -188,6 +188,12 @@ class _HomeTabViewState extends State<HomeTabView> {
     final winProb = storage.calculateWinProbability(match);
     final crr = match.oversA > 0 ? (match.runsA / match.oversA) : 0.0;
 
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final showScoreA = match.status != 'Upcoming' &&
+        (match.oversA > 0 || match.runsA > 0 || isTeamABatting || match.status == 'Completed');
+    final showScoreB = match.status != 'Upcoming' &&
+        (match.oversB > 0 || match.runsB > 0 || !isTeamABatting || !match.isFirstInnings || match.status == 'Completed');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -197,7 +203,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         border: Border.all(color: AppTheme.bgSurface),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
+            color: Colors.black.withValues(alpha: 0.015),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -217,7 +223,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: match.status == 'Live' ? const Color(0xFFFEE2E2) : AppTheme.bgSurface.withOpacity(0.5),
+                    color: match.status == 'Live' ? const Color(0xFFFEE2E2) : AppTheme.bgSurface.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -244,7 +250,7 @@ class _HomeTabViewState extends State<HomeTabView> {
             Row(
               children: [
                 Expanded(
-                  child: _buildTeamScoreColumn(match.teamA, match.runsA, match.wicketsA, match.oversA, match.status != 'Upcoming'),
+                  child: _buildTeamScoreColumn(match.teamA, match.runsA, match.wicketsA, match.oversA, showScoreA),
                 ),
                 const SizedBox(width: 8),
                 Column(
@@ -269,7 +275,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildTeamScoreColumn(match.teamB, match.runsB, match.wicketsB, match.oversB, match.status == 'Completed', isRight: true),
+                  child: _buildTeamScoreColumn(match.teamB, match.runsB, match.wicketsB, match.oversB, showScoreB, isRight: true),
                 ),
               ],
             ),
@@ -279,13 +285,27 @@ class _HomeTabViewState extends State<HomeTabView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  match.status == 'Upcoming' 
-                      ? 'Fixture starts at ${match.time}' 
-                      : '${match.teamA.players.isNotEmpty ? match.teamA.players[0].name.split(" ").first : "Player"} 42*(28)',
-                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11.5, fontWeight: FontWeight.w600),
+                Expanded(
+                  child: Text(
+                    match.status == 'Upcoming'
+                        ? 'Fixture starts at ${match.time}'
+                        : match.status == 'Completed'
+                            ? (match.resultText.isNotEmpty ? match.resultText : 'Match Completed')
+                            : (match.isFirstInnings
+                                ? '1st Innings in progress'
+                                : (match.target > 0 ? 'Target: ${match.target} runs' : '2nd Innings in progress')),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: match.status == 'Completed' ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.bolt, color: AppTheme.primaryGreen, size: 13),
                     const SizedBox(width: 2),

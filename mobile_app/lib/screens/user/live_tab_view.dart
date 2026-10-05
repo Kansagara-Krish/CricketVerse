@@ -181,7 +181,13 @@ class LiveTabView extends StatelessWidget {
 
   Widget _buildLiveMatchCard(BuildContext context, CricketMatch match, StorageService storage) {
     final winProb = storage.calculateWinProbability(match);
-    final crr = match.oversA > 0 ? (match.runsA / match.oversA) : 0.0;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final currentRuns = isTeamABatting ? match.runsA : match.runsB;
+    final currentOvers = isTeamABatting ? match.oversA : match.oversB;
+    final crr = currentOvers > 0 ? (currentRuns / currentOvers) : 0.0;
+
+    final showScoreA = match.runsA > 0 || match.oversA > 0 || isTeamABatting || match.isFirstInnings || match.status == 'Completed';
+    final showScoreB = match.runsB > 0 || match.oversB > 0 || !isTeamABatting || !match.isFirstInnings || match.status == 'Completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -248,7 +254,7 @@ class LiveTabView extends StatelessWidget {
                   match.runsA,
                   match.wicketsA,
                   match.oversA,
-                  true,
+                  showScoreA,
                   isBatting: match.battingTeamId == match.teamA.id,
                 ),
               ),
@@ -282,7 +288,7 @@ class LiveTabView extends StatelessWidget {
                   match.runsB,
                   match.wicketsB,
                   match.oversB,
-                  match.runsB > 0 || match.oversB > 0,
+                  showScoreB,
                   isBatting: match.battingTeamId == match.teamB.id,
                 ),
               ),
