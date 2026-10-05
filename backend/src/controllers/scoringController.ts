@@ -138,18 +138,40 @@ function generateAICommentary(
 }
 
 export function computeMatchResult(match: any) {
-  const isTeamAFirst = match.tossDecision === 'Bat' ? (match.tossWinner === match.teamAId) : (match.tossWinner !== match.teamAId);
+  const tossWinnerStr = String(match.tossWinner || '').trim().toLowerCase();
+  const teamAIdStr = String(match.teamAId || match.teamA?.id || '').trim().toLowerCase();
+  const teamANameStr = String(match.teamA?.name || '').trim().toLowerCase();
+  const teamAShortStr = String(match.teamA?.shortName || '').trim().toLowerCase();
+
+  const isTossWinnerTeamA =
+    tossWinnerStr.length > 0 &&
+    (tossWinnerStr === teamAIdStr ||
+      tossWinnerStr === teamANameStr ||
+      tossWinnerStr === teamAShortStr);
+
+  let isTeamAFirst: boolean;
+  if (match.tossWinner && match.tossDecision) {
+    const isBattingDecision = String(match.tossDecision).trim().toLowerCase() === 'bat';
+    isTeamAFirst = isBattingDecision ? isTossWinnerTeamA : !isTossWinnerTeamA;
+  } else {
+    isTeamAFirst = match.isFirstInnings
+      ? match.battingTeamId === match.teamAId
+      : match.battingTeamId !== match.teamAId;
+  }
+
   const firstBatTeamId = isTeamAFirst ? match.teamAId : match.teamBId;
   const secondBatTeamId = isTeamAFirst ? match.teamBId : match.teamAId;
 
-  const firstBatTeamName = isTeamAFirst ? match.teamA?.name : match.teamB?.name;
-  const secondBatTeamName = isTeamAFirst ? match.teamB?.name : match.teamA?.name;
+  const firstBatTeamName = isTeamAFirst ? (match.teamA?.name || 'Team A') : (match.teamB?.name || 'Team B');
+  const secondBatTeamName = isTeamAFirst ? (match.teamB?.name || 'Team B') : (match.teamA?.name || 'Team A');
 
-  const firstRuns = isTeamAFirst ? match.runsA : match.runsB;
-  const secondRuns = isTeamAFirst ? match.runsB : match.runsA;
+  const firstRuns = isTeamAFirst ? Number(match.runsA || 0) : Number(match.runsB || 0);
+  const secondRuns = isTeamAFirst ? Number(match.runsB || 0) : Number(match.runsA || 0);
 
-  const secondWickets = isTeamAFirst ? match.wicketsB : match.wicketsA;
-  const secondTeamPlayers = isTeamAFirst ? (match.playingXI_B?.length || 11) : (match.playingXI_A?.length || 11);
+  const secondWickets = isTeamAFirst ? Number(match.wicketsB || 0) : Number(match.wicketsA || 0);
+  const secondTeamPlayers = isTeamAFirst
+    ? (match.playingXI_B?.length || match.teamB?.players?.length || 11)
+    : (match.playingXI_A?.length || match.teamA?.players?.length || 11);
   const maxWicketsSecond = Math.max(1, secondTeamPlayers - 1);
   const wicketsInHand = Math.max(1, maxWicketsSecond - secondWickets);
 
@@ -694,9 +716,27 @@ export async function endInningsOrMatch(req: Request, res: Response) {
       match.currentStrikerId = nextBatPlayers.length > 0 ? nextBatPlayers[0].id : '';
       match.currentNonStrikerId = nextBatPlayers.length > 1 ? nextBatPlayers[1].id : '';
       match.currentBowlerId = nextBowlPlayers.length > 0 ? nextBowlPlayers[nextBowlPlayers.length - 1].id : '';
+
+      try {
+        const nextBatTeamName = isTeamABatting ? match.teamB?.name : match.teamA?.name;
+        const currentBatTeamName = (isTeamABatting ? match.teamA?.name : match.teamB?.name) || 'Batting Team';
+        broadcastNotification({
+          title: 'Innings Break! 🏏',
+          message: `${currentBatTeamName} finished innings. ${nextBatTeamName} needs ${match.target} runs to win!`,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (_) {}
     } else {
       match.status = 'Completed';
       computeMatchResult(match);
+
+      try {
+        broadcastNotification({
+          title: '🏆 Match Completed!',
+          message: `${match.teamA?.name} vs ${match.teamB?.name}: ${match.resultText}`,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (_) {}
     }
 
     await match.save();
@@ -722,6 +762,14 @@ export async function endMatchForce(req: Request, res: Response) {
 
     match.status = 'Completed';
     computeMatchResult(match);
+
+    try {
+      broadcastNotification({
+        title: '🏆 Match Completed!',
+        message: `${match.teamA?.name} vs ${match.teamB?.name}: ${match.resultText}`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (_) {}
 
     await match.save();
     await invalidateCachedMatch(matchId);
