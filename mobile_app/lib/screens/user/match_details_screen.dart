@@ -147,11 +147,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
         });
       }
 
-      final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-      final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
-      final runs = match.isFirstInnings ? match.runsA : match.runsB;
-      final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-      final overs = match.isFirstInnings ? match.oversA : match.oversB;
+      final isTeamABatting = match.battingTeamId == match.teamA.id;
+      final battingTeam = isTeamABatting ? match.teamA : match.teamB;
+      final bowlingTeam = isTeamABatting ? match.teamB : match.teamA;
+      final runs = isTeamABatting ? match.runsA : match.runsB;
+      final wickets = isTeamABatting ? match.wicketsA : match.wicketsB;
+      final overs = isTeamABatting ? match.oversA : match.oversB;
 
       String latestBallText = '';
       if (match.balls.isNotEmpty) {
@@ -209,8 +210,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final match = storage.matches.firstWhere((m) => m.id == widget.matchId, orElse: () => storage.matches[0]);
     _checkAndHandleIncomingBall(match);
 
-    final battingTeam = match.battingTeamId == match.teamA.id ? match.teamA : match.teamB;
-    final bowlingTeam = match.battingTeamId == match.teamA.id ? match.teamB : match.teamA;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final battingTeam = isTeamABatting ? match.teamA : match.teamB;
+    final bowlingTeam = isTeamABatting ? match.teamB : match.teamA;
 
     final striker = battingTeam.players.firstWhere(
       (p) => p.id == match.currentStrikerId,
@@ -233,12 +235,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
     );
 
-    final runs = match.isFirstInnings ? match.runsA : match.runsB;
-    final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-    final overs = match.isFirstInnings ? match.oversA : match.oversB;
-    final crr = overs > 0 ? (runs / overs) : 0.0;
+    final runs = isTeamABatting ? match.runsA : match.runsB;
+    final overs = isTeamABatting ? match.oversA : match.oversB;
     
     final winProb = storage.calculateWinProbability(match);
+
+    // Team A and Team B stats for the live card
+    final hasTeamABatted = match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0 || isTeamABatting || match.status == 'Completed';
+    final hasTeamBBatted = match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0 || !isTeamABatting || match.status == 'Completed';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F9F6),
@@ -321,7 +325,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                   'scoreB': '${match.runsB}/${match.wicketsB}',
                   'oversB': '${match.oversB} Overs',
                   'result': match.status == 'Completed'
-                      ? '${match.runsA > match.runsB ? match.teamA.name : match.teamB.name} won the match'
+                      ? (match.resultText.isNotEmpty ? match.resultText : '${match.runsA > match.runsB ? match.teamA.name : match.teamB.name} won the match')
                       : 'Match is ${match.status.toLowerCase()}',
                   'teamAPlayers': match.teamA.players.map((p) => p.name).toList(),
                   'teamBPlayers': match.teamB.players.map((p) => p.name).toList(),
@@ -347,7 +351,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
             pendingCount: storage.pendingScoreCount,
             onRetry: () => NetworkConnectivityService().checkConnectivity(),
           ),
-          // Hero Live Match Banner matching Reference Image
+          // Hero Live Match Banner
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
@@ -379,29 +383,33 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE6F4EA),
+                              color: match.status == 'Live' ? const Color(0xFFE6F4EA) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: match.status == 'Live' ? const Color(0xFF34D399).withValues(alpha: 0.3) : const Color(0xFFCBD5E1),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                FadeTransition(
-                                  opacity: _livePulseAnimation,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF10B981),
-                                      shape: BoxShape.circle,
+                                if (match.status == 'Live') ...[
+                                  FadeTransition(
+                                    opacity: _livePulseAnimation,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF10B981),
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
+                                  const SizedBox(width: 6),
+                                ],
                                 Text(
-                                  'LIVE',
+                                  match.status == 'Live' ? 'LIVE' : match.status.toUpperCase(),
                                   style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFF047857),
+                                    color: match.status == 'Live' ? const Color(0xFF047857) : const Color(0xFF475569),
                                     fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 0.5,
@@ -411,7 +419,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                             ),
                           ),
                           Text(
-                            'T20 World Cup • Final',
+                            '${match.matchType} • ${match.isFirstInnings ? "1st Innings" : "2nd Innings"}',
                             style: GoogleFonts.plusJakartaSans(
                               color: const Color(0xFF64748B),
                               fontSize: 11.5,
@@ -431,76 +439,92 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                             decoration: BoxDecoration(
                               color: const Color(0xFF028A6B),
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF028A6B).withValues(alpha: 0.3),
-                                  blurRadius: 4,
-                                ),
-                              ],
                             ),
                             child: Center(
                               child: Text(
-                                '12',
+                                match.teamA.shortName.isNotEmpty ? match.teamA.shortName.substring(0, 1) : 'A',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            battingTeam.name.isNotEmpty ? battingTeam.name : 'Team A',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    match.teamA.name.isNotEmpty ? match.teamA.name : 'Team A',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isTeamABatting && match.status == 'Live') ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE6F4EA),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Batting',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9.5,
+                                        color: const Color(0xFF047857),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE6F4EA),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'Batting',
+                          if (hasTeamABatted) ...[
+                            Text(
+                              '${match.runsA}/${match.wicketsA}',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 9.5,
-                                color: const Color(0xFF047857),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: isTeamABatting ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${match.oversA} ov)',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                color: const Color(0xFF64748B),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '$runs/$wickets',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF028A6B),
+                            if (isTeamABatting && match.oversA > 0) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                'CRR ${(match.runsA / match.oversA).toStringAsFixed(1)}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5,
+                                  color: const Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ] else
+                            Text(
+                              'Yet to Bat',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: const Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '($overs ov)',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: const Color(0xFF64748B),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'CRR ${crr.toStringAsFixed(1)}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: const Color(0xFF94A3B8),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -514,47 +538,97 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                             decoration: BoxDecoration(
                               color: const Color(0xFFDC2626),
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFDC2626).withValues(alpha: 0.3),
-                                  blurRadius: 4,
-                                ),
-                              ],
                             ),
                             child: Center(
                               child: Text(
-                                '18',
+                                match.teamB.shortName.isNotEmpty ? match.teamB.shortName.substring(0, 1) : 'B',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            bowlingTeam.name.isNotEmpty ? bowlingTeam.name : 'Team B',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0F172A),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    match.teamB.name.isNotEmpty ? match.teamB.name : 'Team B',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (!isTeamABatting && match.status == 'Live') ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE6F4EA),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Batting',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9.5,
+                                        color: const Color(0xFF047857),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          const Spacer(),
-                          Text(
-                            'Yet to Bat',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: const Color(0xFF94A3B8),
-                              fontWeight: FontWeight.w600,
+                          if (hasTeamBBatted) ...[
+                            Text(
+                              '${match.runsB}/${match.wicketsB}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: !isTeamABatting ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${match.oversB} ov)',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                color: const Color(0xFF64748B),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (!isTeamABatting && match.oversB > 0) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                'CRR ${(match.runsB / match.oversB).toStringAsFixed(1)}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5,
+                                  color: const Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ] else
+                            Text(
+                              'Yet to Bat',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: const Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 14),
 
-                      // Orange/Peach Target Summary Bar matching reference image
+                      // Orange/Peach Target Summary Bar
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -569,9 +643,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                match.isFirstInnings
-                                    ? '1st Innings in progress • 12 setting target'
-                                    : 'Target ${match.target} • Need ${match.target - match.runsB} runs in ${(120 - (match.oversB * 6).round())} balls',
+                                match.status == 'Completed'
+                                    ? (match.resultText.isNotEmpty ? match.resultText : 'Match Completed')
+                                    : (match.isFirstInnings
+                                        ? '1st Innings in progress • ${battingTeam.shortName} setting target'
+                                        : 'Target ${match.target} • Need ${(match.target - runs).clamp(0, 9999)} runs off ${((20 - overs.toInt()) * 6 - ((overs - overs.toInt()) * 10).round()).clamp(0, 120)} balls'),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11.5,
                                   color: const Color(0xFFC2410C),
@@ -579,7 +655,6 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                                 ),
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2410C), size: 20),
                           ],
                         ),
                       ),
@@ -643,8 +718,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
 
     final bowlerEco = bowler.oversBowled > 0 ? (bowler.runsConceded / bowler.oversBowled).toStringAsFixed(1) : '0.0';
 
-    final currentRuns = match.isFirstInnings ? match.runsA : match.runsB;
-    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final currentRuns = isTeamABatting ? match.runsA : match.runsB;
+    final currentOvers = isTeamABatting ? match.oversA : match.oversB;
     final crr = currentOvers > 0 ? (currentRuns / currentOvers) : 0.0;
 
     final projMin = (currentRuns + (crr * (20 - currentOvers))).round();
@@ -1715,8 +1791,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final storage = Provider.of<StorageService>(context, listen: false);
     final winProb = storage.calculateWinProbability(match);
 
-    final currentScore = match.isFirstInnings ? match.runsA : match.runsB;
-    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final currentScore = isTeamABatting ? match.runsA : match.runsB;
+    final currentOvers = isTeamABatting ? match.oversA : match.oversB;
 
     // Projected scores at different run rates
     final proj6 = (currentScore + (20.0 - currentOvers) * 6.0).round();

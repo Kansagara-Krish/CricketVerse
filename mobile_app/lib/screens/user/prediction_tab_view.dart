@@ -64,12 +64,13 @@ class _PredictionTabViewState extends State<PredictionTabView> {
     if (_currentMatch == null) return;
     setState(() {
       final m = _currentMatch!;
-      _wickets = m.isFirstInnings ? m.wicketsA : m.wicketsB;
+      final isTeamABatting = m.battingTeamId == m.teamA.id;
+      final currentRuns = isTeamABatting ? m.runsA : m.runsB;
+      final currentOvers = isTeamABatting ? m.oversA : m.oversB;
+      _wickets = isTeamABatting ? m.wicketsA : m.wicketsB;
       // Default runs needed to chase if target set, otherwise a mock scenario
-      _runsRequired = m.target > 0 ? (m.target - m.runsB).clamp(1, 300) : 110;
-      _oversRemaining = m.isFirstInnings
-          ? (20 - m.oversA.toInt()).clamp(1, 20)
-          : (20 - m.oversB.toInt()).clamp(1, 20);
+      _runsRequired = m.target > 0 ? (m.target - currentRuns).clamp(1, 300) : 110;
+      _oversRemaining = (20 - currentOvers.toInt()).clamp(1, 20);
       _isSimulatorActive = false;
     });
   }

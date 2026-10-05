@@ -37,7 +37,8 @@ class _EditBallScreenState extends State<EditBallScreen> {
       final isLegal = ball.extraType != 'Wide' && ball.extraType != 'No Ball';
       
       // Deduct from totals
-      if (match.isFirstInnings) {
+      final isTeamABatting = match.battingTeamId == match.teamA.id;
+      if (isTeamABatting) {
         match.runsA = (match.runsA - totalRuns).clamp(0, 9999);
         if (ball.isWicket && ball.wicketType != 'Retired Hurt') {
           match.wicketsA = (match.wicketsA - 1).clamp(0, 10);
@@ -52,7 +53,7 @@ class _EditBallScreenState extends State<EditBallScreen> {
       }
 
       // Revert batsman
-      final batPlayers = match.isFirstInnings ? match.teamA.players : match.teamB.players;
+      final batPlayers = isTeamABatting ? match.teamA.players : match.teamB.players;
       for (var p in batPlayers) {
         if (p.id == ball.strikerId || p.name == ball.batsmanName) {
           if (ball.extraType == 'None' || ball.extraType == 'No Ball') {
@@ -65,7 +66,7 @@ class _EditBallScreenState extends State<EditBallScreen> {
       }
 
       // Revert bowler
-      final bowlPlayers = match.isFirstInnings ? match.teamB.players : match.teamA.players;
+      final bowlPlayers = isTeamABatting ? match.teamB.players : match.teamA.players;
       for (var p in bowlPlayers) {
         if (p.id == ball.bowlerId || p.name == ball.bowlerName) {
           if (ball.extraType == 'None' || ball.extraType == 'Wide' || ball.extraType == 'No Ball') {

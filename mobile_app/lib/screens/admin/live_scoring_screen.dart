@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/models.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/routes/app_routes.dart';
 import '../../core/widgets/custom_notification.dart';
 
 class LiveScoringScreen extends StatefulWidget {
@@ -29,8 +28,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
     super.initState();
     // Activate match for admin scoring (bypasses scorer login requirement)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<StorageService>(context, listen: false)
-          .adminActivateMatch(widget.match.id);
+      final storage = Provider.of<StorageService>(context, listen: false);
+      storage.setActiveScorerMatchId(widget.match.id);
+      storage.adminActivateMatch(widget.match.id);
+      storage.subscribeToMatchLiveUpdates(widget.match.id);
     });
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
       ..repeat(reverse: true);
@@ -41,6 +42,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
 
   @override
   void dispose() {
+    Provider.of<StorageService>(context, listen: false)
+        .unsubscribeFromMatchLiveUpdates(widget.match.id);
     _pulseController.dispose();
     super.dispose();
   }
@@ -188,11 +191,12 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       orElse: () => widget.match,
     );
 
-    final currentRuns = m.isFirstInnings ? m.runsA : m.runsB;
-    final currentWickets = m.isFirstInnings ? m.wicketsA : m.wicketsB;
-    final currentOvers = m.isFirstInnings ? m.oversA : m.oversB;
-    final battingTeam = m.battingTeamId == m.teamA.id ? m.teamA : m.teamB;
-    final bowlingTeam = m.battingTeamId == m.teamA.id ? m.teamB : m.teamA;
+    final isTeamABatting = m.battingTeamId == m.teamA.id;
+    final currentRuns = isTeamABatting ? m.runsA : m.runsB;
+    final currentWickets = isTeamABatting ? m.wicketsA : m.wicketsB;
+    final currentOvers = isTeamABatting ? m.oversA : m.oversB;
+    final battingTeam = isTeamABatting ? m.teamA : m.teamB;
+    final bowlingTeam = isTeamABatting ? m.teamB : m.teamA;
     final striker = battingTeam.players.firstWhere(
       (p) => p.id == m.currentStrikerId,
       orElse: () => battingTeam.players.isNotEmpty
@@ -211,13 +215,6 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
       appBar: AppBar(
         backgroundColor: AppTheme.bgDark,
         title: Text('Live Scoring', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.aiCommentary, arguments: m),
-            icon: const Icon(Icons.record_voice_over_rounded, color: AppTheme.primaryBlue, size: 18),
-            label: Text('Commentary', style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryBlue, fontSize: 12)),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -245,7 +242,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with TickerProvid
                         child: Text('● LIVE', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
                       ),
                       const SizedBox(width: 8),
-                      Text('${m.matchType} • ${m.isFirstInnings ? "1st" : "2nd"} Innings',
+                      Text('${battingTeam.shortName} • ${m.matchType} • ${m.isFirstInnings ? "1st" : "2nd"} Innings',
                           style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white70)),
                     ],
                   ),

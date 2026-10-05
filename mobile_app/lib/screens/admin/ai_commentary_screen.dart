@@ -178,9 +178,10 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
     final batName = battingTeam.players.isNotEmpty ? battingTeam.players[0].name : 'Batsman';
     final bowlName = bowlingTeam.players.isNotEmpty ? bowlingTeam.players.last.name : 'Bowler';
 
-    final totalRuns = match.isFirstInnings ? match.runsA : match.runsB;
-    final totalWickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-    final currentOvers = match.isFirstInnings ? match.oversA : match.oversB;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final totalRuns = isTeamABatting ? match.runsA : match.runsB;
+    final totalWickets = isTeamABatting ? match.wicketsA : match.wicketsB;
+    final currentOvers = isTeamABatting ? match.oversA : match.oversB;
 
     // Simulate outcome with weighted probability
     final outcomes = [0, 0, 1, 1, 2, 4, 4, 6, -1]; // -1 = wicket

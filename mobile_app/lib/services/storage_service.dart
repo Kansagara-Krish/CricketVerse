@@ -527,26 +527,6 @@ class StorageService with ChangeNotifier {
         if (idx != -1) _matches[idx] = updated;
 
         _recalculatePlayerStats();
-
-        // Auto-play voice commentary with 3-second delay after manager updates score
-        _delayedCommentaryTimer?.cancel();
-        final elevenSettings = ElevenLabsService().settings;
-        if (elevenSettings.autoPlayVoice && updated.balls.isNotEmpty) {
-          final lastBall = updated.balls.last;
-          final commentary = lastBall.commentary;
-          final currentOvers = updated.isFirstInnings ? updated.oversA : updated.oversB;
-          final trigger = elevenSettings.commentaryTrigger;
-          bool shouldSpeak = (trigger == 'Every Ball') ||
-              (trigger == 'Boundaries & Wickets' && (runs >= 4 || isWicket)) ||
-              (trigger == 'Over Finish' && currentOvers.toString().endsWith('.0'));
-          if (shouldSpeak && commentary.isNotEmpty) {
-            _delayedCommentaryTimer = Timer(const Duration(seconds: 3), () {
-              // Ensure it speaks only the latest ball commentary
-              ElevenLabsService().speakCommentary(commentary);
-            });
-          }
-        }
-
         notifyListeners();
       }
     } catch (e) {
@@ -719,7 +699,8 @@ class StorageService with ChangeNotifier {
         final totalRunsThisBall = runsNum + extraRunsNum;
         final isLegalBall = lastBall.extraType != 'Wide' && lastBall.extraType != 'No Ball';
 
-        if (match.isFirstInnings) {
+        final isTeamABatting = match.battingTeamId == match.teamA.id;
+        if (isTeamABatting) {
           match.runsA = (match.runsA - totalRunsThisBall).clamp(0, 9999);
           if (lastBall.isWicket && lastBall.wicketType != 'Retired Hurt') {
             match.wicketsA = (match.wicketsA - 1).clamp(0, 10);

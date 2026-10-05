@@ -26,7 +26,6 @@ class ScorerDashboard extends StatefulWidget {
 class _ScorerDashboardState extends State<ScorerDashboard> {
   String? _tossWinner;
   String _tossDecision = 'Bat';
-  bool _isAutoCommentary = true;
   bool _isSubmittingToss = false;
 
   @override
@@ -676,9 +675,10 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           : Player(id: 'bowler_fallback', name: '${bowlingTeam.shortName} Bowler', role: 'Bowler', nationality: ''),
     );
 
-    final runs = match.isFirstInnings ? match.runsA : match.runsB;
-    final wickets = match.isFirstInnings ? match.wicketsA : match.wicketsB;
-    final overs = match.isFirstInnings ? match.oversA : match.oversB;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final runs = isTeamABatting ? match.runsA : match.runsB;
+    final wickets = isTeamABatting ? match.wicketsA : match.wicketsB;
+    final overs = isTeamABatting ? match.oversA : match.oversB;
     final crr = overs > 0 ? (runs / overs) : 0.0;
 
     return Column(
@@ -938,62 +938,6 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 18),
-
-                // Toggle Auto Commentary
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.psychology_rounded, color: AppTheme.primaryBlue, size: 20),
-                          const SizedBox(width: 10),
-                          Text(
-                            'AI Commentary Generator',
-                            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 12.5, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      Switch(
-                        value: _isAutoCommentary,
-                        onChanged: (val) async {
-                          if (val == false) {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Disable AI Commentary?'),
-                                content: const Text('Are you sure you want to turn off automatic AI commentary generation for subsequent balls?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Disable'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirmed == true) {
-                              setState(() => _isAutoCommentary = false);
-                            }
-                          } else {
-                            setState(() => _isAutoCommentary = true);
-                          }
-                        },
-                        activeThumbColor: AppTheme.primaryBlue,
-                      ),
-                    ],
-                  ),
                 ),
                 const SizedBox(height: 18),
 
@@ -1871,7 +1815,8 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
       return;
     }
 
-    final overs = match.isFirstInnings ? match.oversA : match.oversB;
+    final isTeamABatting = match.battingTeamId == match.teamA.id;
+    final overs = isTeamABatting ? match.oversA : match.oversB;
 
     // 2. Check if over is completed
     if (overs > 0 && (overs * 10).round() % 10 == 0) {
