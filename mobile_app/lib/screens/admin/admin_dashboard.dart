@@ -433,7 +433,7 @@ class _DashboardHomeView extends StatelessWidget {
     return RefreshIndicator(
       color: AppTheme.primaryBlue,
       backgroundColor: Colors.white,
-      onRefresh: () async => await Future.delayed(const Duration(milliseconds: 800)),
+      onRefresh: () async => await storage.loadData(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),

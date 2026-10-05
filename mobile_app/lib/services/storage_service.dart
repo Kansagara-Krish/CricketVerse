@@ -51,10 +51,52 @@ class StorageService with ChangeNotifier {
       final hasSession = await AuthStorageService.hasValidSession();
       if (hasSession) {
         await tryTokenAuth();
+      } else {
+        await loadData();
       }
+      _setupGlobalSocketListener();
     } catch (e) {
       debugPrint('_initStorage error: $e');
     }
+  }
+
+  void _setupGlobalSocketListener() {
+    SocketService.connect();
+    SocketService.listenToMatchUpdates((data) {
+      try {
+        final updatedMatch = CricketMatch.fromJson(data);
+        final idx = _matches.indexWhere((m) => m.id == updatedMatch.id);
+        if (idx != -1) {
+          _matches[idx] = updatedMatch;
+        } else {
+          _matches.add(updatedMatch);
+        }
+        _recalculatePlayerStats();
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Error handling global socket match update: $e');
+      }
+    });
+  }
+
+  Future<CricketMatch?> refreshMatch(String matchId) async {
+    try {
+      final remote = await ApiService.getMatchById(matchId);
+      if (remote != null) {
+        final idx = _matches.indexWhere((m) => m.id == matchId);
+        if (idx != -1) {
+          _matches[idx] = remote;
+        } else {
+          _matches.add(remote);
+        }
+        _recalculatePlayerStats();
+        notifyListeners();
+        return remote;
+      }
+    } catch (e) {
+      debugPrint('Error refreshing match $matchId: $e');
+    }
+    return null;
   }
 
   Future<void> toggleOnlineMode(bool val) async {
@@ -190,16 +232,6 @@ class StorageService with ChangeNotifier {
   void subscribeToMatchLiveUpdates(String matchId) {
     SocketService.connect();
     SocketService.joinMatch(matchId);
-    SocketService.listenToMatchUpdates((data) {
-      final updatedMatch = CricketMatch.fromJson(data);
-      final idx = _matches.indexWhere((m) => m.id == updatedMatch.id);
-      if (idx != -1) {
-        _matches[idx] = updatedMatch;
-      } else {
-        _matches.add(updatedMatch);
-      }
-      notifyListeners();
-    });
   }
 
   void unsubscribeFromMatchLiveUpdates(String matchId) {

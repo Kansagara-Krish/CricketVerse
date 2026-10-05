@@ -142,64 +142,77 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
             onRetry: () => NetworkConnectivityService().checkConnectivity(),
           ),
           Expanded(
-            child: assignedMatches.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.bgSurface,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.assignment_turned_in_outlined,
-                              size: 44,
-                              color: AppTheme.textMuted,
+            child: RefreshIndicator(
+              color: AppTheme.primaryBlue,
+              backgroundColor: Colors.white,
+              onRefresh: () async => await storage.loadData(),
+              child: assignedMatches.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.65,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.bgSurface,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.assignment_turned_in_outlined,
+                                    size: 44,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No Matches Assigned',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Matches assigned to your manager/scorer account will appear here. Pull down to refresh.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No Matches Assigned',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: AppTheme.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Matches assigned to your manager/scorer account will appear here.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: AppTheme.textSecondary,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: assignedMatches.length,
-                    itemBuilder: (context, i) {
-                      final match = assignedMatches[i];
-                      final statusColor = AppTheme.statusColor(match.status);
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      itemCount: assignedMatches.length,
+                      itemBuilder: (context, i) {
+                        final match = assignedMatches[i];
+                        final statusColor = AppTheme.statusColor(match.status);
 
-                      return CardEntranceAnimation(
-                        index: i,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(16),
-                          decoration: AppTheme.glassCard,
-                          child: InkWell(
-                            onTap: () {
-                              storage.setActiveScorerMatchId(match.id);
-                            },
+                        return CardEntranceAnimation(
+                          index: i,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(16),
+                            decoration: AppTheme.glassCard,
+                            child: InkWell(
+                              onTap: () async {
+                                storage.setActiveScorerMatchId(match.id);
+                                storage.subscribeToMatchLiveUpdates(match.id);
+                                await storage.refreshMatch(match.id);
+                              },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -345,6 +358,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                       );
                     },
                   ),
+            ),
           ),
         ],
       ),
@@ -405,9 +419,23 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sync_rounded, color: AppTheme.primaryBlue),
+            tooltip: 'Sync Data with Server',
+            onPressed: () async {
+              final updated = await storage.refreshMatch(match.id);
+              if (mounted) {
+                CustomNotification.show(
+                  context,
+                  updated != null ? 'Match state synced with database!' : 'Failed to sync match data',
+                  type: updated != null ? NotificationType.success : NotificationType.error,
+                );
+              }
+            },
+          ),
           if (match.status == 'Live' || match.status == 'Completed' || match.balls.isNotEmpty) ...[
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue),
+              icon: const Icon(Icons.restart_alt_rounded, color: AppTheme.textSecondary),
               tooltip: 'Reset Score to 0/0',
               onPressed: () => _showResetConfirmation(context, storage, match.id),
             ),
@@ -749,8 +777,13 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
 
         // 2. Scrollable Scoring Controls
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+          child: RefreshIndicator(
+            color: AppTheme.primaryBlue,
+            backgroundColor: Colors.white,
+            onRefresh: () async => await storage.refreshMatch(match.id),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -992,6 +1025,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ],

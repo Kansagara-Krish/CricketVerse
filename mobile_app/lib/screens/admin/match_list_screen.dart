@@ -100,30 +100,37 @@ class _MatchListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (matches.isEmpty) {
-      return EmptyState(
-        icon: emptyIcon,
-        title: 'No Matches',
-        subtitle: emptyMsg,
-        buttonLabel: onAdd != null ? 'Schedule Match' : null,
-        onButtonTap: onAdd,
-      );
-    }
+    final storage = Provider.of<StorageService>(context, listen: false);
     return RefreshIndicator(
       color: AppTheme.primaryBlue,
       backgroundColor: Colors.white,
-      onRefresh: () async => await Future.delayed(const Duration(milliseconds: 800)),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: matches.length,
-        itemBuilder: (_, i) => CardEntranceAnimation(
-          index: i,
-          child: _MatchTile(
-            key: ValueKey(matches[i].id),
-            match: matches[i],
-          ),
-        ),
-      ),
+      onRefresh: () async => await storage.loadData(),
+      child: matches.isEmpty
+          ? SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.65,
+                child: EmptyState(
+                  icon: emptyIcon,
+                  title: 'No Matches',
+                  subtitle: emptyMsg,
+                  buttonLabel: onAdd != null ? 'Schedule Match' : null,
+                  onButtonTap: onAdd,
+                ),
+              ),
+            )
+          : ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: matches.length,
+              itemBuilder: (_, i) => CardEntranceAnimation(
+                index: i,
+                child: _MatchTile(
+                  key: ValueKey(matches[i].id),
+                  match: matches[i],
+                ),
+              ),
+            ),
     );
   }
 }

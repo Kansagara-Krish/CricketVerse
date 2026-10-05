@@ -25,8 +25,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     final storage = Provider.of<StorageService>(context);
     final matchesList = storage.matches.where((m) => m.status == _selectedFilter).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+    return RefreshIndicator(
+      color: AppTheme.primaryBlue,
+      backgroundColor: Colors.white,
+      onRefresh: () async => await storage.loadData(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -54,6 +59,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           _buildLatestUpdatesSection(),
         ],
       ),
+    ),
     );
   }
 

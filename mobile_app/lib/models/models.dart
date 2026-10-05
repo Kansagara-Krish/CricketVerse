@@ -116,6 +116,9 @@ class BallRecord {
   final String? strikerId;
   final String? nonStrikerId;
   final String? bowlerId;
+  final int? innings;
+  final String? battingTeamId;
+  final double? over;
 
   BallRecord({
     required this.run,
@@ -130,6 +133,9 @@ class BallRecord {
     this.strikerId,
     this.nonStrikerId,
     this.bowlerId,
+    this.innings,
+    this.battingTeamId,
+    this.over,
   });
 
   Map<String, dynamic> toJson() => {
@@ -145,21 +151,29 @@ class BallRecord {
         'strikerId': strikerId,
         'nonStrikerId': nonStrikerId,
         'bowlerId': bowlerId,
+        'innings': innings,
+        'battingTeamId': battingTeamId,
+        'over': over,
       };
 
   factory BallRecord.fromJson(Map<String, dynamic> json) => BallRecord(
-        run: json['run'],
-        extraRun: json['extraRun'],
-        extraType: json['extraType'],
-        isWicket: json['isWicket'],
+        run: json['run'] ?? 0,
+        extraRun: json['extraRun'] ?? 0,
+        extraType: json['extraType'] ?? 'None',
+        isWicket: json['isWicket'] ?? false,
         wicketType: json['wicketType'] ?? 'None',
         batsmanName: json['batsmanName'] ?? '',
         bowlerName: json['bowlerName'] ?? '',
         commentary: json['commentary'] ?? '',
-        timestamp: DateTime.parse(json['timestamp']),
+        timestamp: json['timestamp'] != null
+            ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
+            : DateTime.now(),
         strikerId: json['strikerId'],
         nonStrikerId: json['nonStrikerId'],
         bowlerId: json['bowlerId'],
+        innings: json['innings'] as int?,
+        battingTeamId: json['battingTeamId'] as String?,
+        over: (json['over'] as num?)?.toDouble(),
       );
 }
 

@@ -391,6 +391,9 @@ export async function updateScore(req: Request, res: Response) {
       strikerId: currentStrikerId,
       nonStrikerId: currentNonStrikerId,
       bowlerId: currentBowlerId,
+      innings: match.isFirstInnings ? 1 : 2,
+      battingTeamId: match.battingTeamId,
+      over: currentBattingOvers,
     });
 
     // 5. Strike Rotation Logic

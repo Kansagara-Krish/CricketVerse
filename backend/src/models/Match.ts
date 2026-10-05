@@ -15,6 +15,9 @@ export interface IBallRecord {
   strikerId?: string;
   nonStrikerId?: string;
   bowlerId?: string;
+  innings?: number;
+  battingTeamId?: string;
+  over?: number;
 }
 
 export const BallRecordSchema = new Schema<IBallRecord>(
@@ -32,6 +35,9 @@ export const BallRecordSchema = new Schema<IBallRecord>(
     strikerId: { type: String },
     nonStrikerId: { type: String },
     bowlerId: { type: String },
+    innings: { type: Number, default: 1 },
+    battingTeamId: { type: String },
+    over: { type: Number, default: 0.0 },
   },
   { _id: false }
 );

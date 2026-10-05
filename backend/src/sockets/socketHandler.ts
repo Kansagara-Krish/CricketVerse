@@ -67,8 +67,12 @@ export function initSocketIO(server: any) {
 
 export function broadcastMatchUpdate(matchId: string, eventName: string, payload: any) {
   if (ioInstance) {
+    // 1. Emit to specific match room
     ioInstance.to(`match:${matchId}`).emit(eventName, payload);
-    console.log(`Broadcasted event ${eventName} to room match:${matchId}`);
+    // 2. Broadcast globally so admin dashboard, manager portal, and user tabs receive live updates instantly
+    ioInstance.emit(eventName, payload);
+    ioInstance.emit('global_match_update', payload);
+    console.log(`Broadcasted event ${eventName} to room match:${matchId} and globally.`);
   } else {
     console.warn('Socket.IO instance not initialized. Broadcast skipped.');
   }

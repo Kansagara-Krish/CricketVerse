@@ -23,87 +23,93 @@ class LiveTabView extends StatelessWidget {
     final storage = Provider.of<StorageService>(context);
     final liveMatches = storage.matches.where((m) => m.status == 'Live').toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.accentRed,
-                      shape: BoxShape.circle,
+    return RefreshIndicator(
+      color: AppTheme.accentRed,
+      backgroundColor: Colors.white,
+      onRefresh: () async => await storage.loadData(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.accentRed,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Live Matches',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.textPrimary,
+                    const SizedBox(width: 8),
+                    Text(
+                      'Live Matches',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: liveMatches.isNotEmpty
-                      ? AppTheme.accentRed.withValues(alpha: 0.1)
-                      : AppTheme.bgSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
                     color: liveMatches.isNotEmpty
-                        ? AppTheme.accentRed.withValues(alpha: 0.3)
-                        : Colors.transparent,
+                        ? AppTheme.accentRed.withValues(alpha: 0.1)
+                        : AppTheme.bgSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: liveMatches.isNotEmpty
+                          ? AppTheme.accentRed.withValues(alpha: 0.3)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Text(
+                    '${liveMatches.length} IN PLAY',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: liveMatches.isNotEmpty ? AppTheme.accentRed : AppTheme.textSecondary,
+                    ),
                   ),
                 ),
-                child: Text(
-                  '${liveMatches.length} IN PLAY',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: liveMatches.isNotEmpty ? AppTheme.accentRed : AppTheme.textSecondary,
-                  ),
-                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Select any live match below to view real-time ball-by-ball scoring or AI predictions.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (liveMatches.isEmpty) ...[
+              _buildEmptyState(context),
+            ] else ...[
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: liveMatches.length,
+                itemBuilder: (context, index) {
+                  final match = liveMatches[index];
+                  return CardEntranceAnimation(
+                    index: index,
+                    child: _buildLiveMatchCard(context, match, storage),
+                  );
+                },
               ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Select any live match below to view real-time ball-by-ball scoring or AI predictions.',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12.5,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          if (liveMatches.isEmpty) ...[
-            _buildEmptyState(context),
-          ] else ...[
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: liveMatches.length,
-              itemBuilder: (context, index) {
-                final match = liveMatches[index];
-                return CardEntranceAnimation(
-                  index: index,
-                  child: _buildLiveMatchCard(context, match, storage),
-                );
-              },
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

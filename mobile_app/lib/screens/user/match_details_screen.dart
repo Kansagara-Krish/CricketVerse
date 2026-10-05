@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -34,6 +35,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   bool _isLiveAudioActive = false;
   int _lastHandledBallCount = 0;
   Timer? _liveCommentaryDelayTimer;
+  Timer? _periodicSyncTimer;
 
   @override
   void initState() {
@@ -49,7 +51,24 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     _flutterTts = FlutterTts();
     _initTts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<StorageService>(context, listen: false).subscribeToMatchLiveUpdates(widget.matchId);
+      final storage = Provider.of<StorageService>(context, listen: false);
+      storage.subscribeToMatchLiveUpdates(widget.matchId);
+      storage.refreshMatch(widget.matchId);
+    });
+
+    // Continuously communicate with database to check for new ball & AI commentary updates
+    _periodicSyncTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      if (!mounted) return;
+      final storage = Provider.of<StorageService>(context, listen: false);
+      if (storage.matches.isNotEmpty) {
+        final currentMatch = storage.matches.firstWhere(
+          (m) => m.id == widget.matchId,
+          orElse: () => storage.matches[0],
+        );
+        if (currentMatch.status == 'Live') {
+          await storage.refreshMatch(widget.matchId);
+        }
+      }
     });
   }
 
@@ -70,6 +89,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
 
   @override
   void dispose() {
+    _periodicSyncTimer?.cancel();
     _liveCommentaryDelayTimer?.cancel();
     Provider.of<StorageService>(context, listen: false).unsubscribeFromMatchLiveUpdates(widget.matchId);
     _flutterTts.stop();
@@ -431,200 +451,28 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                       const SizedBox(height: 12),
 
                       // Team A Row
-                      Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF028A6B),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Text(
-                                match.teamA.shortName.isNotEmpty ? match.teamA.shortName.substring(0, 1) : 'A',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    match.teamA.name.isNotEmpty ? match.teamA.name : 'Team A',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isTeamABatting && match.status == 'Live') ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE6F4EA),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Batting',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 9.5,
-                                        color: const Color(0xFF047857),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (hasTeamABatted) ...[
-                            Text(
-                              '${match.runsA}/${match.wicketsA}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: isTeamABatting ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '(${match.oversA} ov)',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
-                                color: const Color(0xFF64748B),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (isTeamABatting && match.oversA > 0) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                'CRR ${(match.runsA / match.oversA).toStringAsFixed(1)}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  color: const Color(0xFF94A3B8),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ] else
-                            Text(
-                              'Yet to Bat',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                color: const Color(0xFF94A3B8),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
+                      _buildHeaderTeamRow(
+                        teamName: match.teamA.name,
+                        teamShort: match.teamA.shortName,
+                        teamColor: const Color(0xFF028A6B),
+                        runs: match.runsA,
+                        wickets: match.wicketsA,
+                        overs: match.oversA,
+                        hasBatted: hasTeamABatted,
+                        isBatting: isTeamABatting && match.status == 'Live',
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
 
                       // Team B Row
-                      Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDC2626),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Text(
-                                match.teamB.shortName.isNotEmpty ? match.teamB.shortName.substring(0, 1) : 'B',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    match.teamB.name.isNotEmpty ? match.teamB.name : 'Team B',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (!isTeamABatting && match.status == 'Live') ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE6F4EA),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Batting',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 9.5,
-                                        color: const Color(0xFF047857),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (hasTeamBBatted) ...[
-                            Text(
-                              '${match.runsB}/${match.wicketsB}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: !isTeamABatting ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '(${match.oversB} ov)',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
-                                color: const Color(0xFF64748B),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (!isTeamABatting && match.oversB > 0) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                'CRR ${(match.runsB / match.oversB).toStringAsFixed(1)}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  color: const Color(0xFF94A3B8),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ] else
-                            Text(
-                              'Yet to Bat',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                color: const Color(0xFF94A3B8),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
+                      _buildHeaderTeamRow(
+                        teamName: match.teamB.name,
+                        teamShort: match.teamB.shortName,
+                        teamColor: const Color(0xFFDC2626),
+                        runs: match.runsB,
+                        wickets: match.wicketsB,
+                        overs: match.oversB,
+                        hasBatted: hasTeamBBatted,
+                        isBatting: !isTeamABatting && match.status == 'Live',
                       ),
                       const SizedBox(height: 14),
 
@@ -692,16 +540,203 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
               controller: _tabController,
               children: [
                 // 1. Live Details (Exact layout matching reference screenshot)
-                _buildLiveDetailsView(match, storage, striker, nonStriker, bowler, winProb),
+                RefreshIndicator(
+                  color: const Color(0xFF028A6B),
+                  backgroundColor: Colors.white,
+                  onRefresh: () async => await storage.refreshMatch(widget.matchId),
+                  child: _buildLiveDetailsView(match, storage, striker, nonStriker, bowler, winProb),
+                ),
                 // 2. AI Commentary Feed
-                _buildCommentaryFeed(match),
+                RefreshIndicator(
+                  color: const Color(0xFF028A6B),
+                  backgroundColor: Colors.white,
+                  onRefresh: () async => await storage.refreshMatch(widget.matchId),
+                  child: _buildCommentaryFeed(match),
+                ),
                 // 3. Analytics
-                _buildAnalyticsView(match),
+                RefreshIndicator(
+                  color: const Color(0xFF028A6B),
+                  backgroundColor: Colors.white,
+                  onRefresh: () async => await storage.refreshMatch(widget.matchId),
+                  child: _buildAnalyticsView(match),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderTeamRow({
+    required String teamName,
+    required String teamShort,
+    required Color teamColor,
+    required int runs,
+    required int wickets,
+    required double overs,
+    required bool hasBatted,
+    required bool isBatting,
+  }) {
+    final displayShort = teamShort.trim().isNotEmpty
+        ? teamShort.trim()
+        : (teamName.length > 4 ? teamName.substring(0, 3).toUpperCase() : teamName.toUpperCase());
+
+    final initial = displayShort.isNotEmpty ? displayShort.substring(0, 1).toUpperCase() : '?';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Team Avatar Badge
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: teamColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: teamColor.withValues(alpha: 0.25)),
+          ),
+          child: Center(
+            child: Text(
+              initial,
+              style: GoogleFonts.plusJakartaSans(
+                color: teamColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Team Name & Batting Status
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    displayShort,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  if (isBatting) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6F4EA),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF059669),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Batting',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9.5,
+                              color: const Color(0xFF047857),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              if (teamName.isNotEmpty && teamName.toLowerCase() != displayShort.toLowerCase()) ...[
+                const SizedBox(height: 1),
+                Text(
+                  teamName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // Score display on the right
+        if (hasBatted)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$runs',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: isBatting ? const Color(0xFF028A6B) : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    '/$wickets',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: isBatting ? const Color(0xFF028A6B) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${overs.toStringAsFixed(1)} ov${isBatting && overs > 0 ? " • CRR ${(runs / overs).toStringAsFixed(1)}" : ""}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Yet to Bat',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: const Color(0xFF94A3B8),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1786,6 +1821,165 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   }
 
 
+  // Calculate dynamic progression spots from real live match ball records
+  List<FlSpot> _buildTeamProgressionSpots(CricketMatch match, bool forTeamA) {
+    final teamId = forTeamA ? match.teamA.id : match.teamB.id;
+    final totalRuns = forTeamA ? match.runsA : match.runsB;
+    final totalOvers = forTeamA ? match.oversA : match.oversB;
+
+    if (totalOvers <= 0 && totalRuns <= 0) {
+      return const [FlSpot(0, 0)];
+    }
+
+    // Filter balls for this team from real live database records
+    List<BallRecord> teamBalls = [];
+    if (match.balls.isNotEmpty) {
+      teamBalls = match.balls.where((b) {
+        if (b.battingTeamId != null && b.battingTeamId!.isNotEmpty) {
+          return b.battingTeamId == teamId;
+        }
+        if (b.innings != null) {
+          final isTeamAInnings1 = (match.tossDecision.toLowerCase() == 'bat' &&
+                  (match.tossWinner == match.teamA.name || match.tossWinner == 'Team A' || match.tossWinner == match.teamA.shortName)) ||
+              (match.tossDecision.toLowerCase() == 'bowl' &&
+                  (match.tossWinner == match.teamB.name || match.tossWinner == 'Team B' || match.tossWinner == match.teamB.shortName));
+          final teamAInnings = isTeamAInnings1 ? 1 : 2;
+          return forTeamA ? b.innings == teamAInnings : b.innings != teamAInnings;
+        }
+        return false;
+      }).toList();
+    }
+
+    if (teamBalls.isNotEmpty) {
+      final List<FlSpot> spots = [const FlSpot(0, 0)];
+      int cumulativeRuns = 0;
+      double lastOver = 0.0;
+      final Map<int, int> overEndRuns = {};
+
+      for (final ball in teamBalls) {
+        cumulativeRuns += (ball.run + ball.extraRun);
+        final ballOver = ball.over ?? lastOver;
+        lastOver = ballOver;
+        final int wholeOver = ballOver.floor();
+        overEndRuns[wholeOver] = cumulativeRuns;
+      }
+
+      final int completedOvers = totalOvers.floor();
+      for (int ov = 1; ov <= completedOvers; ov++) {
+        if (overEndRuns.containsKey(ov)) {
+          spots.add(FlSpot(ov.toDouble(), overEndRuns[ov]!.toDouble()));
+        } else if (overEndRuns.containsKey(ov - 1)) {
+          spots.add(FlSpot(ov.toDouble(), overEndRuns[ov - 1]!.toDouble()));
+        }
+      }
+
+      if (spots.isEmpty || (spots.last.x - totalOvers).abs() > 0.05) {
+        spots.add(FlSpot(totalOvers, totalRuns.toDouble()));
+      } else {
+        spots[spots.length - 1] = FlSpot(totalOvers, totalRuns.toDouble());
+      }
+
+      spots.sort((a, b) => a.x.compareTo(b.x));
+      final List<FlSpot> uniqueSpots = [];
+      for (final s in spots) {
+        if (uniqueSpots.isEmpty || (s.x - uniqueSpots.last.x).abs() > 0.05) {
+          uniqueSpots.add(s);
+        } else {
+          uniqueSpots[uniqueSpots.length - 1] = s;
+        }
+      }
+      return uniqueSpots.length < 2 ? [const FlSpot(0, 0), FlSpot(totalOvers > 0 ? totalOvers : 1, totalRuns.toDouble())] : uniqueSpots;
+    }
+
+    // Fallback if individual balls are not yet tracked:
+    final List<FlSpot> spots = [const FlSpot(0, 0)];
+    if (totalOvers > 0) {
+      final int wholeOvers = totalOvers.floor();
+      final step = wholeOvers > 20 ? 5 : (wholeOvers > 10 ? 3 : 2);
+      for (int ov = step; ov < wholeOvers; ov += step) {
+        final ratio = ov / totalOvers;
+        final estRuns = (totalRuns * ratio).roundToDouble();
+        spots.add(FlSpot(ov.toDouble(), estRuns));
+      }
+      spots.add(FlSpot(totalOvers, totalRuns.toDouble()));
+    } else {
+      spots.add(FlSpot(1, totalRuns.toDouble()));
+    }
+    return spots;
+  }
+
+  Widget _buildChartLegendItem({
+    required String teamName,
+    required String score,
+    required String overs,
+    required Color color,
+    required bool isBatting,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            teamName,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            score,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            overs,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          if (isBatting) ...[
+            const SizedBox(width: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'BAT',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.primaryGreen,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // --- 3. Analytics (Dual-Team Live Score Chart, Score Projection & Win Prediction) ---
   Widget _buildAnalyticsView(CricketMatch match) {
     final storage = Provider.of<StorageService>(context, listen: false);
@@ -1794,12 +1988,32 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final isTeamABatting = match.battingTeamId == match.teamA.id;
     final currentScore = isTeamABatting ? match.runsA : match.runsB;
     final currentOvers = isTeamABatting ? match.oversA : match.oversB;
+    final double matchMaxOvers = match.matchType.toUpperCase() == 'ODI' ? 50.0 : 20.0;
+    final double remainingOvers = (matchMaxOvers - currentOvers).clamp(0.0, matchMaxOvers);
 
-    // Projected scores at different run rates
-    final proj6 = (currentScore + (20.0 - currentOvers) * 6.0).round();
-    final proj8 = (currentScore + (20.0 - currentOvers) * 8.0).round();
-    final proj10 = (currentScore + (20.0 - currentOvers) * 10.0).round();
+    // Projected scores at different run rates (non-negative projection)
+    final proj6 = (currentScore + remainingOvers * 6.0).round();
+    final proj8 = (currentScore + remainingOvers * 8.0).round();
+    final proj10 = (currentScore + remainingOvers * 10.0).round();
 
+    // Live Progression Spots computed directly from database
+    final spotsA = _buildTeamProgressionSpots(match, true);
+    final spotsB = _buildTeamProgressionSpots(match, false);
+
+    // Dynamic Max Y & Max X to properly scale any score (e.g. 401 runs in 21.2 overs)
+    final maxScore = max(match.runsA, match.runsB);
+    final double calculatedMaxY = max(50.0, (((maxScore * 1.15) / 25).ceil() * 25.0));
+
+    final double highestOver = max(match.oversA, match.oversB);
+    final double calculatedMaxX = max(matchMaxOvers, (highestOver.ceil()).toDouble());
+
+    final double yInterval = calculatedMaxY > 300
+        ? 100.0
+        : (calculatedMaxY > 150 ? 50.0 : (calculatedMaxY > 60 ? 25.0 : 15.0));
+    final double xInterval = calculatedMaxX > 30 ? 10.0 : 5.0;
+
+    final shortNameA = match.teamA.shortName.isNotEmpty ? match.teamA.shortName : match.teamA.name;
+    final shortNameB = match.teamB.shortName.isNotEmpty ? match.teamB.shortName : match.teamB.name;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1809,7 +2023,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           // 1. Dual Team Live Score Comparison Chart
           Text(
             'LIVE SCORE COMPARISON (RUNS OVER OVERS)',
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textMuted,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -1832,38 +2051,57 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(color: AppTheme.primaryBlue, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(match.teamA.shortName, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                      ],
+                    Flexible(
+                      child: _buildChartLegendItem(
+                        teamName: shortNameA,
+                        score: '${match.runsA}/${match.wicketsA}',
+                        overs: '(${match.oversA} ov)',
+                        color: AppTheme.primaryBlue,
+                        isBatting: match.battingTeamId == match.teamA.id,
+                      ),
                     ),
-                    Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(color: AppTheme.accentRed, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(match.teamB.shortName, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                      ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: _buildChartLegendItem(
+                        teamName: shortNameB,
+                        score: '${match.runsB}/${match.wicketsB}',
+                        overs: '(${match.oversB} ov)',
+                        color: AppTheme.accentRed,
+                        isBatting: match.battingTeamId == match.teamB.id,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 180,
+                  height: 190,
                   child: LineChart(
                     LineChartData(
+                      lineTouchData: LineTouchData(
+                        enabled: true,
+                        handleBuiltInTouches: true,
+                        touchTooltipData: LineTouchTooltipData(
+                          tooltipRoundedRadius: 8,
+                          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                            return touchedSpots.map((barSpot) {
+                              final isA = barSpot.barIndex == 0;
+                              final name = isA ? shortNameA : shortNameB;
+                              return LineTooltipItem(
+                                '$name\n${barSpot.y.toInt()} runs (${barSpot.x.toStringAsFixed(1)} ov)',
+                                GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
+                        horizontalInterval: yInterval,
                         getDrawingHorizontalLine: (v) => const FlLine(color: AppTheme.bgSurface, strokeWidth: 1),
                       ),
                       titlesData: FlTitlesData(
@@ -1872,21 +2110,32 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30,
+                            reservedSize: 34,
+                            interval: yInterval,
                             getTitlesWidget: (val, _) => Text(
                               '${val.toInt()}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.textMuted),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                           ),
                         ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
+                            reservedSize: 22,
+                            interval: xInterval,
                             getTitlesWidget: (val, _) => Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
                                 '${val.toInt()}ov',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 9, color: AppTheme.textMuted),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textMuted,
+                                ),
                               ),
                             ),
                           ),
@@ -1894,47 +2143,66 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                       ),
                       borderData: FlBorderData(show: false),
                       minX: 0,
-                      maxX: 20,
+                      maxX: calculatedMaxX,
                       minY: 0,
-                      maxY: 200,
+                      maxY: calculatedMaxY,
                       lineBarsData: [
                         // Team A Line
                         LineChartBarData(
-                          spots: const [
-                            FlSpot(0, 0),
-                            FlSpot(4, 38),
-                            FlSpot(8, 72),
-                            FlSpot(12, 108),
-                            FlSpot(16, 145),
-                            FlSpot(20, 185),
-                          ],
-                          isCurved: true,
+                          spots: spotsA,
+                          isCurved: spotsA.length > 2,
+                          curveSmoothness: 0.2,
                           color: AppTheme.primaryBlue,
                           barWidth: 3,
                           isStrokeCapRound: true,
-                          dotData: const FlDotData(show: true),
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                              radius: 3.5,
+                              color: AppTheme.primaryBlue,
+                              strokeWidth: 1.5,
+                              strokeColor: Colors.white,
+                            ),
+                          ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.primaryBlue.withValues(alpha: 0.2),
+                                AppTheme.primaryBlue.withValues(alpha: 0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
-                        // Team B Line (Live or past)
+                        // Team B Line
                         LineChartBarData(
-                          spots: [
-                            const FlSpot(0, 0),
-                            const FlSpot(4, 32),
-                            const FlSpot(8, 64),
-                            const FlSpot(12, 98),
-                            FlSpot(currentOvers, currentScore.toDouble()),
-                          ],
-                          isCurved: true,
+                          spots: spotsB,
+                          isCurved: spotsB.length > 2,
+                          curveSmoothness: 0.2,
                           color: AppTheme.accentRed,
                           barWidth: 3,
                           isStrokeCapRound: true,
-                          dotData: const FlDotData(show: true),
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                              radius: 3.5,
+                              color: AppTheme.accentRed,
+                              strokeWidth: 1.5,
+                              strokeColor: Colors.white,
+                            ),
+                          ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: AppTheme.accentRed.withValues(alpha: 0.08),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.accentRed.withValues(alpha: 0.18),
+                                AppTheme.accentRed.withValues(alpha: 0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       ],
@@ -1949,7 +2217,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           // 2. Live Win Prediction & Score Projection Card
           Text(
             'WIN PREDICTION & SCORE PROJECTION',
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.2),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textMuted,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -1974,7 +2247,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                   children: [
                     Text(
                       'AI Win Prediction Gauge',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1984,24 +2261,44 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                       ),
                       child: Text(
                         'AI PREDICT',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 9.5, color: AppTheme.accentPurple, fontWeight: FontWeight.w800),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.5,
+                          color: AppTheme.accentPurple,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                // Win percentage indicators
+                // Win percentage indicators (Fixed RenderFlex overflow with Expanded & shortName)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${match.teamA.name}: ${winProb.toStringAsFixed(0)}%',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                    Expanded(
+                      child: Text(
+                        '$shortNameA: ${winProb.toStringAsFixed(0)}%',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryBlue,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Text(
-                      '${match.teamB.name}: ${(100 - winProb).toStringAsFixed(0)}%',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.accentRed),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$shortNameB: ${(100 - winProb).toStringAsFixed(0)}%',
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentRed,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -2013,8 +2310,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                     height: 12,
                     child: Row(
                       children: [
-                        Expanded(flex: winProb.round(), child: Container(color: AppTheme.primaryBlue)),
-                        Expanded(flex: (100 - winProb).round(), child: Container(color: AppTheme.accentRed)),
+                        Flexible(
+                          flex: winProb.round().clamp(1, 99),
+                          child: Container(color: AppTheme.primaryBlue),
+                        ),
+                        Flexible(
+                          flex: (100 - winProb.round()).clamp(1, 99),
+                          child: Container(color: AppTheme.accentRed),
+                        ),
                       ],
                     ),
                   ),
@@ -2025,8 +2328,12 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 const SizedBox(height: 14),
 
                 Text(
-                  'Projected Score Bounds (End of 20 Overs)',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+                  'Projected Score Bounds (End of ${matchMaxOvers.toInt()} Overs)',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
