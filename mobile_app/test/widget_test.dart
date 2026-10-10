@@ -8,6 +8,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:provider/provider.dart';
+import 'package:cricketverse_ai/services/storage_service.dart';
 import 'package:cricketverse_ai/main.dart';
 
 void main() {
@@ -21,13 +23,18 @@ void main() {
     });
 
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const CricketVerseApp());
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => StorageService(),
+        child: const CricketVerseApp(),
+      ),
+    );
 
     // Verify that splash screen or main app is built.
     expect(find.byType(MaterialApp), findsOneWidget);
 
     // Let any splash timers finish to avoid pending timer exception
     await tester.pump(const Duration(seconds: 3));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }

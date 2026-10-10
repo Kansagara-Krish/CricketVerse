@@ -973,16 +973,20 @@ class ApiService {
         Uri.parse('$baseUrl/auth/email-config'),
         headers: _headers,
         body: jsonEncode(body),
-      ).timeout(defaultTimeout);
+      ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(res.body);
+      Map<String, dynamic> data = {};
+      try {
+        data = jsonDecode(res.body);
+      } catch (_) {}
+
       if (res.statusCode == 200) {
         return {'success': true, 'message': data['message'] ?? 'Email configuration saved.', 'config': data['config']};
       }
-      return {'success': false, 'error': data['error'] ?? 'Failed to update email configuration.'};
+      return {'success': false, 'error': data['error'] ?? 'Server error (${res.statusCode}): Failed to update email config.'};
     } catch (e) {
       debugPrint('ApiService updateEmailConfig error: $e');
-      return {'success': false, 'error': 'Network error updating email configuration.'};
+      return {'success': false, 'error': 'Connection timed out or failed to reach backend server.'};
     }
   }
 
@@ -992,16 +996,20 @@ class ApiService {
         Uri.parse('$baseUrl/auth/email-config/test'),
         headers: _headers,
         body: jsonEncode({'targetEmail': targetEmail.trim()}),
-      ).timeout(defaultTimeout);
+      ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(res.body);
+      Map<String, dynamic> data = {};
+      try {
+        data = jsonDecode(res.body);
+      } catch (_) {}
+
       if (res.statusCode == 200) {
         return {'success': true, 'message': data['message'] ?? 'Test email sent successfully.'};
       }
       return {'success': false, 'error': data['error'] ?? 'Failed to send test email.'};
     } catch (e) {
       debugPrint('ApiService testEmailConfig error: $e');
-      return {'success': false, 'error': 'Network error sending test email.'};
+      return {'success': false, 'error': 'Connection timed out or failed to reach backend server.'};
     }
   }
 

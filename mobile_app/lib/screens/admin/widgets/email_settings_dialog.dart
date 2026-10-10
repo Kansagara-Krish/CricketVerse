@@ -148,13 +148,63 @@ class _EmailSettingsDialogState extends State<EmailSettingsDialog> {
     if (_isTesting) return;
 
     final storage = Provider.of<StorageService>(context, listen: false);
-    final target = storage.currentUserEmail ?? _senderEmailCtrl.text.trim();
+    final defaultTarget = storage.currentUserEmail ?? _senderEmailCtrl.text.trim();
+    final testRecipientCtrl = TextEditingController(text: defaultTarget);
 
-    if (target.isEmpty) {
+    final shouldSend = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Send Test Email',
+          style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter email address to receive the test verification email:',
+              style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: testRecipientCtrl,
+              keyboardType: TextInputType.emailAddress,
+              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. 23012011026@gnu.ac.in',
+                hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white38, fontSize: 12),
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                filled: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Send Test', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSend != true || !mounted) return;
+    final target = testRecipientCtrl.text.trim();
+
+    if (target.isEmpty || !target.contains('@')) {
       AppNotification.error(
         context,
         title: 'Error',
-        message: 'No recipient email available for test.',
+        message: 'Please enter a valid recipient email address.',
       );
       return;
     }

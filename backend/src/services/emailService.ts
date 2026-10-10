@@ -24,7 +24,8 @@ export interface UpdateEmailConfigInput {
 }
 
 /**
- * Retrieves the active email configuration from MongoDB or environment variables fallback.
+ * Retrieves the active email configuration exclusively from MongoDB database.
+ * Dynamic database storage allows administrators to update credentials without server restart.
  */
 export async function getActiveEmailConfig(): Promise<{
   senderEmail: string;
@@ -48,63 +49,35 @@ export async function getActiveEmailConfig(): Promise<{
         isConfigured: true,
       };
     }
-
-    // Fallback to environment variables if present
-    const envEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER;
-    const envPass = process.env.SMTP_APP_PASSWORD || process.env.EMAIL_PASS;
-    if (envEmail && envPass) {
-      return {
-        senderEmail: envEmail,
-        senderName: process.env.SMTP_SENDER_NAME || 'CricketVerse',
-        appPassword: envPass,
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE === 'false' ? false : true,
-        isConfigured: true,
-      };
-    }
-
     return null;
   } catch (err) {
-    console.error('Error getting active email config:', err);
+    console.error('Error fetching email configuration from database:', err);
     return null;
   }
 }
 
 /**
- * Returns the public email config for Admin inspection (WITHOUT the app password).
+ * Returns the public email config from MongoDB for Admin inspection (WITHOUT exposing app password).
  */
 export async function getPublicEmailConfig(): Promise<EmailConfigPublic> {
-  const dbConfig = await EmailConfigModel.findOne({ id: 'global_email_config' });
-  const envEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER;
-  const envPass = process.env.SMTP_APP_PASSWORD || process.env.EMAIL_PASS;
+  try {
+    const dbConfig = await EmailConfigModel.findOne({ id: 'global_email_config' });
 
-  if (dbConfig && dbConfig.senderEmail) {
-    return {
-      isConfigured: dbConfig.isConfigured,
-      senderEmail: dbConfig.senderEmail,
-      senderName: dbConfig.senderName || 'CricketVerse',
-      host: dbConfig.host || 'smtp.gmail.com',
-      port: dbConfig.port || 465,
-      secure: dbConfig.secure !== undefined ? dbConfig.secure : true,
-      hasAppPassword: Boolean(dbConfig.appPassword && dbConfig.appPassword.length > 0),
-      updatedAt: dbConfig.updatedAt ? dbConfig.updatedAt.toISOString() : undefined,
-      updatedBy: dbConfig.updatedBy || 'Admin',
-    };
-  }
-
-  if (envEmail) {
-    return {
-      isConfigured: Boolean(envPass),
-      senderEmail: envEmail,
-      senderName: process.env.SMTP_SENDER_NAME || 'CricketVerse',
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === 'false' ? false : true,
-      hasAppPassword: Boolean(envPass),
-      updatedAt: new Date().toISOString(),
-      updatedBy: 'Environment (.env)',
-    };
+    if (dbConfig && dbConfig.senderEmail) {
+      return {
+        isConfigured: dbConfig.isConfigured,
+        senderEmail: dbConfig.senderEmail,
+        senderName: dbConfig.senderName || 'CricketVerse',
+        host: dbConfig.host || 'smtp.gmail.com',
+        port: dbConfig.port || 465,
+        secure: dbConfig.secure !== undefined ? dbConfig.secure : true,
+        hasAppPassword: Boolean(dbConfig.appPassword && dbConfig.appPassword.length > 0),
+        updatedAt: dbConfig.updatedAt ? dbConfig.updatedAt.toISOString() : undefined,
+        updatedBy: dbConfig.updatedBy || 'Admin',
+      };
+    }
+  } catch (err) {
+    console.error('Error fetching public email config from database:', err);
   }
 
   return {
@@ -128,66 +101,93 @@ export function createTransporter(config: {
   port?: number;
   secure?: boolean;
 }) {
-  const host = config.host || 'smtp.gmail.com';
-  const port = config.port || 465;
+  const host = (config.host || 'smtp.gmail.com').trim();
+  const isGmail = host.toLowerCase().includes('gmail');
+  const port = config.port || (isGmail ? 465 : 587);
   const secure = config.secure !== undefined ? config.secure : port === 465;
+
+  if (isGmail) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: config.senderEmail.trim(),
+        pass: config.appPassword.replace(/\s+/g, ''),
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
+    });
+  }
 
   return nodemailer.createTransport({
     host,
     port,
     secure,
     auth: {
-      user: config.senderEmail,
-      pass: config.appPassword,
+      user: config.senderEmail.trim(),
+      pass: config.appPassword.replace(/\s+/g, ''),
     },
     tls: {
-      rejectUnauthorized: false, // Prevents self-signed / ISP TLS issues in dev
+      rejectUnauthorized: false,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
 }
 
 /**
- * Updates or sets the email configuration in DB.
+ * Updates or sets the email configuration in MongoDB.
  * App password is saved only if a fresh one is provided.
  */
 export async function saveEmailConfig(input: UpdateEmailConfigInput): Promise<EmailConfigPublic> {
   const existing = await EmailConfigModel.findOne({ id: 'global_email_config' });
 
-  const senderEmail = input.senderEmail.trim();
+  const senderEmail = input.senderEmail.trim().toLowerCase();
   const senderName = input.senderName?.trim() || 'CricketVerse';
   const host = input.host?.trim() || 'smtp.gmail.com';
   const port = input.port || (host.includes('gmail') ? 465 : 587);
   const secure = input.secure !== undefined ? input.secure : port === 465;
 
   let appPassword = existing?.appPassword || '';
-  if (input.appPassword && input.appPassword.trim().length > 0) {
-    // Fresh app password provided by admin (clean spaces often generated in Google App Passwords like "abcd efgh ijkl mnop")
-    appPassword = input.appPassword.replace(/\s+/g, '');
+  const isFreshPassword = Boolean(input.appPassword && input.appPassword.trim().length > 0);
+  if (isFreshPassword) {
+    appPassword = input.appPassword!.replace(/\s+/g, '');
   }
 
   if (!appPassword) {
     throw new Error('An App Password is required to configure email sending.');
   }
 
-  // Verify SMTP connection before saving
-  const testTransporter = createTransporter({
-    senderEmail,
-    appPassword,
-    host,
-    port,
-    secure,
-  });
+  // Only perform network SMTP verify if a new password is provided or email changed or not yet verified
+  const isAlreadyVerified = Boolean(
+    existing &&
+    existing.isConfigured &&
+    existing.appPassword &&
+    existing.senderEmail.toLowerCase() === senderEmail
+  );
+  const needsVerification = isFreshPassword || !isAlreadyVerified;
 
-  try {
-    await testTransporter.verify();
-  } catch (verifyErr: any) {
-    console.error('SMTP credentials verification failed:', verifyErr);
-    throw new Error(
-      `SMTP connection test failed: ${verifyErr.message || 'Please verify your email address and App Password.'}`
-    );
+  if (needsVerification) {
+    const testTransporter = createTransporter({
+      senderEmail,
+      appPassword,
+      host,
+      port,
+      secure,
+    });
+
+    try {
+      await testTransporter.verify();
+    } catch (verifyErr: any) {
+      console.error('SMTP credentials verification failed:', verifyErr);
+      throw new Error(
+        `SMTP connection test failed: ${verifyErr.message || 'Please verify your email address and App Password.'}`
+      );
+    }
   }
 
   const updated = await EmailConfigModel.findOneAndUpdate(
@@ -204,7 +204,7 @@ export async function saveEmailConfig(input: UpdateEmailConfigInput): Promise<Em
         updatedBy: input.updatedBy || 'Admin',
       },
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   return {
@@ -221,7 +221,7 @@ export async function saveEmailConfig(input: UpdateEmailConfigInput): Promise<Em
 }
 
 /**
- * Sends a stylized HTML OTP Email for Password Reset.
+ * Sends a stylized, executive HTML OTP Email for Password Reset.
  */
 export async function sendPasswordResetOtpEmail(
   toEmail: string,
@@ -232,12 +232,12 @@ export async function sendPasswordResetOtpEmail(
 
   if (!config || !config.isConfigured) {
     console.warn(
-      `⚠️ [EMAIL NOT CONFIGURED] OTP for ${toEmail} is [${otpCode}]. (Admin has not configured sender email & app password yet).`
+      `⚠️ [EMAIL NOT CONFIGURED] OTP for ${toEmail} is [${otpCode}]. (No active SMTP config found in database).`
     );
     return {
       success: false,
       error:
-        'Email service is not yet configured by the administrator. Please contact the administrator or configure SMTP settings in Admin Panel.',
+        'Email service is not configured in the database. Please configure SMTP settings in Admin Panel.',
     };
   }
 
@@ -246,62 +246,61 @@ export async function sendPasswordResetOtpEmail(
 
   const htmlContent = `
   <!DOCTYPE html>
-  <html>
+  <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <title>CricketVerse OTP Verification</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CricketVerse Verification Code</title>
   </head>
-  <body style="margin: 0; padding: 0; background-color: #0b111e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ffffff;">
-    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #0b111e; padding: 40px 10px;">
+  <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 36px 12px;">
       <tr>
         <td align="center">
-          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background: linear-gradient(145deg, #131d2e 0%, #0d1522 100%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); overflow: hidden;">
-            <!-- Header Banner -->
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); overflow: hidden;">
+            
+            <!-- Brand Header -->
             <tr>
-              <td style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                <div style="display: inline-block; padding: 10px 18px; border-radius: 12px; background: linear-gradient(135deg, #028A6B, #00B0FF); margin-bottom: 12px;">
-                  <span style="font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: 1px;">CRICKETVERSE AI</span>
+              <td style="padding: 28px 24px 20px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                <div style="display: inline-block; padding: 6px 16px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #059669);">
+                  <span style="font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: 1.2px;">⚡ CRICKETVERSE</span>
                 </div>
-                <h2 style="margin: 8px 0 0 0; color: #ffffff; font-size: 20px; font-weight: 700;">Password Reset Request</h2>
+                <h2 style="margin: 14px 0 0 0; font-size: 20px; font-weight: 700; color: #0f172a;">Password Reset Code</h2>
               </td>
             </tr>
 
-            <!-- Body -->
+            <!-- Focused Content -->
             <tr>
-              <td style="padding: 32px; color: #cbd5e1; font-size: 15px; line-height: 1.6;">
-                <p style="margin: 0 0 16px 0; color: #f8fafc; font-size: 16px; font-weight: 600;">
+              <td style="padding: 28px 24px; text-align: center;">
+                <p style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #334155;">
                   Hello ${displayName},
                 </p>
-                <p style="margin: 0 0 24px 0; color: #94a3b8;">
-                  We received a request to reset your password for your CricketVerse account. Use the one-time verification code (OTP) below to complete your password update.
+                <p style="margin: 0 0 18px 0; font-size: 14px; color: #64748b; line-height: 1.5;">
+                  Here is your verification code to reset your CricketVerse password:
                 </p>
 
-                <!-- OTP Code Display Card -->
-                <div style="background: rgba(2, 138, 107, 0.12); border: 1.5px dashed #00B0FF; border-radius: 14px; padding: 22px; text-align: center; margin: 24px 0;">
-                  <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #00B0FF; margin-bottom: 6px;">
-                    Your One-Time Password
-                  </div>
-                  <div style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #ffffff; font-family: monospace; text-shadow: 0 0 16px rgba(0, 176, 255, 0.6);">
+                <!-- Focused OTP Box -->
+                <div style="background-color: #f8fafc; border: 2px dashed #0284c7; border-radius: 14px; padding: 18px 12px; margin: 16px 0; text-align: center;">
+                  <div style="font-size: 40px; font-weight: 900; letter-spacing: 8px; color: #0f172a; font-family: monospace; line-height: 1.2;">
                     ${otpCode}
                   </div>
-                  <div style="font-size: 12px; color: #94a3b8; margin-top: 8px;">
-                    ⏱️ Code expires in <strong>10 minutes</strong>.
+                  <div style="font-size: 12.5px; font-weight: 600; color: #0284c7; margin-top: 8px;">
+                    ⏱️ Code expires in 10 minutes
                   </div>
                 </div>
 
-                <p style="margin: 24px 0 0 0; font-size: 13px; color: #64748b; line-height: 1.5;">
-                  🔒 <strong>Security Tip:</strong> Never share this OTP with anyone. If you did not request a password reset, you can safely ignore this email — your account remains secure.
+                <p style="margin: 18px 0 0 0; font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
+                  If you didn't request a password reset, you can safely ignore this email.
                 </p>
               </td>
             </tr>
 
             <!-- Footer -->
             <tr>
-              <td style="background-color: rgba(0,0,0,0.3); padding: 20px 32px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255,255,255,0.06);">
-                © ${new Date().getFullYear()} CricketVerse AI Platform. All rights reserved.
+              <td style="padding: 16px 24px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 11.5px; color: #94a3b8;">
+                © ${new Date().getFullYear()} CricketVerse AI Platform
               </td>
             </tr>
+
           </table>
         </td>
       </tr>
@@ -314,8 +313,8 @@ export async function sendPasswordResetOtpEmail(
     const info = await transporter.sendMail({
       from: `"${config.senderName}" <${config.senderEmail}>`,
       to: toEmail,
-      subject: `🏏 CricketVerse OTP: ${otpCode} - Reset Your Password`,
-      text: `Hello ${displayName},\n\nYour CricketVerse password reset OTP is: ${otpCode}\n\nThis OTP is valid for 10 minutes. If you did not request this, please ignore this email.\n\nCricketVerse Team`,
+      subject: `🏏 CricketVerse OTP: ${otpCode} - Reset Password`,
+      text: `Hello ${displayName},\n\nYour CricketVerse password reset OTP is: ${otpCode}\n\nValid for 10 minutes. If you did not request this, please ignore this email.\n\nCricketVerse Team`,
       html: htmlContent,
     });
 
@@ -328,27 +327,78 @@ export async function sendPasswordResetOtpEmail(
 }
 
 /**
- * Test sending an email to verify SMTP configuration
+ * Test sending an email to verify SMTP configuration from MongoDB.
  */
 export async function sendTestEmail(targetEmail: string): Promise<{ success: boolean; error?: string }> {
   const config = await getActiveEmailConfig();
   if (!config || !config.isConfigured) {
-    return { success: false, error: 'Email service is not configured.' };
+    return { success: false, error: 'Email service is not configured in database.' };
   }
 
   const transporter = createTransporter(config);
+  const htmlContent = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CricketVerse SMTP Verification</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 36px 12px;">
+      <tr>
+        <td align="center">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); overflow: hidden;">
+            
+            <!-- Header -->
+            <tr>
+              <td style="padding: 28px 24px 20px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                <div style="display: inline-block; padding: 6px 16px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #059669);">
+                  <span style="font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: 1.2px;">⚡ CRICKETVERSE</span>
+                </div>
+                <h2 style="margin: 14px 0 0 0; font-size: 20px; font-weight: 700; color: #0f172a;">Email Service Verified</h2>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style="padding: 24px; text-align: center;">
+                <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; background-color: #ecfdf5; color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 14px;">
+                  ✅ SMTP Connected Successfully
+                </div>
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #475569; line-height: 1.5;">
+                  Your sender configuration is active and working properly from MongoDB storage.
+                </p>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; text-align: left; font-size: 13px; color: #334155;">
+                  <div style="margin-bottom: 6px;"><strong>Sender:</strong> ${config.senderEmail}</div>
+                  <div><strong>Storage:</strong> MongoDB (Dynamic Config)</div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding: 16px 24px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; font-size: 11.5px; color: #94a3b8;">
+                © ${new Date().getFullYear()} CricketVerse AI Platform
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+
   try {
     await transporter.sendMail({
       from: `"${config.senderName}" <${config.senderEmail}>`,
       to: targetEmail,
-      subject: '🏏 CricketVerse - SMTP Configuration Test Successful',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; background-color: #0b111e; color: #fff; border-radius: 12px;">
-          <h2 style="color: #00B0FF;">CricketVerse SMTP Test</h2>
-          <p>Congratulations! Your sender email configuration (<strong>${config.senderEmail}</strong>) is active and working properly.</p>
-          <p style="color: #94a3b8; font-size: 12px;">Sent at: ${new Date().toLocaleString()}</p>
-        </div>
-      `,
+      subject: '🏏 CricketVerse - SMTP Service Verification Successful',
+      html: htmlContent,
+      text: `CricketVerse SMTP Verification Successful.\nSender: ${config.senderEmail}\nStorage: MongoDB\nTime: ${new Date().toUTCString()}`,
     });
     return { success: true };
   } catch (err: any) {
