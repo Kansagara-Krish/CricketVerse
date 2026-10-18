@@ -146,10 +146,12 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
 
     setState(() => _playingItemIndex = index);
 
-    final voiceName = _elevenLabs.settings.voiceName;
+    final voiceLabel = _elevenLabs.settings.isInbuiltTts
+        ? 'Inbuilt Device TTS (Free • 0 Tokens)'
+        : _elevenLabs.settings.voiceName;
     CustomNotification.show(
       context,
-      '🎙️ Speaking with $voiceName...',
+      '🎙️ Speaking with $voiceLabel...',
       type: NotificationType.info,
     );
 
@@ -329,8 +331,14 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
             ),
             Text(
-              'Voice: ${_elevenLabs.settings.voiceName}',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.accentGold),
+              _elevenLabs.settings.isInbuiltTts
+                  ? 'Engine: Inbuilt TTS (Free • 0 Tokens)'
+                  : 'Engine: ElevenLabs (${_elevenLabs.settings.voiceName})',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: _elevenLabs.settings.isInbuiltTts ? AppTheme.primaryGreen : AppTheme.accentGold,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -339,7 +347,10 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
             icon: const Icon(Icons.tune_rounded, color: AppTheme.primaryBlue),
             tooltip: 'AI & Voice Settings',
             onPressed: () {
-              Navigator.pushNamed(context, '/admin/ai-settings').then((_) => setState(() {}));
+              Navigator.pushNamed(context, '/admin/ai-settings').then((_) async {
+                await _elevenLabs.loadSettings();
+                if (mounted) setState(() {});
+              });
             },
           ),
         ],
@@ -591,7 +602,11 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
                                 color: isPlayingThis ? AppTheme.accentRed : AppTheme.primaryBlue,
                                 size: 22,
                               ),
-                              tooltip: isPlayingThis ? 'Stop Audio' : 'Listen with ElevenLabs Voice',
+                              tooltip: isPlayingThis
+                                  ? 'Stop Audio'
+                                  : (_elevenLabs.settings.isInbuiltTts
+                                      ? 'Listen with Inbuilt TTS (0 Tokens)'
+                                      : 'Listen with ElevenLabs Voice'),
                               onPressed: () => _playCommentaryAudio(index, item.text),
                             ),
                           ],

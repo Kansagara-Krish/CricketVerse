@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAiConfig extends Document {
   id: string;
+  voiceProvider: string; // 'elevenlabs' | 'inbuilt_tts'
   apiKey: string;
   voiceId: string;
   voiceName: string;
@@ -13,6 +14,9 @@ export interface IAiConfig extends Document {
   autoPlayVoice: boolean;
   commentaryStyle: string;
   commentaryTrigger: string;
+  ttsSpeechRate: number;
+  ttsPitch: number;
+  ttsLanguage: string;
   isConfigured: boolean;
   updatedBy: string;
   createdAt: Date;
@@ -22,6 +26,7 @@ export interface IAiConfig extends Document {
 const AiConfigSchema = new Schema<IAiConfig>(
   {
     id: { type: String, required: true, unique: true, default: 'global_ai_config' },
+    voiceProvider: { type: String, enum: ['elevenlabs', 'inbuilt_tts'], default: 'inbuilt_tts' },
     apiKey: { type: String, default: '' },
     voiceId: { type: String, default: 'JBFqnCBsd6RMkjVDRZzb' },
     voiceName: { type: String, default: 'George (Cricket Classic)' },
@@ -33,6 +38,9 @@ const AiConfigSchema = new Schema<IAiConfig>(
     autoPlayVoice: { type: Boolean, default: true },
     commentaryStyle: { type: String, default: 'Hype / Energetic' },
     commentaryTrigger: { type: String, default: 'Every Ball' },
+    ttsSpeechRate: { type: Number, default: 0.5 },
+    ttsPitch: { type: Number, default: 1.0 },
+    ttsLanguage: { type: String, default: 'en-US' },
     isConfigured: { type: Boolean, default: false },
     updatedBy: { type: String, default: 'Admin' },
   },

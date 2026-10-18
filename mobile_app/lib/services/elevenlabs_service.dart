@@ -23,6 +23,7 @@ class ElevenLabsVoicePreset {
 }
 
 class ElevenLabsSettings {
+  String voiceProvider; // 'elevenlabs' | 'inbuilt_tts'
   String apiKey;
   String voiceId;
   String voiceName;
@@ -34,8 +35,12 @@ class ElevenLabsSettings {
   bool autoPlayVoice;
   String commentaryStyle; // 'Hype / Energetic', 'Professional', 'Technical', 'Casual'
   String commentaryTrigger; // 'Every Ball', 'Boundaries & Wickets', 'Over Finish'
+  double ttsSpeechRate; // 0.3 to 1.0, default 0.5
+  double ttsPitch; // 0.5 to 1.5, default 1.0
+  String ttsLanguage; // 'en-US', 'en-GB', 'en-IN', 'en-AU'
 
   ElevenLabsSettings({
+    this.voiceProvider = 'inbuilt_tts',
     this.apiKey = '',
     this.voiceId = 'JBFqnCBsd6RMkjVDRZzb', // George - British Narrator
     this.voiceName = 'George (Cricket Classic)',
@@ -47,9 +52,18 @@ class ElevenLabsSettings {
     this.autoPlayVoice = true,
     this.commentaryStyle = 'Hype / Energetic',
     this.commentaryTrigger = 'Every Ball',
+    this.ttsSpeechRate = 0.5,
+    this.ttsPitch = 1.0,
+    this.ttsLanguage = 'en-US',
   });
 
+  bool get isElevenLabs => voiceProvider == 'elevenlabs';
+  bool get isInbuiltTts => voiceProvider == 'inbuilt_tts';
+  String get activeVoiceDisplayName =>
+      isInbuiltTts ? 'Inbuilt Text-to-Speech (Free)' : voiceName;
+
   Map<String, dynamic> toJson() => {
+        'voiceProvider': voiceProvider,
         'apiKey': apiKey,
         'voiceId': voiceId,
         'voiceName': voiceName,
@@ -61,22 +75,36 @@ class ElevenLabsSettings {
         'autoPlayVoice': autoPlayVoice,
         'commentaryStyle': commentaryStyle,
         'commentaryTrigger': commentaryTrigger,
+        'ttsSpeechRate': ttsSpeechRate,
+        'ttsPitch': ttsPitch,
+        'ttsLanguage': ttsLanguage,
       };
 
-  factory ElevenLabsSettings.fromJson(Map<String, dynamic> json) =>
-      ElevenLabsSettings(
-        apiKey: json['apiKey'] ?? '',
-        voiceId: json['voiceId'] ?? 'JBFqnCBsd6RMkjVDRZzb',
-        voiceName: json['voiceName'] ?? 'George (Cricket Classic)',
-        modelId: json['modelId'] ?? 'eleven_turbo_v2_5',
-        stability: (json['stability'] as num?)?.toDouble() ?? 0.5,
-        similarityBoost: (json['similarityBoost'] as num?)?.toDouble() ?? 0.8,
-        style: (json['style'] as num?)?.toDouble() ?? 0.35,
-        useSpeakerBoost: json['useSpeakerBoost'] ?? true,
-        autoPlayVoice: json['autoPlayVoice'] ?? false,
-        commentaryStyle: json['commentaryStyle'] ?? 'Hype / Energetic',
-        commentaryTrigger: json['commentaryTrigger'] ?? 'Every Ball',
-      );
+  factory ElevenLabsSettings.fromJson(Map<String, dynamic> json) {
+    String provider = json['voiceProvider'] ?? '';
+    final apiKeyStr = json['apiKey']?.toString().trim() ?? '';
+    if (provider.isEmpty) {
+      provider = apiKeyStr.isNotEmpty ? 'elevenlabs' : 'inbuilt_tts';
+    }
+
+    return ElevenLabsSettings(
+      voiceProvider: provider,
+      apiKey: apiKeyStr,
+      voiceId: json['voiceId'] ?? 'JBFqnCBsd6RMkjVDRZzb',
+      voiceName: json['voiceName'] ?? 'George (Cricket Classic)',
+      modelId: json['modelId'] ?? 'eleven_turbo_v2_5',
+      stability: (json['stability'] as num?)?.toDouble() ?? 0.5,
+      similarityBoost: (json['similarityBoost'] as num?)?.toDouble() ?? 0.8,
+      style: (json['style'] as num?)?.toDouble() ?? 0.35,
+      useSpeakerBoost: json['useSpeakerBoost'] ?? true,
+      autoPlayVoice: json['autoPlayVoice'] ?? false,
+      commentaryStyle: json['commentaryStyle'] ?? 'Hype / Energetic',
+      commentaryTrigger: json['commentaryTrigger'] ?? 'Every Ball',
+      ttsSpeechRate: (json['ttsSpeechRate'] as num?)?.toDouble() ?? 0.5,
+      ttsPitch: (json['ttsPitch'] as num?)?.toDouble() ?? 1.0,
+      ttsLanguage: json['ttsLanguage'] ?? 'en-US',
+    );
+  }
 }
 
 class ElevenLabsService {
@@ -158,21 +186,32 @@ class ElevenLabsService {
     });
   }
 
+  static const Map<String, String> availableLanguages = {
+    'en-US': 'English (US Broadcaster)',
+    'en-GB': 'English (UK / Cricket Classic)',
+    'en-IN': 'English (India Stadium)',
+    'en-AU': 'English (Australia Companion)',
+  };
+
   Future<void> _initFallbackTts() async {
-    if (_isTtsInitialized) return;
     try {
-      await _fallbackTts.setLanguage("en-US");
-      await _fallbackTts.setSpeechRate(0.5);
+      await _fallbackTts.setLanguage(_settings.ttsLanguage);
+      await _fallbackTts.setSpeechRate(_settings.ttsSpeechRate);
       await _fallbackTts.setVolume(1.0);
-      await _fallbackTts.setPitch(1.0);
+      await _fallbackTts.setPitch(_settings.ttsPitch);
       _fallbackTts.setCompletionHandler(() {
+        _isPlaying = false;
+        isPlayingNotifier.value = false;
+        currentPlayingTextNotifier.value = null;
+      });
+      _fallbackTts.setErrorHandler((dynamic msg) {
         _isPlaying = false;
         isPlayingNotifier.value = false;
         currentPlayingTextNotifier.value = null;
       });
       _isTtsInitialized = true;
     } catch (e) {
-      debugPrint('Error initializing fallback TTS: $e');
+      debugPrint('Error initializing inbuilt TTS: $e');
     }
   }
 
@@ -198,6 +237,13 @@ class ElevenLabsService {
       } catch (remoteErr) {
         debugPrint('Could not sync remote ElevenLabs config: $remoteErr');
       }
+
+      // Sync active TTS properties
+      if (_isTtsInitialized) {
+        await _fallbackTts.setLanguage(_settings.ttsLanguage);
+        await _fallbackTts.setSpeechRate(_settings.ttsSpeechRate);
+        await _fallbackTts.setPitch(_settings.ttsPitch);
+      }
     } catch (e) {
       debugPrint('Error loading ElevenLabs settings: $e');
     }
@@ -212,6 +258,13 @@ class ElevenLabsService {
         'cricketverse_elevenlabs_settings_v1',
         jsonEncode(_settings.toJson()),
       );
+
+      // Reapply TTS voice settings
+      if (_isTtsInitialized) {
+        await _fallbackTts.setLanguage(_settings.ttsLanguage);
+        await _fallbackTts.setSpeechRate(_settings.ttsSpeechRate);
+        await _fallbackTts.setPitch(_settings.ttsPitch);
+      }
 
       // Persist to centralized backend database
       try {
@@ -282,7 +335,9 @@ class ElevenLabsService {
     }
   }
 
-  /// Speak commentary using ElevenLabs TTS with fallback to flutter_tts
+  /// Speak commentary using the configured engine:
+  /// Mode 1 (ElevenLabs): Uses ElevenLabs API (requires API key, cloud neural voice).
+  /// Mode 2 (Inbuilt TTS): Uses native device text-to-speech (100% free, zero tokens, no API key).
   Future<bool> speakCommentary(
     String text, {
     VoidCallback? onStart,
@@ -300,7 +355,16 @@ class ElevenLabsService {
     currentPlayingTextNotifier.value = cleanText;
     onStart?.call();
 
-    // If API Key is present, try ElevenLabs REST API
+    // OPTION 2: INBUILT TEXT-TO-SPEECH (Zero API tokens, 100% free, local device engine)
+    if (_settings.isInbuiltTts) {
+      return await _speakWithInbuiltTts(
+        cleanText,
+        onComplete: onComplete,
+        onError: onError,
+      );
+    }
+
+    // OPTION 1: ELEVENLABS API (Requires valid API key & token usage)
     if (_settings.apiKey.trim().isNotEmpty) {
       try {
         final audioBytes = await _fetchElevenLabsAudio(cleanText);
@@ -326,26 +390,133 @@ class ElevenLabsService {
           return true;
         }
       } catch (e) {
-        debugPrint('ElevenLabs API request failed ($e), using fallback TTS.');
+        debugPrint('ElevenLabs API request failed ($e), falling back to Inbuilt TTS.');
       }
+    } else {
+      debugPrint('ElevenLabs engine chosen but API key is missing. Using Inbuilt TTS fallback.');
     }
 
-    // Fallback: flutter_tts
+    // Graceful fallback to Inbuilt TTS if ElevenLabs fails or is unconfigured
+    return await _speakWithInbuiltTts(
+      cleanText,
+      onComplete: onComplete,
+      onError: onError,
+    );
+  }
+
+  /// Internal playback via native device Text-to-Speech
+  Future<bool> _speakWithInbuiltTts(
+    String cleanText, {
+    VoidCallback? onComplete,
+    Function(String error)? onError,
+  }) async {
     try {
       await _initFallbackTts();
-      await _fallbackTts.speak(cleanText);
+      await _fallbackTts.setLanguage(_settings.ttsLanguage);
+      await _fallbackTts.setSpeechRate(_settings.ttsSpeechRate);
+      await _fallbackTts.setPitch(_settings.ttsPitch);
+
       _fallbackTts.setCompletionHandler(() {
         _isPlaying = false;
         isPlayingNotifier.value = false;
         currentPlayingTextNotifier.value = null;
         onComplete?.call();
       });
+
+      _fallbackTts.setErrorHandler((dynamic err) {
+        _isPlaying = false;
+        isPlayingNotifier.value = false;
+        currentPlayingTextNotifier.value = null;
+        onError?.call('Inbuilt TTS playback error: $err');
+      });
+
+      await _fallbackTts.speak(cleanText);
       return true;
     } catch (e) {
       _isPlaying = false;
       isPlayingNotifier.value = false;
       currentPlayingTextNotifier.value = null;
-      onError?.call('Audio playback failed: $e');
+      onError?.call('Inbuilt TTS playback failed: $e');
+      return false;
+    }
+  }
+
+  /// Explicitly speak using Inbuilt TTS (for live preview in Admin AI Settings)
+  Future<bool> speakWithInbuiltTts(
+    String text, {
+    VoidCallback? onComplete,
+    Function(String error)? onError,
+  }) async {
+    final cleanText = text.trim();
+    if (cleanText.isEmpty) return false;
+
+    await stopAudio();
+    _isPlaying = true;
+    isPlayingNotifier.value = true;
+    currentPlayingTextNotifier.value = cleanText;
+
+    return await _speakWithInbuiltTts(
+      cleanText,
+      onComplete: onComplete,
+      onError: onError,
+    );
+  }
+
+  /// Explicitly speak using ElevenLabs API (for live preview in Admin AI Settings)
+  Future<bool> speakWithElevenLabs(
+    String text, {
+    VoidCallback? onComplete,
+    Function(String error)? onError,
+  }) async {
+    final cleanText = text.trim();
+    if (cleanText.isEmpty) return false;
+
+    await stopAudio();
+    _isPlaying = true;
+    isPlayingNotifier.value = true;
+    currentPlayingTextNotifier.value = cleanText;
+
+    if (_settings.apiKey.trim().isEmpty) {
+      _isPlaying = false;
+      isPlayingNotifier.value = false;
+      currentPlayingTextNotifier.value = null;
+      onError?.call('Please enter an ElevenLabs API Key first.');
+      return false;
+    }
+
+    try {
+      final audioBytes = await _fetchElevenLabsAudio(cleanText);
+      if (audioBytes != null && audioBytes.isNotEmpty) {
+        if (!kIsWeb) {
+          final tempDir = await getTemporaryDirectory();
+          final hash = cleanText.hashCode.abs();
+          final file = File('${tempDir.path}/commentary_$hash.mp3');
+          await file.writeAsBytes(audioBytes);
+          await _audioPlayer.play(DeviceFileSource(file.path));
+        } else {
+          await _audioPlayer.play(BytesSource(audioBytes));
+        }
+
+        _audioPlayer.onPlayerComplete.first.then((_) {
+          _isPlaying = false;
+          isPlayingNotifier.value = false;
+          currentPlayingTextNotifier.value = null;
+          onComplete?.call();
+        });
+
+        return true;
+      } else {
+        _isPlaying = false;
+        isPlayingNotifier.value = false;
+        currentPlayingTextNotifier.value = null;
+        onError?.call('ElevenLabs synthesis failed. Check key validity and character quota.');
+        return false;
+      }
+    } catch (e) {
+      _isPlaying = false;
+      isPlayingNotifier.value = false;
+      currentPlayingTextNotifier.value = null;
+      onError?.call('Network error reaching ElevenLabs: $e');
       return false;
     }
   }

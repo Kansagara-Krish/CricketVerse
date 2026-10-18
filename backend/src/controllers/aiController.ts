@@ -12,8 +12,10 @@ export async function getAiConfig(req: Request, res: Response) {
 
     if (!config) {
       const defaultApiKey = process.env.ELEVENLABS_API_KEY || '';
+      const defaultProvider = defaultApiKey.trim().length > 0 ? 'elevenlabs' : 'inbuilt_tts';
       const newConfig = await AiConfigModel.create({
         id: 'global_ai_config',
+        voiceProvider: defaultProvider,
         apiKey: defaultApiKey,
         voiceId: 'JBFqnCBsd6RMkjVDRZzb',
         voiceName: 'George (Cricket Classic)',
@@ -25,6 +27,9 @@ export async function getAiConfig(req: Request, res: Response) {
         autoPlayVoice: true,
         commentaryStyle: 'Hype / Energetic',
         commentaryTrigger: 'Every Ball',
+        ttsSpeechRate: 0.5,
+        ttsPitch: 1.0,
+        ttsLanguage: 'en-US',
         isConfigured: defaultApiKey.trim().length > 0,
         updatedBy: 'System',
       });
@@ -40,6 +45,7 @@ export async function getAiConfig(req: Request, res: Response) {
 
 export async function updateAiConfig(req: any, res: Response) {
   const {
+    voiceProvider,
     apiKey,
     voiceId,
     voiceName,
@@ -51,6 +57,9 @@ export async function updateAiConfig(req: any, res: Response) {
     autoPlayVoice,
     commentaryStyle,
     commentaryTrigger,
+    ttsSpeechRate,
+    ttsPitch,
+    ttsLanguage,
   } = req.body;
 
   try {
@@ -63,6 +72,9 @@ export async function updateAiConfig(req: any, res: Response) {
       updatedBy: `${userName} (${userRole})`,
     };
 
+    if (voiceProvider !== undefined) {
+      updateDoc.voiceProvider = voiceProvider === 'elevenlabs' ? 'elevenlabs' : 'inbuilt_tts';
+    }
     if (cleanApiKey !== undefined) {
       updateDoc.apiKey = cleanApiKey;
       updateDoc.isConfigured = cleanApiKey.length > 0;
@@ -77,6 +89,9 @@ export async function updateAiConfig(req: any, res: Response) {
     if (autoPlayVoice !== undefined) updateDoc.autoPlayVoice = Boolean(autoPlayVoice);
     if (commentaryStyle !== undefined) updateDoc.commentaryStyle = commentaryStyle;
     if (commentaryTrigger !== undefined) updateDoc.commentaryTrigger = commentaryTrigger;
+    if (ttsSpeechRate !== undefined) updateDoc.ttsSpeechRate = Number(ttsSpeechRate);
+    if (ttsPitch !== undefined) updateDoc.ttsPitch = Number(ttsPitch);
+    if (ttsLanguage !== undefined) updateDoc.ttsLanguage = String(ttsLanguage);
 
     const config = await AiConfigModel.findOneAndUpdate(
       { id: 'global_ai_config' },
@@ -88,7 +103,7 @@ export async function updateAiConfig(req: any, res: Response) {
     audioCache.clear();
 
     return res.status(200).json({
-      message: 'ElevenLabs & AI configuration updated successfully.',
+      message: 'Voice commentary & AI configuration updated successfully.',
       config,
     });
   } catch (err) {
@@ -158,8 +173,20 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
   }
 
   try {
-    // 1. Fetch active ElevenLabs configuration from Database
+    // 1. Fetch active commentary voice configuration from Database
     const dbConfig = await AiConfigModel.findOne({ id: 'global_ai_config' }).lean();
+    const effectiveProvider = dbConfig?.voiceProvider || 'inbuilt_tts';
+
+    // If inbuilt TTS is selected, zero ElevenLabs tokens are used; client synthesizes speech locally
+    if (effectiveProvider === 'inbuilt_tts') {
+      return res.status(200).json({
+        provider: 'inbuilt_tts',
+        message: 'Inbuilt Text-To-Speech is active. Zero API tokens used; device speaks natively.',
+        text,
+        audioBase64: null,
+      });
+    }
+
     const effectiveApiKey = dbConfig?.apiKey?.trim() || process.env.ELEVENLABS_API_KEY || '';
     const selectedVoiceId = voiceId || dbConfig?.voiceId || 'JBFqnCBsd6RMkjVDRZzb';
     const selectedModelId = modelId || dbConfig?.modelId || 'eleven_turbo_v2_5';

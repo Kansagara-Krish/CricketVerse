@@ -50,6 +50,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     );
     _flutterTts = FlutterTts();
     _initTts();
+    ElevenLabsService().loadSettings().then((_) {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storage = Provider.of<StorageService>(context, listen: false);
       storage.subscribeToMatchLiveUpdates(widget.matchId);
@@ -73,10 +76,11 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   }
 
   void _initTts() async {
-    await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setSpeechRate(0.48);
+    final s = ElevenLabsService().settings;
+    await _flutterTts.setLanguage(s.ttsLanguage);
+    await _flutterTts.setSpeechRate(s.ttsSpeechRate);
     await _flutterTts.setVolume(1.0);
-    await _flutterTts.setPitch(1.0);
+    await _flutterTts.setPitch(s.ttsPitch);
     _flutterTts.setCompletionHandler(() {
       if (mounted) {
         setState(() {
@@ -116,10 +120,14 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           _isPlayingVoice = true;
           _playingVoiceIndex = index;
         });
-        final voiceName = ElevenLabsService().settings.voiceName;
+        final service = ElevenLabsService();
+        final isTts = service.settings.isInbuiltTts;
+        final voiceName = service.settings.voiceName;
         CustomNotification.show(
           context,
-          '🎙️ Playing AI Voice Commentary ($voiceName)...',
+          isTts
+              ? '🎙️ Playing Inbuilt Voice Commentary (Free • 0 Tokens)...'
+              : '🎙️ Playing ElevenLabs AI Voice ($voiceName)...',
           type: NotificationType.info,
         );
       }
@@ -1683,7 +1691,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                             Text(
                               _isLiveAudioActive
                                   ? (_isPlayingVoice ? 'Speaking latest ball...' : 'Live audio active • Auto-syncing')
-                                  : 'Listen to AI live voice',
+                                  : (ElevenLabsService().settings.isInbuiltTts
+                                      ? 'Listen to Inbuilt Voice (Free • 0 Tokens)'
+                                      : 'Listen to ElevenLabs AI live voice'),
                               style: GoogleFonts.plusJakartaSans(
                                 color: Colors.white70,
                                 fontSize: 10.5,

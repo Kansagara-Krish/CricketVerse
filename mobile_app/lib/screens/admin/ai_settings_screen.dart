@@ -26,6 +26,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
   bool _isTestingVoice = false;
 
+  // Voice provider mode: 'elevenlabs' | 'inbuilt_tts'
+  String _voiceProvider = 'inbuilt_tts';
+
+  // Inbuilt TTS configuration
+  double _ttsSpeechRate = 0.50;
+  double _ttsPitch = 1.00;
+  String _ttsLanguage = 'en-US';
+
   // Commentary settings
   bool _aiCommentary = true;
   bool _autoPlayVoice = false;
@@ -48,6 +56,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   void initState() {
     super.initState();
     final s = _elevenLabsService.settings;
+    _voiceProvider = s.voiceProvider;
+    _ttsSpeechRate = s.ttsSpeechRate;
+    _ttsPitch = s.ttsPitch;
+    _ttsLanguage = s.ttsLanguage;
+
     _apiKeyController = TextEditingController(text: s.apiKey);
     _customVoiceIdController = TextEditingController(text: s.voiceId);
 
@@ -65,6 +78,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     _elevenLabsService.loadSettings().then((remote) {
       if (mounted) {
         setState(() {
+          _voiceProvider = remote.voiceProvider;
+          _ttsSpeechRate = remote.ttsSpeechRate;
+          _ttsPitch = remote.ttsPitch;
+          _ttsLanguage = remote.ttsLanguage;
           _apiKeyController.text = remote.apiKey;
           _customVoiceIdController.text = remote.voiceId;
           _autoPlayVoice = remote.autoPlayVoice;
@@ -91,6 +108,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
   Future<void> _saveAllSettings() async {
     final s = _elevenLabsService.settings;
+    s.voiceProvider = _voiceProvider;
+    s.ttsSpeechRate = _ttsSpeechRate;
+    s.ttsPitch = _ttsPitch;
+    s.ttsLanguage = _ttsLanguage;
+
     s.apiKey = _apiKeyController.text.trim();
     s.voiceId = _selectedVoiceId == 'CUSTOM'
         ? _customVoiceIdController.text.trim()
@@ -113,9 +135,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     if (!mounted) return;
 
     if (ok) {
+      final engineLabel = _voiceProvider == 'elevenlabs'
+          ? 'ElevenLabs AI'
+          : 'Inbuilt Text-to-Speech';
       CustomNotification.show(
         context,
-        'ElevenLabs & AI Settings saved successfully! 🎙️',
+        'Voice Settings ($engineLabel) saved successfully! 🎙️',
         type: NotificationType.success,
       );
     } else {
@@ -161,39 +186,67 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
     setState(() => _isTestingVoice = true);
 
-    // Temporarily sync active settings for preview
-    final s = _elevenLabsService.settings;
-    s.apiKey = _apiKeyController.text.trim();
-    s.voiceId = _selectedVoiceId == 'CUSTOM'
-        ? _customVoiceIdController.text.trim()
-        : _selectedVoiceId;
-    s.modelId = _selectedModel;
-    s.stability = _stability;
-    s.similarityBoost = _similarityBoost;
-    s.style = _styleExaggeration;
-    s.useSpeakerBoost = _useSpeakerBoost;
-
     const sampleText =
         "SIX! What an extraordinary shot over deep mid-wicket! That has cleared the stadium roof! Welcome to CricketVerse live commentary!";
 
-    CustomNotification.show(
-      context,
-      '🎙️ Speaking with ${s.apiKey.isNotEmpty ? "ElevenLabs AI Voice" : "Device TTS Voice"}...',
-      type: NotificationType.info,
-    );
+    if (_voiceProvider == 'inbuilt_tts') {
+      final s = _elevenLabsService.settings;
+      s.ttsSpeechRate = _ttsSpeechRate;
+      s.ttsPitch = _ttsPitch;
+      s.ttsLanguage = _ttsLanguage;
 
-    await _elevenLabsService.speakCommentary(
-      sampleText,
-      onComplete: () {
-        if (mounted) setState(() => _isTestingVoice = false);
-      },
-      onError: (err) {
-        if (mounted) {
-          setState(() => _isTestingVoice = false);
-          CustomNotification.show(context, 'Voice test error: $err', type: NotificationType.error);
-        }
-      },
-    );
+      CustomNotification.show(
+        context,
+        '🎙️ Speaking with Inbuilt Device TTS (Free, 0 tokens)...',
+        type: NotificationType.info,
+      );
+
+      await _elevenLabsService.speakWithInbuiltTts(
+        sampleText,
+        onComplete: () {
+          if (mounted) setState(() => _isTestingVoice = false);
+        },
+        onError: (err) {
+          if (mounted) {
+            setState(() => _isTestingVoice = false);
+            CustomNotification.show(context, 'TTS error: $err', type: NotificationType.error);
+          }
+        },
+      );
+    } else {
+      final s = _elevenLabsService.settings;
+      s.apiKey = _apiKeyController.text.trim();
+      s.voiceId = _selectedVoiceId == 'CUSTOM'
+          ? _customVoiceIdController.text.trim()
+          : _selectedVoiceId;
+      s.modelId = _selectedModel;
+      s.stability = _stability;
+      s.similarityBoost = _similarityBoost;
+      s.style = _styleExaggeration;
+      s.useSpeakerBoost = _useSpeakerBoost;
+
+      final matchedPreset = ElevenLabsService.defaultVoices.where((v) => v.id == s.voiceId);
+      final voiceName = matchedPreset.isNotEmpty ? matchedPreset.first.name : 'Custom Voice';
+
+      CustomNotification.show(
+        context,
+        '🎙️ Speaking with ElevenLabs AI Voice ($voiceName)...',
+        type: NotificationType.info,
+      );
+
+      await _elevenLabsService.speakWithElevenLabs(
+        sampleText,
+        onComplete: () {
+          if (mounted) setState(() => _isTestingVoice = false);
+        },
+        onError: (err) {
+          if (mounted) {
+            setState(() => _isTestingVoice = false);
+            CustomNotification.show(context, 'ElevenLabs error: $err', type: NotificationType.error);
+          }
+        },
+      );
+    }
   }
 
   @override
@@ -263,7 +316,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ElevenLabs AI Voice Commentary',
+                          'Cricket AI Voice Commentary Studio',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
@@ -272,7 +325,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          'Voice narration & match commentary configuration',
+                          _voiceProvider == 'inbuilt_tts'
+                              ? 'Active Mode: Inbuilt Device TTS (Free • 0 Tokens)'
+                              : 'Active Mode: ElevenLabs AI Cloud (API Key)',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             color: Colors.white70,
@@ -286,206 +341,337 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             ),
             const SizedBox(height: 18),
 
-            // Section 1: ELEVENLABS CREDENTIALS & VOICE
-            const _SectionLabel('ELEVENLABS API & VOICE ENGINE'),
+            // Section 1: VOICE COMMENTARY ENGINE (ADMIN CHOICE)
+            const _SectionLabel('VOICE COMMENTARY ENGINE (ADMIN CHOICE)'),
             const SizedBox(height: 12),
 
-            // API Key Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.bgMedium,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.key_rounded, color: AppTheme.accentGold, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ElevenLabs API Key',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_isTestingConnection)
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentGold),
-                        ),
-                    ],
+            // Mode Selector Cards (Option 1: ElevenLabs API vs Option 2: Inbuilt TTS)
+            Row(
+              children: [
+                Expanded(
+                  child: _EngineOptionCard(
+                    title: '1. ElevenLabs API',
+                    subtitle: 'Cloud AI • Requires API key & tokens',
+                    badge: 'PREMIUM AI',
+                    badgeColor: const Color(0xFF6366F1),
+                    icon: Icons.cloud_outlined,
+                    isSelected: _voiceProvider == 'elevenlabs',
+                    onTap: () {
+                      setState(() {
+                        _voiceProvider = 'elevenlabs';
+                      });
+                    },
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Get your key at beta.elevenlabs.io under Profile Settings.',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _EngineOptionCard(
+                    title: '2. Inbuilt TTS',
+                    subtitle: 'Local device • 0 tokens • 100% Free',
+                    badge: '0 TOKENS / FREE',
+                    badgeColor: AppTheme.primaryGreen,
+                    icon: Icons.record_voice_over_rounded,
+                    isSelected: _voiceProvider == 'inbuilt_tts',
+                    onTap: () {
+                      setState(() {
+                        _voiceProvider = 'inbuilt_tts';
+                      });
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _apiKeyController,
-                    obscureText: true,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'e.g. sk_1234567890abcdef...',
-                      hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.black.withValues(alpha: 0.25),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                      ),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: TextButton(
-                          onPressed: _isTestingConnection ? null : _testElevenLabsKey,
-                          child: Text(
-                            'Test Key',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: AppTheme.accentGold,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-                  if (_connectionStatusMessage != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _isConnectionValid == true
-                            ? AppTheme.primaryGreen.withValues(alpha: 0.15)
-                            : AppTheme.accentRed.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isConnectionValid == true
-                              ? AppTheme.primaryGreen.withValues(alpha: 0.4)
-                              : AppTheme.accentRed.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isConnectionValid == true ? Icons.check_circle : Icons.error_outline,
-                            color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
-                            size: 16,
+            if (_voiceProvider == 'inbuilt_tts') ...[
+              // Option 2: Inbuilt Text-to-Speech (Zero tokens, 100% Free)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgMedium,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
+                          child: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGreen, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Inbuilt Text-to-Speech (Zero Tokens Used)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                '100% Free • No ElevenLabs API key required',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: AppTheme.primaryGreen,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Commentary is spoken natively on device. Zero ElevenLabs API tokens or credits are consumed at any time, both for admin and live match users.',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textMuted, height: 1.4),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Commentary Accent / Language
+                    _DropdownTile(
+                      'Commentary Accent / Language',
+                      _ttsLanguage,
+                      ElevenLabsService.availableLanguages.entries
+                          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                          .toList(),
+                      (val) => setState(() => _ttsLanguage = val),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Speech Rate (Speed)
+                    _SliderCard(
+                      label: 'Speech Rate (Pace)',
+                      value: _ttsSpeechRate,
+                      min: 0.30,
+                      max: 0.85,
+                      displayFormat: '${(_ttsSpeechRate * 200).toInt()}% Pace',
+                      subtitle: 'Commentary delivery pace (0.45 - 0.55 recommended for natural cricket flow)',
+                      onChanged: (v) => setState(() => _ttsSpeechRate = v),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Voice Pitch
+                    _SliderCard(
+                      label: 'Voice Pitch (Tone)',
+                      value: _ttsPitch,
+                      min: 0.70,
+                      max: 1.30,
+                      displayFormat: '${(_ttsPitch * 100).toInt()}% Pitch',
+                      subtitle: 'Pitch tone of the speaker (lower is deeper broadcaster, higher is sharper)',
+                      onChanged: (v) => setState(() => _ttsPitch = v),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Option 1: ElevenLabs API (Requires API Key)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgMedium,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.key_rounded, color: AppTheme.accentGold, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ElevenLabs API Key',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_isTestingConnection)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentGold),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Get your key at beta.elevenlabs.io under Profile Settings.',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _apiKeyController,
+                      obscureText: true,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. sk_1234567890abcdef...',
+                        hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
+                        filled: true,
+                        fillColor: Colors.black.withValues(alpha: 0.25),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: TextButton(
+                            onPressed: _isTestingConnection ? null : _testElevenLabsKey,
                             child: Text(
-                              _connectionStatusMessage!,
+                              'Test Key',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
-                                color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
-                                fontWeight: FontWeight.w600,
+                                color: AppTheme.accentGold,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
+
+                    if (_connectionStatusMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _isConnectionValid == true
+                              ? AppTheme.primaryGreen.withValues(alpha: 0.15)
+                              : AppTheme.accentRed.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _isConnectionValid == true
+                                ? AppTheme.primaryGreen.withValues(alpha: 0.4)
+                                : AppTheme.accentRed.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _isConnectionValid == true ? Icons.check_circle : Icons.error_outline,
+                              color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _connectionStatusMessage!,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  color: _isConnectionValid == true ? AppTheme.primaryGreen : AppTheme.accentRed,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Voice Preset Selector
-            _DropdownTile(
-              'Voice Character / Announcer',
-              _selectedVoiceId,
-              [
-                ...ElevenLabsService.defaultVoices.map((v) => DropdownMenuItem(
-                      value: v.id,
-                      child: Text('${v.name} (${v.sampleGender})'),
-                    )),
-                const DropdownMenuItem(value: 'CUSTOM', child: Text('Custom Voice ID...')),
-              ],
-              (val) => setState(() => _selectedVoiceId = val),
-            ),
-
-            if (_selectedVoiceId == 'CUSTOM') ...[
-              const SizedBox(height: 8),
-              TextField(
-                controller: _customVoiceIdController,
-                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Custom ElevenLabs Voice ID',
-                  labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
-                  filled: true,
-                  fillColor: AppTheme.bgMedium,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
                 ),
               ),
+              const SizedBox(height: 14),
+
+              // Voice Preset Selector
+              _DropdownTile(
+                'Voice Character / Announcer',
+                _selectedVoiceId,
+                [
+                  ...ElevenLabsService.defaultVoices.map((v) => DropdownMenuItem(
+                        value: v.id,
+                        child: Text('${v.name} (${v.sampleGender})'),
+                      )),
+                  const DropdownMenuItem(value: 'CUSTOM', child: Text('Custom Voice ID...')),
+                ],
+                (val) => setState(() => _selectedVoiceId = val),
+              ),
+
+              if (_selectedVoiceId == 'CUSTOM') ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _customVoiceIdController,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Custom ElevenLabs Voice ID',
+                    labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
+                    filled: true,
+                    fillColor: AppTheme.bgMedium,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 10),
+
+              // Model Selection
+              _DropdownTile(
+                'ElevenLabs Model',
+                _selectedModel,
+                ElevenLabsService.availableModels
+                    .map((m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(
+                            m == 'eleven_turbo_v2_5'
+                                ? 'Turbo v2.5 (Fastest & Real-time)'
+                                : m == 'eleven_multilingual_v2'
+                                    ? 'Multilingual v2 (High Quality)'
+                                    : 'Monolingual v1',
+                          ),
+                        ))
+                    .toList(),
+                (val) => setState(() => _selectedModel = val),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Sliders (Stability, Similarity, Style)
+              _SliderCard(
+                label: 'Voice Stability',
+                value: _stability,
+                min: 0.0,
+                max: 1.0,
+                displayFormat: '${(_stability * 100).toInt()}%',
+                subtitle: 'Higher is more consistent; lower is more emotive and dynamic',
+                onChanged: (v) => setState(() => _stability = v),
+              ),
+              const SizedBox(height: 10),
+              _SliderCard(
+                label: 'Clarity / Similarity Boost',
+                value: _similarityBoost,
+                min: 0.0,
+                max: 1.0,
+                displayFormat: '${(_similarityBoost * 100).toInt()}%',
+                subtitle: 'Enhances voice identity adherence and reduces background noise',
+                onChanged: (v) => setState(() => _similarityBoost = v),
+              ),
+              const SizedBox(height: 10),
+              _SliderCard(
+                label: 'Style Exaggeration',
+                value: _styleExaggeration,
+                min: 0.0,
+                max: 1.0,
+                displayFormat: '${(_styleExaggeration * 100).toInt()}%',
+                subtitle: 'Amplifies cricket commentator energy and excitement tone',
+                onChanged: (v) => setState(() => _styleExaggeration = v),
+              ),
             ],
-
-            const SizedBox(height: 10),
-
-            // Model Selection
-            _DropdownTile(
-              'ElevenLabs Model',
-              _selectedModel,
-              ElevenLabsService.availableModels
-                  .map((m) => DropdownMenuItem(
-                        value: m,
-                        child: Text(
-                          m == 'eleven_turbo_v2_5'
-                              ? 'Turbo v2.5 (Fastest & Real-time)'
-                              : m == 'eleven_multilingual_v2'
-                                  ? 'Multilingual v2 (High Quality)'
-                                  : 'Monolingual v1',
-                        ),
-                      ))
-                  .toList(),
-              (val) => setState(() => _selectedModel = val),
-            ),
-
-            const SizedBox(height: 14),
-
-            // Sliders (Stability, Similarity, Style)
-            _SliderCard(
-              label: 'Voice Stability',
-              value: _stability,
-              min: 0.0,
-              max: 1.0,
-              displayFormat: '${(_stability * 100).toInt()}%',
-              subtitle: 'Higher is more consistent; lower is more emotive and dynamic',
-              onChanged: (v) => setState(() => _stability = v),
-            ),
-            const SizedBox(height: 10),
-            _SliderCard(
-              label: 'Clarity / Similarity Boost',
-              value: _similarityBoost,
-              min: 0.0,
-              max: 1.0,
-              displayFormat: '${(_similarityBoost * 100).toInt()}%',
-              subtitle: 'Enhances voice identity adherence and reduces background noise',
-              onChanged: (v) => setState(() => _similarityBoost = v),
-            ),
-            const SizedBox(height: 10),
-            _SliderCard(
-              label: 'Style Exaggeration',
-              value: _styleExaggeration,
-              min: 0.0,
-              max: 1.0,
-              displayFormat: '${(_styleExaggeration * 100).toInt()}%',
-              subtitle: 'Amplifies cricket commentator energy and excitement tone',
-              onChanged: (v) => setState(() => _styleExaggeration = v),
-            ),
 
             const SizedBox(height: 16),
 
@@ -499,11 +685,17 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   color: Colors.white,
                 ),
                 label: Text(
-                  _isTestingVoice ? 'Stop Audio Preview' : 'Test ElevenLabs Voice Live 🎙️',
+                  _isTestingVoice
+                      ? 'Stop Audio Preview'
+                      : (_voiceProvider == 'inbuilt_tts'
+                          ? 'Test Inbuilt TTS Voice 🎙️'
+                          : 'Test ElevenLabs Voice Live 🎙️'),
                   style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13.5),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isTestingVoice ? AppTheme.accentRed : const Color(0xFF6366F1),
+                  backgroundColor: _isTestingVoice
+                      ? AppTheme.accentRed
+                      : (_voiceProvider == 'inbuilt_tts' ? AppTheme.primaryGreen : const Color(0xFF6366F1)),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -780,6 +972,8 @@ class _DropdownTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final validCurrent = items.any((it) => it.value == current) ? current : (items.isNotEmpty ? items.first.value : null);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -789,7 +983,7 @@ class _DropdownTile extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: DropdownButtonFormField<String>(
-        initialValue: items.any((it) => it.value == current) ? current : items.first.value,
+        initialValue: validCurrent,
         dropdownColor: AppTheme.bgMedium,
         style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
         decoration: InputDecoration(
@@ -802,6 +996,110 @@ class _DropdownTile extends StatelessWidget {
         onChanged: (v) {
           if (v != null) onChanged(v);
         },
+      ),
+    );
+  }
+}
+
+class _EngineOptionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badge;
+  final Color badgeColor;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _EngineOptionCard({
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+    required this.badgeColor,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isSelected ? badgeColor.withValues(alpha: 0.12) : AppTheme.bgMedium,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? badgeColor : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: badgeColor.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: isSelected ? badgeColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: isSelected ? badgeColor : Colors.white70, size: 18),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    badge,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: badgeColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                color: isSelected ? Colors.white70 : AppTheme.textMuted,
+                height: 1.3,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
