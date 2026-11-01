@@ -78,6 +78,16 @@ export function broadcastMatchUpdate(matchId: string, eventName: string, payload
   }
 }
 
+export function broadcastTeamUpdate(eventName: string, payload: any) {
+  if (ioInstance) {
+    ioInstance.emit(eventName, payload);
+    ioInstance.emit('global_team_update', payload);
+    console.log(`Broadcasted team event ${eventName} globally.`);
+  } else {
+    console.warn('Socket.IO instance not initialized. Broadcast skipped.');
+  }
+}
+
 export function broadcastNotification(payload: { title: string; message: string; timestamp?: string }) {
   if (ioInstance) {
     ioInstance.emit('global_notification', payload);

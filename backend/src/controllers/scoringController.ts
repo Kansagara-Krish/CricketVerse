@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { MatchModel } from '../models/Match';
 import { TeamModel } from '../models/Team';
-import { invalidateCachedMatch, setCachedMatch } from '../config/redis';
+import { redis, invalidateCachedMatch, setCachedMatch } from '../config/redis';
 import { broadcastMatchUpdate, broadcastNotification } from '../sockets/socketHandler';
 
 export function getMaxOvers(matchType: string): number {
@@ -256,17 +256,61 @@ export async function startMatchSetup(req: Request, res: Response) {
   }
 }
 
+// In-memory idempotency store with TTL cleanup
+interface IdempotencyRecord {
+  status: 'in-flight' | 'completed';
+  response?: any;
+  timestamp: number;
+}
+
+const idempotencyStore = new Map<string, IdempotencyRecord>();
+
+// Periodically clean up idempotency keys older than 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of idempotencyStore.entries()) {
+    if (now - record.timestamp > 600000) {
+      idempotencyStore.delete(key);
+    }
+  }
+}, 300000);
+
 export async function updateScore(req: Request, res: Response) {
   const { matchId } = req.params;
   const { runs, extraType, extraRuns, isWicket, wicketType, dismissedPlayerId, newBatsmanId, newBatsmanPosition } = req.body;
+  const idempotencyKey = ((req.headers['x-idempotency-key'] as string) || req.body?.idempotencyKey || '').trim();
+
+  if (idempotencyKey) {
+    const existing = idempotencyStore.get(idempotencyKey);
+    if (existing) {
+      if (existing.status === 'in-flight') {
+        return res.status(409).json({ error: 'Duplicate scoring delivery is currently processing.' });
+      }
+      if (existing.status === 'completed' && existing.response) {
+        return res.status(200).json(existing.response);
+      }
+    }
+    idempotencyStore.set(idempotencyKey, { status: 'in-flight', timestamp: Date.now() });
+
+    if (redis) {
+      try {
+        const cached = await redis.get(`idempotency:${idempotencyKey}`);
+        if (cached) {
+          return res.status(200).json(JSON.parse(cached));
+        }
+      } catch (_) {}
+    }
+  }
 
   try {
     const match = await MatchModel.findOne({ id: matchId });
     if (!match) {
+      if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
       return res.status(404).json({ error: 'Match not found.' });
     }
 
     if (match.status === 'Completed') {
+      if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
       return res.status(400).json({ error: 'Match is already completed.' });
     }
 
@@ -516,8 +560,20 @@ export async function updateScore(req: Request, res: Response) {
     const updated = match.toJSON();
     broadcastMatchUpdate(matchId, 'match_update', updated);
 
+    if (idempotencyKey) {
+      idempotencyStore.set(idempotencyKey, { status: 'completed', response: updated, timestamp: Date.now() });
+      if (redis) {
+        try {
+          await redis.set(`idempotency:${idempotencyKey}`, JSON.stringify(updated), 'EX', 600);
+        } catch (_) {}
+      }
+    }
+
     return res.status(200).json(updated);
   } catch (err) {
+    if (idempotencyKey) {
+      idempotencyStore.delete(idempotencyKey);
+    }
     console.error('Error updating score:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
@@ -525,13 +581,30 @@ export async function updateScore(req: Request, res: Response) {
 
 export async function undoLastBall(req: Request, res: Response) {
   const { matchId } = req.params;
+  const idempotencyKey = ((req.headers['x-idempotency-key'] as string) || req.body?.idempotencyKey || '').trim();
+
+  if (idempotencyKey) {
+    const existing = idempotencyStore.get(idempotencyKey);
+    if (existing) {
+      if (existing.status === 'in-flight') {
+        return res.status(409).json({ error: 'Duplicate undo request is currently processing.' });
+      }
+      if (existing.status === 'completed' && existing.response) {
+        return res.status(200).json(existing.response);
+      }
+    }
+    idempotencyStore.set(idempotencyKey, { status: 'in-flight', timestamp: Date.now() });
+  }
+
   try {
     const match = await MatchModel.findOne({ id: matchId });
     if (!match) {
+      if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
       return res.status(404).json({ error: 'Match not found.' });
     }
 
     if (!match.balls || match.balls.length === 0) {
+      if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
       return res.status(400).json({ error: 'No balls to undo.' });
     }
 
@@ -637,8 +710,15 @@ export async function undoLastBall(req: Request, res: Response) {
     const updated = match.toJSON();
     broadcastMatchUpdate(matchId, 'match_update', updated);
 
+    if (idempotencyKey) {
+      idempotencyStore.set(idempotencyKey, { status: 'completed', response: updated, timestamp: Date.now() });
+    }
+
     return res.status(200).json(updated);
   } catch (err) {
+    if (idempotencyKey) {
+      idempotencyStore.delete(idempotencyKey);
+    }
     console.error('Error undoing last ball:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }

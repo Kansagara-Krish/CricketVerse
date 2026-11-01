@@ -552,11 +552,17 @@ class ApiService {
     String? dismissedPlayerId,
     String? newBatsmanId,
     String? newBatsmanPosition,
+    String? idempotencyKey,
   }) async {
     try {
+      final key = idempotencyKey ??
+          '${DateTime.now().millisecondsSinceEpoch}_${matchId}_${runs}_${extraType}_${extraRuns}_${isWicket}_${DateTime.now().microsecondsSinceEpoch}';
+      final headers = Map<String, String>.from(_headers);
+      headers['X-Idempotency-Key'] = key;
+
       final res = await http.post(
         Uri.parse('$baseUrl/scoring/$matchId/ball'),
-        headers: _headers,
+        headers: headers,
         body: jsonEncode({
           'runs': runs,
           'extraType': extraType,
@@ -566,6 +572,7 @@ class ApiService {
           'dismissedPlayerId': dismissedPlayerId,
           'newBatsmanId': newBatsmanId,
           'newBatsmanPosition': newBatsmanPosition,
+          'idempotencyKey': key,
         }),
       ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
@@ -578,9 +585,17 @@ class ApiService {
     }
   }
 
-  static Future<CricketMatch?> undoLastBall(String matchId) async {
+  static Future<CricketMatch?> undoLastBall(String matchId, {String? idempotencyKey}) async {
     try {
-      final res = await http.post(Uri.parse('$baseUrl/scoring/$matchId/undo'), headers: _headers).timeout(defaultTimeout);
+      final headers = Map<String, String>.from(_headers);
+      if (idempotencyKey != null) {
+        headers['X-Idempotency-Key'] = idempotencyKey;
+      }
+      final res = await http.post(
+        Uri.parse('$baseUrl/scoring/$matchId/undo'),
+        headers: headers,
+        body: idempotencyKey != null ? jsonEncode({'idempotencyKey': idempotencyKey}) : null,
+      ).timeout(defaultTimeout);
       if (res.statusCode == 200) {
         return CricketMatch.fromJson(jsonDecode(res.body));
       }

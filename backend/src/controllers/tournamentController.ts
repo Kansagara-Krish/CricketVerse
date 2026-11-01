@@ -64,15 +64,12 @@ export async function getTournamentStandings(req: Request, res: Response) {
       return res.status(404).json({ error: 'Tournament not found.' });
     }
 
-    // Find all teams or participating teams
-    let teamsQuery: any = {};
-    if (tournament.participatingTeamIds && tournament.participatingTeamIds.length > 0) {
-      teamsQuery = { id: { $in: tournament.participatingTeamIds } };
-    }
-    let teams = await TeamModel.find(teamsQuery).lean();
-    if (teams.length === 0) {
-      teams = await TeamModel.find().limit(8).lean();
-    }
+    // Strictly find only participating teams belonging to this tournament
+    const participatingTeamIds = tournament.participatingTeamIds || [];
+    const teamsQuery = participatingTeamIds.length > 0
+      ? { id: { $in: participatingTeamIds } }
+      : { id: { $in: [] } };
+    const teams = await TeamModel.find(teamsQuery).lean();
 
     // Find all matches for this tournament
     const matches = await MatchModel.find({ tournamentId: id }).lean();
@@ -190,7 +187,7 @@ export async function createTournament(req: Request, res: Response) {
       startDate: startDate || '',
       endDate: endDate || '',
       participatingTeamIds: teamsList,
-      teamsCount: teamsCount || teamsList.length || 0,
+      teamsCount: teamsList.length > 0 ? teamsList.length : (teamsCount || 0),
       matchesCount: matchesCount || 0,
     });
 
@@ -222,8 +219,12 @@ export async function updateTournament(req: Request, res: Response) {
     if (status !== undefined) updateData.status = status;
     if (startDate !== undefined) updateData.startDate = startDate;
     if (endDate !== undefined) updateData.endDate = endDate;
-    if (participatingTeamIds !== undefined) updateData.participatingTeamIds = participatingTeamIds;
-    if (teamsCount !== undefined) updateData.teamsCount = teamsCount;
+    if (participatingTeamIds !== undefined) {
+      updateData.participatingTeamIds = participatingTeamIds;
+      updateData.teamsCount = Array.isArray(participatingTeamIds) ? participatingTeamIds.length : (teamsCount || 0);
+    } else if (teamsCount !== undefined) {
+      updateData.teamsCount = teamsCount;
+    }
     if (matchesCount !== undefined) updateData.matchesCount = matchesCount;
 
     const updated = await TournamentModel.findOneAndUpdate(

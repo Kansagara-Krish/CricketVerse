@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cricketverse_ai/main.dart';
 import 'package:cricketverse_ai/models/models.dart';
 import 'package:cricketverse_ai/screens/admin/ai_commentary_screen.dart';
 

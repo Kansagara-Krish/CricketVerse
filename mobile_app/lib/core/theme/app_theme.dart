@@ -198,11 +198,11 @@ class AppTheme {
   }
 
   static Color roleColor(String role) {
-    switch (role) {
-      case 'Batter':       return primaryBlue;
-      case 'Bowler':       return accentRed;
-      case 'All-rounder':  return accentGold;
-      default:             return textMuted;
-    }
+    final r = role.toLowerCase().trim();
+    if (r.contains('bowl')) return accentRed;
+    if (r.contains('all') || r.contains('round')) return accentGold;
+    if (r.contains('keep') || r.contains('wk')) return accentPurple;
+    if (r.contains('bat')) return primaryBlue;
+    return textMuted;
   }
 }

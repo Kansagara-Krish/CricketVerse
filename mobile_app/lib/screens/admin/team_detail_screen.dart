@@ -14,9 +14,21 @@ class TeamDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7);
-    final batters = team.players.where((p) => p.role == 'Batter').toList();
-    final allRounders = team.players.where((p) => p.role == 'All-rounder').toList();
-    final bowlers = team.players.where((p) => p.role == 'Bowler').toList();
+    final wicketKeepers = team.players.where((p) {
+      final r = p.role.toLowerCase();
+      return r.contains('keep') || r.contains('wk');
+    }).toList();
+    final allRounders = team.players.where((p) {
+      final r = p.role.toLowerCase();
+      return (r.contains('all') || r.contains('round')) && !wicketKeepers.contains(p);
+    }).toList();
+    final bowlers = team.players.where((p) {
+      final r = p.role.toLowerCase();
+      return r.contains('bowl') && !wicketKeepers.contains(p) && !allRounders.contains(p);
+    }).toList();
+    final batters = team.players.where((p) {
+      return !wicketKeepers.contains(p) && !allRounders.contains(p) && !bowlers.contains(p);
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -77,18 +89,21 @@ class TeamDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  _StatChip('Batters', '${batters.length}', AppTheme.primaryBlue),
-                  const SizedBox(width: 10),
-                  _StatChip('All-rounders', '${allRounders.length}', AppTheme.accentGold),
-                  const SizedBox(width: 10),
+                  _StatChip('Batsmen', '${batters.length}', AppTheme.primaryBlue),
+                  const SizedBox(width: 8),
                   _StatChip('Bowlers', '${bowlers.length}', AppTheme.accentRed),
+                  const SizedBox(width: 8),
+                  _StatChip('All-rounders', '${allRounders.length}', AppTheme.accentGold),
+                  const SizedBox(width: 8),
+                  _StatChip('Keepers', '${wicketKeepers.length}', AppTheme.accentPurple),
                 ],
               ),
             ),
           ),
 
           // Player Sections
-          _playerSection(context, 'BATTERS', batters, AppTheme.primaryBlue),
+          _playerSection(context, 'BATSMEN', batters, AppTheme.primaryBlue),
+          _playerSection(context, 'WICKET KEEPERS', wicketKeepers, AppTheme.accentPurple),
           _playerSection(context, 'ALL-ROUNDERS', allRounders, AppTheme.accentGold),
           _playerSection(context, 'BOWLERS', bowlers, AppTheme.accentRed),
 

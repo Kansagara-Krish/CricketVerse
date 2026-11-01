@@ -75,26 +75,54 @@ class _TournamentDetailsScreenState extends State<TournamentDetailsScreen> with 
     );
   }
 
+  List<String> _getParticipatingIds(StorageService storage) {
+    final tournId = widget.tournament['id']?.toString() ?? '';
+    final liveTourn = storage.tournaments.where((t) => t.id == tournId).firstOrNull;
+    if (liveTourn != null && liveTourn.participatingTeamIds.isNotEmpty) {
+      return liveTourn.participatingTeamIds;
+    }
+    final rawParticipating = widget.tournament['participatingTeamIds'];
+    if (rawParticipating is List && rawParticipating.isNotEmpty) {
+      return rawParticipating.map((e) => e.toString()).toList();
+    }
+    return <String>[];
+  }
+
   Widget _buildStandingsTab(StorageService storage) {
     final tournId = widget.tournament['id']?.toString() ?? '';
-    final rawParticipating = widget.tournament['participatingTeamIds'];
-    final List<String> participatingIds = rawParticipating is List
-        ? rawParticipating.map((e) => e.toString()).toList()
-        : [];
+    final participatingIds = _getParticipatingIds(storage);
 
     final tournMatches = storage.matches.where((m) {
       if (tournId.isNotEmpty && m.tournamentId == tournId) return true;
       if (participatingIds.isNotEmpty) {
         return participatingIds.contains(m.teamA.id) && participatingIds.contains(m.teamB.id);
       }
-      return true;
+      return false;
     }).toList();
 
-    List<Team> teams = participatingIds.isNotEmpty
+    final List<Team> teams = participatingIds.isNotEmpty
         ? storage.teams.where((t) => participatingIds.contains(t.id)).toList()
-        : storage.teams;
+        : <Team>[];
 
-    if (teams.isEmpty) teams = storage.teams;
+    if (teams.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.leaderboard_outlined, size: 48, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              Text(
+                'No participating teams selected for this tournament.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     // Helper to convert overs like 19.4 to decimal 19.666
     double toDecimalOvers(double oversVal) {
@@ -248,17 +276,14 @@ class _TournamentDetailsScreenState extends State<TournamentDetailsScreen> with 
 
   Widget _buildMatchesTab(StorageService storage) {
     final tournId = widget.tournament['id']?.toString() ?? '';
-    final rawParticipating = widget.tournament['participatingTeamIds'];
-    final List<String> participatingIds = rawParticipating is List
-        ? rawParticipating.map((e) => e.toString()).toList()
-        : [];
+    final participatingIds = _getParticipatingIds(storage);
 
     final matches = storage.matches.where((m) {
       if (tournId.isNotEmpty && m.tournamentId == tournId) return true;
       if (participatingIds.isNotEmpty) {
         return participatingIds.contains(m.teamA.id) && participatingIds.contains(m.teamB.id);
       }
-      return true;
+      return false;
     }).toList();
 
     if (matches.isEmpty) {
@@ -345,14 +370,31 @@ class _TournamentDetailsScreenState extends State<TournamentDetailsScreen> with 
   }
 
   Widget _buildTeamsTab(StorageService storage) {
-    final rawParticipating = widget.tournament['participatingTeamIds'];
-    final List<String> participatingIds = rawParticipating is List
-        ? rawParticipating.map((e) => e.toString()).toList()
-        : [];
+    final participatingIds = _getParticipatingIds(storage);
 
     final teams = participatingIds.isNotEmpty
         ? storage.teams.where((t) => participatingIds.contains(t.id)).toList()
-        : storage.teams;
+        : <Team>[];
+
+    if (teams.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              Text(
+                'No participating teams selected for this tournament.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),

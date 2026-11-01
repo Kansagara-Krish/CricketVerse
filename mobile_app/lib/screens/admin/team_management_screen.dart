@@ -228,7 +228,15 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
             p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             p.role.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             team.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
-          if (_selectedRoleFilter == 'All' || p.role.toLowerCase() == _selectedRoleFilter.toLowerCase()) {
+          final pRole = p.role.toLowerCase();
+          final fRole = _selectedRoleFilter.toLowerCase();
+          final matches = _selectedRoleFilter == 'All' ||
+              pRole == fRole ||
+              (fRole.contains('bat') && pRole.contains('bat')) ||
+              (fRole.contains('bowl') && pRole.contains('bowl')) ||
+              ((fRole.contains('all') || fRole.contains('round')) && (pRole.contains('all') || pRole.contains('round'))) ||
+              ((fRole.contains('keep') || fRole.contains('wk')) && (pRole.contains('keep') || pRole.contains('wk')));
+          if (matches) {
             allPlayers.add({
               'player': p,
               'team': team,
@@ -640,12 +648,16 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
                     children: [
                       Row(
                         children: [
-                          Text(
-                            team.name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.textPrimary,
+                          Flexible(
+                            child: Text(
+                              team.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -669,6 +681,8 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
                       const SizedBox(height: 4),
                       Text(
                         '${team.players.length} Players • 8 Support Staff',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.5,
                           color: AppTheme.textSecondary,
@@ -850,12 +864,16 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            '• ${team.name}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: teamColor,
-                              fontWeight: FontWeight.w700,
+                          Flexible(
+                            child: Text(
+                              '• ${team.name}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: teamColor,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -865,9 +883,15 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRed, size: 18),
-                  onPressed: () {
-                    storage.removePlayer(team.id, player.id);
-                    CustomNotification.show(context, '${player.name} removed from ${team.shortName}', type: NotificationType.info);
+                  onPressed: () async {
+                    final error = await storage.removePlayer(team.id, player.id);
+                    if (mounted) {
+                      if (error != null) {
+                        CustomNotification.show(context, error, type: NotificationType.warning);
+                      } else {
+                        CustomNotification.show(context, '${player.name} removed from ${team.shortName}', type: NotificationType.info);
+                      }
+                    }
                   },
                 ),
               ],
@@ -878,9 +902,8 @@ class _TeamManagementScreenState extends State<TeamManagementScreen>
     );
   }
 
-  // Filter sheet for Players Role
   void _showPlayerFilterSheet() {
-    final roles = ['All', 'Batter', 'Bowler', 'All-rounder', 'Wicketkeeper'];
+    final roles = ['All', 'Batsman', 'Bowler', 'All-rounder', 'Wicket Keeper'];
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,

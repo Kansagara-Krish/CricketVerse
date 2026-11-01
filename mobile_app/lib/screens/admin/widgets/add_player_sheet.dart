@@ -28,7 +28,7 @@ class AddPlayerSheet extends StatefulWidget {
 
 class _AddPlayerSheetState extends State<AddPlayerSheet> {
   final _nameCtrl = TextEditingController();
-  String _selectedRole = 'Batter';
+  final Set<String> _selectedRoles = {'Batsman'};
   late String _selectedTeamId;
   String _selectedLeadership = 'None'; // 'None', 'Captain', 'Vice-Captain'
 
@@ -42,6 +42,45 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
   void dispose() {
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  String _formatRoleFromSelection(Set<String> roles) {
+    final hasBat = roles.contains('Batsman') || roles.contains('Batter');
+    final hasBowl = roles.contains('Bowler');
+    final hasAll = roles.contains('All-rounder');
+    final hasWk = roles.contains('Wicket Keeper') || roles.contains('Wicketkeeper');
+
+    final isAll = hasAll || (hasBat && hasBowl);
+
+    if (isAll && hasWk) return 'All-rounder & Wicketkeeper';
+    if (isAll) return 'All-rounder';
+    if (hasBat && hasWk) return 'Batsman & Wicketkeeper';
+    if (hasBowl && hasWk) return 'Bowler & Wicketkeeper';
+    if (hasBat) return 'Batsman';
+    if (hasBowl) return 'Bowler';
+    if (hasWk) return 'Wicketkeeper';
+    return 'Batsman';
+  }
+
+  void _toggleRole(String role) {
+    setState(() {
+      if (_selectedRoles.contains(role)) {
+        if (_selectedRoles.length > 1) {
+          _selectedRoles.remove(role);
+        }
+      } else {
+        if (role == 'All-rounder') {
+          _selectedRoles.remove('Batsman');
+          _selectedRoles.remove('Bowler');
+          _selectedRoles.add('All-rounder');
+        } else if (role == 'Batsman' || role == 'Bowler') {
+          _selectedRoles.remove('All-rounder');
+          _selectedRoles.add(role);
+        } else {
+          _selectedRoles.add(role);
+        }
+      }
+    });
   }
 
   @override
@@ -62,6 +101,8 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
     } else if (_selectedLeadership == 'Vice-Captain' && hasViceCaptain) {
       _selectedLeadership = 'None';
     }
+
+    final activeRole = _formatRoleFromSelection(_selectedRoles);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -96,20 +137,75 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
             ),
           ),
           const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            dropdownColor: Colors.white,
-            initialValue: _selectedRole,
-            style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
-            decoration: const InputDecoration(
-              labelText: 'Player Role',
-              prefixIcon: Icon(Icons.sports_cricket_rounded, color: AppTheme.textMuted),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'Batter', child: Text('Batter')),
-              DropdownMenuItem(value: 'Bowler', child: Text('Bowler')),
-              DropdownMenuItem(value: 'All-rounder', child: Text('All-rounder')),
+          // Player Role Checkbox Selection with Dynamic Badge
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.sports_cricket_rounded, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Player Role',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.roleColor(activeRole).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            activeRole.contains('Wicket')
+                                ? Icons.sports_handball_rounded
+                                : activeRole.contains('Bowler')
+                                    ? Icons.sports_baseball_rounded
+                                    : activeRole.contains('All')
+                                        ? Icons.swap_horiz_rounded
+                                        : Icons.sports_cricket_rounded,
+                            size: 11,
+                            color: AppTheme.roleColor(activeRole),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            activeRole,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.roleColor(activeRole),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 2.3,
+                children: [
+                  _buildRoleCheckboxTile('Batsman', Icons.sports_cricket_rounded, const Color(0xFF0284C7)),
+                  _buildRoleCheckboxTile('Bowler', Icons.sports_baseball_rounded, const Color(0xFFE11D48)),
+                  _buildRoleCheckboxTile('All-rounder', Icons.swap_horiz_rounded, const Color(0xFFD97706)),
+                  _buildRoleCheckboxTile('Wicket Keeper', Icons.sports_handball_rounded, const Color(0xFF7C3AED)),
+                ],
+              ),
             ],
-            onChanged: (v) => setState(() => _selectedRole = v ?? _selectedRole),
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
@@ -132,7 +228,7 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
           // Dynamic Leadership Role Selection (Captain / Vice-Captain)
           DropdownButtonFormField<String>(
             dropdownColor: Colors.white,
-            value: _selectedLeadership,
+            initialValue: _selectedLeadership,
             style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13.5),
             decoration: InputDecoration(
               labelText: 'Team Role / Designation',
@@ -176,7 +272,7 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
                 final newPlayer = Player(
                   id: 'player_${DateTime.now().millisecondsSinceEpoch}',
                   name: _nameCtrl.text.trim(),
-                  role: _selectedRole,
+                  role: _formatRoleFromSelection(_selectedRoles),
                   nationality: 'IND',
                   isCaptain: isCap,
                   isViceCaptain: isVC,
@@ -204,6 +300,69 @@ class _AddPlayerSheetState extends State<AddPlayerSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoleCheckboxTile(String role, IconData icon, Color color) {
+    final isSelected = _selectedRoles.contains(role);
+
+    return InkWell(
+      onTap: () => _toggleRole(role),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.6 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? color.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: isSelected,
+                activeColor: color,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                side: BorderSide(
+                  color: isSelected ? color : const Color(0xFF94A3B8),
+                  width: 1.5,
+                ),
+                onChanged: (val) {
+                  _toggleRole(role);
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(icon, size: 16, color: isSelected ? color : const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  color: isSelected ? color : const Color(0xFF1E293B),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

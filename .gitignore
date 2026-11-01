@@ -31,6 +31,8 @@ backend/build/
 backend/.env
 backend/.env.local
 backend/.env.*.local
+*.env
+*.env.*
 *.log
 
 # Prisma

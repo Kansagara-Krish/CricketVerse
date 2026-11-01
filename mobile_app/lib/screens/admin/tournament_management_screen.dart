@@ -107,224 +107,7 @@ class _TournamentManagementScreenState extends State<TournamentManagementScreen>
     }
   }
 
-  // --- Inline / Modal Edit Sheet (Persists to StorageService) ---
-  void _showEditSheet(Tournament tournament, StorageService storage) {
-    final nameCtrl = TextEditingController(text: tournament.name);
-    final teamsCtrl = TextEditingController(text: tournament.teamsCount.toString());
-    final matchesCtrl = TextEditingController(text: tournament.matchesCount.toString());
-    final startCtrl = TextEditingController(text: tournament.startDate);
-    final endCtrl = TextEditingController(text: tournament.endDate);
-    String format = tournament.format;
-    String status = tournament.status;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Edit Tournament',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: nameCtrl,
-                style: GoogleFonts.plusJakartaSans(
-                  color: const Color(0xFF0F172A),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Tournament Name',
-                  labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                  prefixIcon: const Icon(Icons.emoji_events_outlined, color: Color(0xFF028A6B)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF028A6B), width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: ['T20', 'ODI', 'Test'].contains(format) ? format : 'T20',
-                      dropdownColor: Colors.white,
-                      decoration: InputDecoration(
-                        labelText: 'Format',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: ['T20', 'ODI', 'Test']
-                          .map((f) => DropdownMenuItem(value: f, child: Text(f)))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setModalState(() => format = v);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: ['Live', 'Upcoming', 'Completed'].contains(status) ? status : 'Upcoming',
-                      dropdownColor: Colors.white,
-                      decoration: InputDecoration(
-                        labelText: 'Status',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: ['Live', 'Upcoming', 'Completed']
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setModalState(() => status = v);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: teamsCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Teams Count',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        prefixIcon: const Icon(Icons.people_alt_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: matchesCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Matches Count',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        prefixIcon: const Icon(Icons.sports_cricket_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: startCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Start Date (DD-MM-YYYY)',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        prefixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: endCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'End Date (DD-MM-YYYY)',
-                        labelStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B)),
-                        prefixIcon: const Icon(Icons.event_outlined, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final updated = Tournament(
-                      id: tournament.id,
-                      name: nameCtrl.text.trim().isEmpty ? tournament.name : nameCtrl.text.trim(),
-                      format: format,
-                      status: status,
-                      teamsCount: int.tryParse(teamsCtrl.text.trim()) ?? tournament.teamsCount,
-                      matchesCount: int.tryParse(matchesCtrl.text.trim()) ?? tournament.matchesCount,
-                      startDate: startCtrl.text.trim().isEmpty ? tournament.startDate : startCtrl.text.trim(),
-                      endDate: endCtrl.text.trim().isEmpty ? tournament.endDate : endCtrl.text.trim(),
-                      participatingTeamIds: tournament.participatingTeamIds,
-                    );
-
-                    storage.updateTournament(updated);
-                    Navigator.pop(ctx);
-                    CustomNotification.show(
-                      context,
-                      'Tournament "${updated.name}" updated successfully!',
-                      type: NotificationType.success,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF028A6B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Save Changes',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // --- Delete Confirmation Dialog ---
   void _showDeleteConfirmDialog(Tournament tournament, StorageService storage) {
@@ -1044,7 +827,20 @@ class _TournamentManagementScreenState extends State<TournamentManagementScreen>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         onSelected: (action) {
                           if (action == 'edit') {
-                            _showEditSheet(tournament, storage);
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.createTournament,
+                              arguments: {
+                                'id': tournament.id,
+                                'name': tournament.name,
+                                'format': tournament.format,
+                                'status': tournament.status,
+                                'start': tournament.startDate,
+                                'end': tournament.endDate,
+                                'matches': tournament.matchesCount.toString(),
+                                'participatingTeamIds': tournament.participatingTeamIds,
+                              },
+                            );
                           } else if (action == 'delete') {
                             _showDeleteConfirmDialog(tournament, storage);
                           } else if (action == 'toggle_status') {
@@ -1147,6 +943,7 @@ class _TournamentManagementScreenState extends State<TournamentManagementScreen>
                                 'start': tournament.startDate,
                                 'end': tournament.endDate,
                                 'matches': tournament.matchesCount.toString(),
+                                'participatingTeamIds': tournament.participatingTeamIds,
                               },
                             );
                           },
@@ -1180,7 +977,22 @@ class _TournamentManagementScreenState extends State<TournamentManagementScreen>
                       // Edit Button (Soft Green)
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => _showEditSheet(tournament, storage),
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.createTournament,
+                              arguments: {
+                                'id': tournament.id,
+                                'name': tournament.name,
+                                'format': tournament.format,
+                                'status': tournament.status,
+                                'start': tournament.startDate,
+                                'end': tournament.endDate,
+                                'matches': tournament.matchesCount.toString(),
+                                'participatingTeamIds': tournament.participatingTeamIds,
+                              },
+                            );
+                          },
                           child: Container(
                             height: 36,
                             decoration: BoxDecoration(

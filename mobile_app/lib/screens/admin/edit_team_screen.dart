@@ -128,7 +128,7 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
     final nationalityCtrl = TextEditingController(text: player?.nationality ?? widget.team.shortName);
     final runsCtrl = TextEditingController(text: player != null ? '${player.runsScored}' : '0');
     final wicketsCtrl = TextEditingController(text: player != null ? '${player.wicketsTaken}' : '0');
-    String selectedRole = player?.role ?? 'Batter';
+    final Set<String> selectedRoles = _parseRolesFromPlayer(player?.role);
 
     // Leadership role state: 'Member', 'Captain', 'Vice-Captain'
     String leadershipRole = 'Member';
@@ -195,42 +195,98 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                     prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Role Selector
-                Text('Player Role', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Row(
-                  children: ['Batter', 'All-rounder', 'Bowler'].map((r) {
-                    final selected = selectedRole == r;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setModalState(() => selectedRole = r),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 6),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: selected ? AppTheme.primaryBlue.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.03),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: selected ? AppTheme.primaryBlue : Colors.black.withValues(alpha: 0.08),
-                              width: selected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              r,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
-                                fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                                color: selected ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                              ),
-                            ),
-                          ),
+                // Role Selector Header & Dynamic Preview Badge
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sports_cricket_rounded, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Player Role',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF334155),
                         ),
                       ),
-                    );
-                  }).toList(),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.roleColor(_formatRoleFromSelection(selectedRoles)).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _formatRoleFromSelection(selectedRoles).contains('Wicket')
+                                  ? Icons.sports_handball_rounded
+                                  : _formatRoleFromSelection(selectedRoles).contains('Bowler')
+                                      ? Icons.sports_baseball_rounded
+                                      : _formatRoleFromSelection(selectedRoles).contains('All')
+                                          ? Icons.swap_horiz_rounded
+                                          : Icons.sports_cricket_rounded,
+                              size: 11,
+                              color: AppTheme.roleColor(_formatRoleFromSelection(selectedRoles)),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatRoleFromSelection(selectedRoles),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.roleColor(_formatRoleFromSelection(selectedRoles)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Role Checkbox Grid (Multiple selection supported)
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.3,
+                  children: [
+                    _buildRoleCheckboxTile(
+                      role: 'Batsman',
+                      icon: Icons.sports_cricket_rounded,
+                      color: const Color(0xFF0284C7),
+                      isSelected: selectedRoles.contains('Batsman'),
+                      onTap: () => _toggleRole('Batsman', selectedRoles, setModalState),
+                    ),
+                    _buildRoleCheckboxTile(
+                      role: 'Bowler',
+                      icon: Icons.sports_baseball_rounded,
+                      color: const Color(0xFFE11D48),
+                      isSelected: selectedRoles.contains('Bowler'),
+                      onTap: () => _toggleRole('Bowler', selectedRoles, setModalState),
+                    ),
+                    _buildRoleCheckboxTile(
+                      role: 'All-rounder',
+                      icon: Icons.swap_horiz_rounded,
+                      color: const Color(0xFFD97706),
+                      isSelected: selectedRoles.contains('All-rounder'),
+                      onTap: () => _toggleRole('All-rounder', selectedRoles, setModalState),
+                    ),
+                    _buildRoleCheckboxTile(
+                      role: 'Wicket Keeper',
+                      icon: Icons.sports_handball_rounded,
+                      color: const Color(0xFF7C3AED),
+                      isSelected: selectedRoles.contains('Wicket Keeper'),
+                      onTap: () => _toggleRole('Wicket Keeper', selectedRoles, setModalState),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
 
@@ -402,7 +458,7 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
                       final updatedPlayer = Player(
                         id: pId,
                         name: name,
-                        role: selectedRole,
+                        role: _formatRoleFromSelection(selectedRoles),
                         nationality: nationalityCtrl.text.trim(),
                         isCaptain: isCap,
                         isViceCaptain: isVc,
@@ -448,6 +504,135 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
     );
   }
 
+  static Set<String> _parseRolesFromPlayer(String? role) {
+    if (role == null || role.trim().isEmpty) return {'Batsman'};
+    final r = role.toLowerCase().trim();
+    final Set<String> roles = {};
+
+    final hasWk = r.contains('keep') || r.contains('wk');
+    final hasAll = r.contains('all') || r.contains('round');
+    final hasBat = r.contains('bat');
+    final hasBowl = r.contains('bowl');
+
+    if (hasWk) roles.add('Wicket Keeper');
+
+    if (hasAll) {
+      roles.add('All-rounder');
+    } else {
+      if (hasBat) roles.add('Batsman');
+      if (hasBowl) roles.add('Bowler');
+    }
+
+    if (roles.isEmpty) {
+      roles.add('Batsman');
+    }
+    return roles;
+  }
+
+  static String _formatRoleFromSelection(Set<String> roles) {
+    final hasBat = roles.contains('Batsman') || roles.contains('Batter');
+    final hasBowl = roles.contains('Bowler');
+    final hasAll = roles.contains('All-rounder');
+    final hasWk = roles.contains('Wicket Keeper') || roles.contains('Wicketkeeper');
+
+    final isAll = hasAll || (hasBat && hasBowl);
+
+    if (isAll && hasWk) return 'All-rounder & Wicketkeeper';
+    if (isAll) return 'All-rounder';
+    if (hasBat && hasWk) return 'Batsman & Wicketkeeper';
+    if (hasBowl && hasWk) return 'Bowler & Wicketkeeper';
+    if (hasBat) return 'Batsman';
+    if (hasBowl) return 'Bowler';
+    if (hasWk) return 'Wicketkeeper';
+    return 'Batsman';
+  }
+
+  void _toggleRole(String role, Set<String> roles, StateSetter setModalState) {
+    setModalState(() {
+      if (roles.contains(role)) {
+        if (roles.length > 1) {
+          roles.remove(role);
+        }
+      } else {
+        if (role == 'All-rounder') {
+          roles.remove('Batsman');
+          roles.remove('Bowler');
+          roles.add('All-rounder');
+        } else if (role == 'Batsman' || role == 'Bowler') {
+          roles.remove('All-rounder');
+          roles.add(role);
+        } else {
+          roles.add(role);
+        }
+      }
+    });
+  }
+
+  Widget _buildRoleCheckboxTile({
+    required String role,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.6 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? color.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: isSelected,
+                activeColor: color,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                side: BorderSide(
+                  color: isSelected ? color : const Color(0xFF94A3B8),
+                  width: 1.5,
+                ),
+                onChanged: (_) => onTap(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(icon, size: 16, color: isSelected ? color : const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  color: isSelected ? color : const Color(0xFF1E293B),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _removePlayer(StorageService storage, Player player) async {
     final confirm = await ConfirmDialog.show(
       context,
@@ -456,13 +641,23 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
     );
 
     if (confirm == true && mounted) {
-      storage.removePlayer(widget.team.id, player.id);
-      setState(() {});
-      CustomNotification.show(
-        context,
-        'Removed "${player.name}" from team squad',
-        type: NotificationType.info,
-      );
+      final error = await storage.removePlayer(widget.team.id, player.id);
+      if (mounted) {
+        setState(() {});
+        if (error != null) {
+          CustomNotification.show(
+            context,
+            error,
+            type: NotificationType.warning,
+          );
+        } else {
+          CustomNotification.show(
+            context,
+            'Removed "${player.name}" from team squad',
+            type: NotificationType.info,
+          );
+        }
+      }
     }
   }
 
@@ -736,9 +931,7 @@ class _EditTeamScreenState extends State<EditTeamScreen> {
               ...currentTeam.players.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final player = entry.value;
-                Color roleColor = AppTheme.primaryBlue;
-                if (player.role == 'All-rounder') roleColor = AppTheme.accentGold;
-                if (player.role == 'Bowler') roleColor = AppTheme.accentRed;
+                final roleColor = AppTheme.roleColor(player.role);
 
                 return CardEntranceAnimation(
                   index: idx + 2,

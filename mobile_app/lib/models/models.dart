@@ -50,21 +50,21 @@ class Player {
         'dismissalInfo': dismissalInfo,
       };
 
-  factory Player.fromJson(Map<String, dynamic> json) => Player(
-        id: json['id'],
-        name: json['name'],
-        role: json['role'],
-        nationality: json['nationality'],
-        isCaptain: json['isCaptain'] ?? json['is_captain'] ?? false,
-        isViceCaptain: json['isViceCaptain'] ?? json['is_vice_captain'] ?? false,
-        runsScored: json['runsScored'] ?? 0,
-        ballsFaced: json['ballsFaced'] ?? 0,
-        wicketsTaken: json['wicketsTaken'] ?? 0,
-        runsConceded: json['runsConceded'] ?? 0,
+  factory Player.fromJson(Map<dynamic, dynamic> json) => Player(
+        id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+        name: json['name']?.toString() ?? 'Player',
+        role: json['role']?.toString() ?? 'Batter',
+        nationality: json['nationality']?.toString() ?? 'IND',
+        isCaptain: json['isCaptain'] == true || json['is_captain'] == true,
+        isViceCaptain: json['isViceCaptain'] == true || json['is_vice_captain'] == true,
+        runsScored: (json['runsScored'] as num?)?.toInt() ?? 0,
+        ballsFaced: (json['ballsFaced'] as num?)?.toInt() ?? 0,
+        wicketsTaken: (json['wicketsTaken'] as num?)?.toInt() ?? 0,
+        runsConceded: (json['runsConceded'] as num?)?.toInt() ?? 0,
         oversBowled: (json['oversBowled'] as num?)?.toDouble() ?? 0.0,
-        matchesPlayed: json['matchesPlayed'] ?? 0,
-        isOut: json['isOut'] ?? false,
-        dismissalInfo: json['dismissalInfo'] ?? '',
+        matchesPlayed: (json['matchesPlayed'] as num?)?.toInt() ?? 0,
+        isOut: json['isOut'] == true,
+        dismissalInfo: json['dismissalInfo']?.toString() ?? '',
       );
 }
 
@@ -92,14 +92,15 @@ class Team {
         'players': players.map((p) => p.toJson()).toList(),
       };
 
-  factory Team.fromJson(Map<String, dynamic> json) => Team(
-        id: json['id'],
-        name: json['name'],
-        shortName: json['shortName'],
-        logoColorHex: json['logoColorHex'],
-        players: (json['players'] as List)
-            .map((p) => Player.fromJson(p))
-            .toList(),
+  factory Team.fromJson(Map<dynamic, dynamic> json) => Team(
+        id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        shortName: json['shortName']?.toString() ?? '',
+        logoColorHex: json['logoColorHex']?.toString() ?? '0xFF028A6B',
+        players: (json['players'] as List?)
+                ?.map((p) => Player.fromJson(p is Map ? p : {}))
+                .toList() ??
+            [],
       );
 }
 
@@ -109,8 +110,8 @@ class BallRecord {
   final String extraType; // "Wide", "No Ball", "Leg Bye", "None"
   final bool isWicket;
   final String wicketType; // "Bowled", "Caught", "LBW", "Run Out", "None"
-  final String batsmanName;
-  final String bowlerName;
+  String batsmanName;
+  String bowlerName;
   final String commentary;
   final DateTime timestamp;
   final String? strikerId;
@@ -156,23 +157,25 @@ class BallRecord {
         'over': over,
       };
 
-  factory BallRecord.fromJson(Map<String, dynamic> json) => BallRecord(
-        run: json['run'] ?? 0,
-        extraRun: json['extraRun'] ?? 0,
-        extraType: json['extraType'] ?? 'None',
-        isWicket: json['isWicket'] ?? false,
-        wicketType: json['wicketType'] ?? 'None',
-        batsmanName: json['batsmanName'] ?? '',
-        bowlerName: json['bowlerName'] ?? '',
-        commentary: json['commentary'] ?? '',
+  factory BallRecord.fromJson(Map<dynamic, dynamic> json) => BallRecord(
+        run: (json['run'] as num?)?.toInt() ?? 0,
+        extraRun: (json['extraRun'] as num?)?.toInt() ?? 0,
+        extraType: json['extraType']?.toString() ?? 'None',
+        isWicket: json['isWicket'] == true,
+        wicketType: json['wicketType']?.toString() ?? 'None',
+        batsmanName: json['batsmanName']?.toString() ?? '',
+        bowlerName: json['bowlerName']?.toString() ?? '',
+        commentary: json['commentary']?.toString() ?? '',
         timestamp: json['timestamp'] != null
-            ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
+            ? (json['timestamp'] is DateTime
+                ? json['timestamp'] as DateTime
+                : DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now())
             : DateTime.now(),
-        strikerId: json['strikerId'],
-        nonStrikerId: json['nonStrikerId'],
-        bowlerId: json['bowlerId'],
-        innings: json['innings'] as int?,
-        battingTeamId: json['battingTeamId'] as String?,
+        strikerId: json['strikerId']?.toString(),
+        nonStrikerId: json['nonStrikerId']?.toString(),
+        bowlerId: json['bowlerId']?.toString(),
+        innings: (json['innings'] as num?)?.toInt(),
+        battingTeamId: json['battingTeamId']?.toString(),
         over: (json['over'] as num?)?.toDouble(),
       );
 }
@@ -286,44 +289,47 @@ class CricketMatch {
         'resultText': resultText,
       };
 
-  factory CricketMatch.fromJson(Map<String, dynamic> json) => CricketMatch(
-        id: json['id'],
-        tournamentId: json['tournamentId'],
-        teamA: Team.fromJson(json['teamA']),
-        teamB: Team.fromJson(json['teamB']),
-        matchType: json['matchType'],
-        venue: json['venue'],
-        date: json['date'],
-        time: json['time'],
-        status: json['status'] ?? 'Upcoming',
-        tossWinner: json['tossWinner'] ?? '',
-        tossDecision: json['tossDecision'] ?? '',
-        battingTeamId: json['battingTeamId'] ?? '',
-        playingXI_A: (json['playingXI_A'] as List)
-            .map((p) => Player.fromJson(p))
-            .toList(),
-        playingXI_B: (json['playingXI_B'] as List)
-            .map((p) => Player.fromJson(p))
-            .toList(),
-        runsA: json['runsA'] ?? 0,
-        wicketsA: json['wicketsA'] ?? 0,
+  factory CricketMatch.fromJson(Map<dynamic, dynamic> json) => CricketMatch(
+        id: json['id']?.toString() ?? '',
+        tournamentId: json['tournamentId']?.toString(),
+        teamA: Team.fromJson(json['teamA'] is Map ? json['teamA'] as Map : {}),
+        teamB: Team.fromJson(json['teamB'] is Map ? json['teamB'] as Map : {}),
+        matchType: json['matchType']?.toString() ?? 'T20',
+        venue: json['venue']?.toString() ?? '',
+        date: json['date']?.toString() ?? '',
+        time: json['time']?.toString() ?? '',
+        status: json['status']?.toString() ?? 'Upcoming',
+        tossWinner: json['tossWinner']?.toString() ?? '',
+        tossDecision: json['tossDecision']?.toString() ?? '',
+        battingTeamId: json['battingTeamId']?.toString() ?? '',
+        playingXI_A: (json['playingXI_A'] as List?)
+                ?.map((p) => Player.fromJson(p is Map ? p : {}))
+                .toList() ??
+            [],
+        playingXI_B: (json['playingXI_B'] as List?)
+                ?.map((p) => Player.fromJson(p is Map ? p : {}))
+                .toList() ??
+            [],
+        runsA: (json['runsA'] as num?)?.toInt() ?? 0,
+        wicketsA: (json['wicketsA'] as num?)?.toInt() ?? 0,
         oversA: (json['oversA'] as num?)?.toDouble() ?? 0.0,
-        runsB: json['runsB'] ?? 0,
-        wicketsB: json['wicketsB'] ?? 0,
+        runsB: (json['runsB'] as num?)?.toInt() ?? 0,
+        wicketsB: (json['wicketsB'] as num?)?.toInt() ?? 0,
         oversB: (json['oversB'] as num?)?.toDouble() ?? 0.0,
-        target: json['target'] ?? 0,
-        scorerUsername: json['scorerUsername'] ?? '',
-        scorerPassword: json['scorerPassword'] ?? '',
-        currentStrikerId: json['currentStrikerId'] ?? '',
-        currentNonStrikerId: json['currentNonStrikerId'] ?? '',
-        currentBowlerId: json['currentBowlerId'] ?? '',
-        balls: (json['balls'] as List)
-            .map((b) => BallRecord.fromJson(b))
-            .toList(),
+        target: (json['target'] as num?)?.toInt() ?? 0,
+        scorerUsername: json['scorerUsername']?.toString() ?? '',
+        scorerPassword: json['scorerPassword']?.toString() ?? '',
+        currentStrikerId: json['currentStrikerId']?.toString() ?? '',
+        currentNonStrikerId: json['currentNonStrikerId']?.toString() ?? '',
+        currentBowlerId: json['currentBowlerId']?.toString() ?? '',
+        balls: (json['balls'] as List?)
+                ?.map((b) => BallRecord.fromJson(b is Map ? b : {}))
+                .toList() ??
+            [],
         isFirstInnings: json['isFirstInnings'] ?? true,
-        winnerTeamId: json['winnerTeamId'] ?? '',
-        winnerName: json['winnerName'] ?? '',
-        resultText: json['resultText'] ?? '',
+        winnerTeamId: json['winnerTeamId']?.toString() ?? '',
+        winnerName: json['winnerName']?.toString() ?? '',
+        resultText: json['resultText']?.toString() ?? '',
       );
 }
 

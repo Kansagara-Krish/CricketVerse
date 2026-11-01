@@ -10,11 +10,41 @@ async function getFullMatchData(matchId: string) {
   const match = await MatchModel.findOne({ id: matchId }).lean();
   if (!match) return null;
 
+  const teamAId = match.teamAId || match.teamA?.id;
+  const teamBId = match.teamBId || match.teamB?.id;
+
+  const [teamA, teamB] = await Promise.all([
+    teamAId ? TeamModel.findOne({ id: teamAId }).lean() : null,
+    teamBId ? TeamModel.findOne({ id: teamBId }).lean() : null,
+  ]);
+
+  const syncPlayerList = (xi: any[], teamPlayers: any[]) => {
+    if (!Array.isArray(xi)) return [];
+    if (!Array.isArray(teamPlayers) || teamPlayers.length === 0) return xi;
+    const playerMap = new Map<string, any>(teamPlayers.map((p: any) => [p.id, p]));
+    return xi.map((p: any) => {
+      const live = playerMap.get(p.id);
+      return live
+        ? {
+            ...p,
+            name: live.name,
+            role: live.role,
+            nationality: live.nationality || p.nationality,
+            isCaptain: live.isCaptain ?? p.isCaptain,
+            isViceCaptain: live.isViceCaptain ?? p.isViceCaptain,
+          }
+        : p;
+    });
+  };
+
+  const xiA = syncPlayerList(match.playingXI_A, teamA?.players);
+  const xiB = syncPlayerList(match.playingXI_B, teamB?.players);
+
   return {
     id: match.id,
     tournamentId: match.tournamentId,
-    teamA: match.teamA,
-    teamB: match.teamB,
+    teamA: teamA || match.teamA,
+    teamB: teamB || match.teamB,
     matchType: match.matchType,
     venue: match.venue,
     date: match.date,
@@ -23,8 +53,8 @@ async function getFullMatchData(matchId: string) {
     tossWinner: match.tossWinner || '',
     tossDecision: match.tossDecision || '',
     battingTeamId: match.battingTeamId || '',
-    playingXI_A: match.playingXI_A || [],
-    playingXI_B: match.playingXI_B || [],
+    playingXI_A: xiA,
+    playingXI_B: xiB,
     runsA: match.runsA || 0,
     wicketsA: match.wicketsA || 0,
     oversA: Number(match.oversA || 0.0),
@@ -65,6 +95,31 @@ async function getFullMatchData(matchId: string) {
 export async function getMatches(req: Request, res: Response) {
   try {
     const list = await MatchModel.find().lean();
+    const teams = await TeamModel.find().lean();
+    const teamPlayerMap = new Map<string, any>();
+    teams.forEach((t: any) => {
+      (t.players || []).forEach((p: any) => {
+        teamPlayerMap.set(p.id, p);
+      });
+    });
+
+    const syncXI = (xi: any[]) => {
+      if (!Array.isArray(xi)) return [];
+      return xi.map((p: any) => {
+        const live = teamPlayerMap.get(p.id);
+        return live
+          ? {
+              ...p,
+              name: live.name,
+              role: live.role,
+              nationality: live.nationality || p.nationality,
+              isCaptain: live.isCaptain ?? p.isCaptain,
+              isViceCaptain: live.isViceCaptain ?? p.isViceCaptain,
+            }
+          : p;
+      });
+    };
+
     const formatted = list.map((match: any) => ({
       id: match.id,
       tournamentId: match.tournamentId,
@@ -78,8 +133,8 @@ export async function getMatches(req: Request, res: Response) {
       tossWinner: match.tossWinner || '',
       tossDecision: match.tossDecision || '',
       battingTeamId: match.battingTeamId || '',
-      playingXI_A: match.playingXI_A || [],
-      playingXI_B: match.playingXI_B || [],
+      playingXI_A: syncXI(match.playingXI_A),
+      playingXI_B: syncXI(match.playingXI_B),
       runsA: match.runsA || 0,
       wicketsA: match.wicketsA || 0,
       oversA: Number(match.oversA || 0.0),

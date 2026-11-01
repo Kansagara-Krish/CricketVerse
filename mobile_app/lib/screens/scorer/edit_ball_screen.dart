@@ -53,7 +53,9 @@ class _EditBallScreenState extends State<EditBallScreen> {
       }
 
       // Revert batsman
-      final batPlayers = isTeamABatting ? match.teamA.players : match.teamB.players;
+      final batPlayers = isTeamABatting
+          ? (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players)
+          : (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players);
       for (var p in batPlayers) {
         if (p.id == ball.strikerId || p.name == ball.batsmanName) {
           if (ball.extraType == 'None' || ball.extraType == 'No Ball') {
@@ -66,7 +68,9 @@ class _EditBallScreenState extends State<EditBallScreen> {
       }
 
       // Revert bowler
-      final bowlPlayers = isTeamABatting ? match.teamB.players : match.teamA.players;
+      final bowlPlayers = isTeamABatting
+          ? (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players)
+          : (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players);
       for (var p in bowlPlayers) {
         if (p.id == ball.bowlerId || p.name == ball.bowlerName) {
           if (ball.extraType == 'None' || ball.extraType == 'Wide' || ball.extraType == 'No Ball') {

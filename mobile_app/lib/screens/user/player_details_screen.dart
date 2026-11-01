@@ -87,7 +87,7 @@ class PlayerDetailsScreen extends StatelessWidget {
                     _buildStatRow('Strike Rate', strikeRate.toStringAsFixed(1)),
                     if (player.role == 'All-rounder') const Divider(color: Color(0x1A0F172A)),
                   ],
-                  if (player.role != 'Batter') ...[
+                  if (player.role == 'Bowler' || player.role == 'All-rounder') ...[
                     _buildStatRow('Wickets Taken', '${player.wicketsTaken}'),
                     const Divider(color: Color(0x1A0F172A)),
                     _buildStatRow('Runs Conceded', '${player.runsConceded}'),

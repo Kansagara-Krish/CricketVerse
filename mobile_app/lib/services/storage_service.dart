@@ -65,8 +65,22 @@ class StorageService with ChangeNotifier {
     SocketService.listenToMatchUpdates((data) {
       try {
         final updatedMatch = CricketMatch.fromJson(data);
+        final teamMap = {for (var t in _teams) t.id: t};
+        _syncSingleMatchWithTeams(updatedMatch, teamMap);
+
         final idx = _matches.indexWhere((m) => m.id == updatedMatch.id);
         if (idx != -1) {
+          final existing = _matches[idx];
+          // Preserve local in-flight active pitch IDs if backend payload had them empty
+          if (updatedMatch.currentStrikerId.isEmpty && existing.currentStrikerId.isNotEmpty) {
+            updatedMatch.currentStrikerId = existing.currentStrikerId;
+          }
+          if (updatedMatch.currentNonStrikerId.isEmpty && existing.currentNonStrikerId.isNotEmpty) {
+            updatedMatch.currentNonStrikerId = existing.currentNonStrikerId;
+          }
+          if (updatedMatch.currentBowlerId.isEmpty && existing.currentBowlerId.isNotEmpty) {
+            updatedMatch.currentBowlerId = existing.currentBowlerId;
+          }
           _matches[idx] = updatedMatch;
         } else {
           _matches.add(updatedMatch);
@@ -77,12 +91,184 @@ class StorageService with ChangeNotifier {
         debugPrint('Error handling global socket match update: $e');
       }
     });
+
+    SocketService.listenToTeamUpdates((data) {
+      try {
+        final updatedTeam = Team.fromJson(data);
+        final tIdx = _teams.indexWhere((t) => t.id == updatedTeam.id);
+        if (tIdx != -1) {
+          _teams[tIdx] = updatedTeam;
+        } else {
+          _teams.add(updatedTeam);
+        }
+
+        // Live sync squad to all matches containing this team
+        _syncAllMatchesWithLatestTeams();
+        _recalculatePlayerStats();
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Error handling global socket team update: $e');
+      }
+    });
+
+    // Auto-refresh active match if socket reconnects
+    SocketService.addReconnectListener(() {
+      if (_activeScorerMatchId != null) {
+        debugPrint('Socket reconnected: refreshing active match $_activeScorerMatchId');
+        refreshMatch(_activeScorerMatchId!);
+      }
+    });
+  }
+
+  void _syncSingleMatchWithTeams(CricketMatch m, Map<String, Team> teamMap) {
+    // 1. Sync Team A
+    final liveA = teamMap[m.teamA.id];
+    if (liveA != null) {
+      m.teamA.name = liveA.name;
+      m.teamA.shortName = liveA.shortName;
+      m.teamA.players.clear();
+      m.teamA.players.addAll(liveA.players);
+
+      final livePlayerMapA = {for (var p in liveA.players) p.id: p};
+      final existingXI = List<Player>.from(m.playingXI_A);
+      final updatedXiA = <Player>[];
+      final seenIdsA = <String>{};
+
+      for (var p in existingXI) {
+        final live = livePlayerMapA[p.id];
+        if (live != null) {
+          updatedXiA.add(Player(
+            id: p.id,
+            name: live.name,
+            role: live.role,
+            nationality: live.nationality,
+            isCaptain: live.isCaptain,
+            isViceCaptain: live.isViceCaptain,
+            runsScored: p.runsScored,
+            ballsFaced: p.ballsFaced,
+            wicketsTaken: p.wicketsTaken,
+            runsConceded: p.runsConceded,
+            oversBowled: p.oversBowled,
+            matchesPlayed: p.matchesPlayed,
+            isOut: p.isOut,
+            dismissalInfo: p.dismissalInfo,
+          ));
+        } else {
+          final hasParticipated = (p.runsScored > 0) ||
+              (p.ballsFaced > 0) ||
+              (p.oversBowled > 0) ||
+              p.isOut ||
+              (p.id == m.currentStrikerId) ||
+              (p.id == m.currentNonStrikerId) ||
+              (p.id == m.currentBowlerId);
+          if (hasParticipated) {
+            updatedXiA.add(p);
+          }
+        }
+        seenIdsA.add(p.id);
+      }
+
+      for (var lp in liveA.players) {
+        if (!seenIdsA.contains(lp.id)) {
+          updatedXiA.add(lp);
+          seenIdsA.add(lp.id);
+        }
+      }
+      m.playingXI_A = updatedXiA;
+    }
+
+    // 2. Sync Team B
+    final liveB = teamMap[m.teamB.id];
+    if (liveB != null) {
+      m.teamB.name = liveB.name;
+      m.teamB.shortName = liveB.shortName;
+      m.teamB.players.clear();
+      m.teamB.players.addAll(liveB.players);
+
+      final livePlayerMapB = {for (var p in liveB.players) p.id: p};
+      final existingXI = List<Player>.from(m.playingXI_B);
+      final updatedXiB = <Player>[];
+      final seenIdsB = <String>{};
+
+      for (var p in existingXI) {
+        final live = livePlayerMapB[p.id];
+        if (live != null) {
+          updatedXiB.add(Player(
+            id: p.id,
+            name: live.name,
+            role: live.role,
+            nationality: live.nationality,
+            isCaptain: live.isCaptain,
+            isViceCaptain: live.isViceCaptain,
+            runsScored: p.runsScored,
+            ballsFaced: p.ballsFaced,
+            wicketsTaken: p.wicketsTaken,
+            runsConceded: p.runsConceded,
+            oversBowled: p.oversBowled,
+            matchesPlayed: p.matchesPlayed,
+            isOut: p.isOut,
+            dismissalInfo: p.dismissalInfo,
+          ));
+        } else {
+          final hasParticipated = (p.runsScored > 0) ||
+              (p.ballsFaced > 0) ||
+              (p.oversBowled > 0) ||
+              p.isOut ||
+              (p.id == m.currentStrikerId) ||
+              (p.id == m.currentNonStrikerId) ||
+              (p.id == m.currentBowlerId);
+          if (hasParticipated) {
+            updatedXiB.add(p);
+          }
+        }
+        seenIdsB.add(p.id);
+      }
+
+      for (var lp in liveB.players) {
+        if (!seenIdsB.contains(lp.id)) {
+          updatedXiB.add(lp);
+          seenIdsB.add(lp.id);
+        }
+      }
+      m.playingXI_B = updatedXiB;
+    }
+
+    // 3. Update player names in ball records
+    final allPlayersMap = <String, Player>{};
+    if (liveA != null) {
+      for (var p in liveA.players) {
+        allPlayersMap[p.id] = p;
+      }
+    }
+    if (liveB != null) {
+      for (var p in liveB.players) {
+        allPlayersMap[p.id] = p;
+      }
+    }
+    for (var ball in m.balls) {
+      if (ball.strikerId != null && allPlayersMap.containsKey(ball.strikerId)) {
+        ball.batsmanName = allPlayersMap[ball.strikerId]!.name;
+      }
+      if (ball.bowlerId != null && allPlayersMap.containsKey(ball.bowlerId)) {
+        ball.bowlerName = allPlayersMap[ball.bowlerId]!.name;
+      }
+    }
+  }
+
+  void _syncAllMatchesWithLatestTeams() {
+    if (_teams.isEmpty) return;
+    final teamMap = {for (var t in _teams) t.id: t};
+    for (var m in _matches) {
+      _syncSingleMatchWithTeams(m, teamMap);
+    }
   }
 
   Future<CricketMatch?> refreshMatch(String matchId) async {
     try {
       final remote = await ApiService.getMatchById(matchId);
       if (remote != null) {
+        final teamMap = {for (var t in _teams) t.id: t};
+        _syncSingleMatchWithTeams(remote, teamMap);
         final idx = _matches.indexWhere((m) => m.id == matchId);
         if (idx != -1) {
           _matches[idx] = remote;
@@ -117,6 +303,8 @@ class StorageService with ChangeNotifier {
 
       final remoteManagers = await ApiService.getManagers();
       _managers = remoteManagers;
+
+      _syncAllMatchesWithLatestTeams();
 
       _recalculatePlayerStats();
       notifyListeners();
@@ -371,9 +559,12 @@ class StorageService with ChangeNotifier {
   void addPlayer(String teamId, Player player) async {
     for (var t in _teams) {
       if (t.id == teamId) {
+        t.players.removeWhere((p) => p.id == player.id);
         t.players.add(player);
       }
     }
+    _syncAllMatchesWithLatestTeams();
+    _recalculatePlayerStats();
     notifyListeners();
 
     final ok = await ApiService.addPlayer(teamId, player);
@@ -388,9 +579,13 @@ class StorageService with ChangeNotifier {
         final idx = t.players.indexWhere((p) => p.id == updatedPlayer.id);
         if (idx != -1) {
           t.players[idx] = updatedPlayer;
+        } else {
+          t.players.add(updatedPlayer);
         }
       }
     }
+    _syncAllMatchesWithLatestTeams();
+    _recalculatePlayerStats();
     notifyListeners();
 
     final ok = await ApiService.updatePlayer(updatedPlayer);
@@ -399,26 +594,31 @@ class StorageService with ChangeNotifier {
     }
   }
 
-  void removePlayer(String teamId, String playerId) async {
+  Future<String?> removePlayer(String teamId, String playerId) async {
+    // Safety check: Cannot remove player if actively participating in live match
+    for (var m in _matches) {
+      if (m.status == 'Live') {
+        if (m.currentStrikerId == playerId || m.currentNonStrikerId == playerId || m.currentBowlerId == playerId) {
+          return 'Cannot delete this player while they are actively batting or bowling in an ongoing Live match. Please change the active batsman/bowler first.';
+        }
+      }
+    }
+
+    final ok = await ApiService.removePlayer(playerId);
+    if (!ok) {
+      return 'Failed to remove player. Please check your internet connection and try again.';
+    }
+
     for (var t in _teams) {
       if (t.id == teamId) {
         t.players.removeWhere((p) => p.id == playerId);
       }
     }
-    for (var m in _matches) {
-      if (m.teamA.id == teamId) {
-        m.teamA.players.removeWhere((p) => p.id == playerId);
-      }
-      if (m.teamB.id == teamId) {
-        m.teamB.players.removeWhere((p) => p.id == playerId);
-      }
-    }
+    _syncAllMatchesWithLatestTeams();
+    _recalculatePlayerStats();
     notifyListeners();
-
-    final ok = await ApiService.removePlayer(playerId);
-    if (ok) {
-      await loadData();
-    }
+    await loadData();
+    return null;
   }
 
   void scheduleMatch({
@@ -516,7 +716,13 @@ class StorageService with ChangeNotifier {
   }
 
   void setActiveScorerMatchId(String? matchId) {
+    if (_activeScorerMatchId != null && _activeScorerMatchId != matchId) {
+      unsubscribeFromMatchLiveUpdates(_activeScorerMatchId!);
+    }
     _activeScorerMatchId = matchId;
+    if (matchId != null) {
+      subscribeToMatchLiveUpdates(matchId);
+    }
     notifyListeners();
   }
 
@@ -530,7 +736,7 @@ class StorageService with ChangeNotifier {
     }
   }
 
-  void updateScore({
+  Future<bool> updateScore({
     required int runs,
     required String extraType,
     required int extraRuns,
@@ -539,8 +745,9 @@ class StorageService with ChangeNotifier {
     String? dismissedPlayerId,
     String? newBatsmanId,
     String? newBatsmanPosition,
+    String? idempotencyKey,
   }) async {
-    if (_activeScorerMatchId == null) return;
+    if (_activeScorerMatchId == null) return false;
 
     try {
       final updated = await ApiService.updateScore(
@@ -553,6 +760,7 @@ class StorageService with ChangeNotifier {
         dismissedPlayerId: dismissedPlayerId,
         newBatsmanId: newBatsmanId,
         newBatsmanPosition: newBatsmanPosition,
+        idempotencyKey: idempotencyKey,
       );
       if (updated != null) {
         final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
@@ -560,18 +768,26 @@ class StorageService with ChangeNotifier {
 
         _recalculatePlayerStats();
         notifyListeners();
+        return true;
       }
+      return false;
     } catch (e) {
       debugPrint('updateScore error: $e');
+      return false;
     }
   }
 
   void switchBowler(String newBowlerId) async {
     if (_activeScorerMatchId == null) return;
+    final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    if (idx != -1) {
+      _matches[idx].currentBowlerId = newBowlerId;
+      notifyListeners();
+    }
     final updated = await ApiService.switchBowler(_activeScorerMatchId!, newBowlerId);
     if (updated != null) {
-      final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-      if (idx != -1) _matches[idx] = updated;
+      final currentIdx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+      if (currentIdx != -1) _matches[currentIdx] = updated;
       notifyListeners();
     }
   }
@@ -581,6 +797,7 @@ class StorageService with ChangeNotifier {
     final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
     if (idx != -1) {
       _matches[idx].currentStrikerId = strikerId;
+      saveMatchesState();
       notifyListeners();
     }
   }
@@ -590,6 +807,16 @@ class StorageService with ChangeNotifier {
     final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
     if (idx != -1) {
       _matches[idx].currentNonStrikerId = nonStrikerId;
+      saveMatchesState();
+      notifyListeners();
+    }
+  }
+
+  void setTarget(int target) {
+    if (_activeScorerMatchId == null) return;
+    final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    if (idx != -1) {
+      _matches[idx].target = target;
       notifyListeners();
     }
   }
@@ -710,16 +937,17 @@ class StorageService with ChangeNotifier {
     }
   }
 
-  void undoLastBall() async {
+  Future<bool> undoLastBall({String? idempotencyKey}) async {
     _delayedCommentaryTimer?.cancel();
     ElevenLabsService().stopAudio();
-    if (_activeScorerMatchId == null) return;
-    final updated = await ApiService.undoLastBall(_activeScorerMatchId!);
+    if (_activeScorerMatchId == null) return false;
+    final updated = await ApiService.undoLastBall(_activeScorerMatchId!, idempotencyKey: idempotencyKey);
     if (updated != null) {
       final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
       if (idx != -1) _matches[idx] = updated;
       _recalculatePlayerStats();
       notifyListeners();
+      return true;
     } else {
       // Offline fallback: Revert locally
       final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
@@ -758,7 +986,9 @@ class StorageService with ChangeNotifier {
 
         _recalculatePlayerStats();
         notifyListeners();
+        return true;
       }
+      return false;
     }
   }
 

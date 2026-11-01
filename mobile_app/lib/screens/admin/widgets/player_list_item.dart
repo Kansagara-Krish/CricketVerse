@@ -149,7 +149,8 @@ class PlayerListItem extends StatelessWidget {
                   const SizedBox(width: 10),
 
                   // Score / Stats representation
-                  if (player.role == 'All-rounder')
+                  if (player.role.toLowerCase().contains('all') ||
+                      (player.role.toLowerCase().contains('bat') && player.role.toLowerCase().contains('bowl')))
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -171,7 +172,7 @@ class PlayerListItem extends StatelessWidget {
                         ),
                       ],
                     )
-                  else if (player.role == 'Bowler')
+                  else if (player.role.toLowerCase().contains('bowl') && !player.role.toLowerCase().contains('keep'))
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -185,6 +186,30 @@ class PlayerListItem extends StatelessWidget {
                         ),
                         Text(
                           'wickets',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            color: AppTheme.textMuted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (player.role.toLowerCase().contains('keep') || player.role.toLowerCase().contains('wk'))
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          player.role.toLowerCase().contains('bowl')
+                              ? '${player.wicketsTaken}W • ${player.runsScored}R'
+                              : '${player.runsScored}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: player.role.toLowerCase().contains('bowl') ? 13 : 16,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF7C3AED),
+                          ),
+                        ),
+                        Text(
+                          player.role.toLowerCase().contains('bowl') ? 'wk • bowler' : 'runs • wk',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 9,
                             color: AppTheme.textMuted,

@@ -43,6 +43,15 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           _startCtrl.text = args['start'] ?? '';
           _endCtrl.text = args['end'] ?? '';
           _format = args['format'] ?? 'T20';
+          if (args['knockoutType'] != null) {
+            _knockoutType = args['knockoutType'];
+          }
+          if (args['participatingTeamIds'] is List) {
+            _selectedTeams.clear();
+            _selectedTeams.addAll(
+              (args['participatingTeamIds'] as List).map((e) => e.toString()),
+            );
+          }
         });
       }
     });
@@ -79,6 +88,18 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         controller.text = formatted;
       });
     }
+  }
+
+  void _handleSubmissionSuccess(bool isEdit, String name) {
+    if (!mounted) return;
+    CustomNotification.show(
+      context,
+      isEdit
+          ? 'Tournament "$name" updated successfully!'
+          : 'Tournament "$name" created successfully!',
+      type: NotificationType.success,
+    );
+    Navigator.of(context).pop();
   }
 
   @override
@@ -292,68 +313,163 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _Label('PARTICIPATING TEAMS'),
-                    const SizedBox(height: 10),
-                    ...storage.teams.map((team) {
-                      final color = Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7);
-                      final selected = _selectedTeams.contains(team.id);
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          if (selected) {
-                            _selectedTeams.remove(team.id);
-                          } else {
-                            _selectedTeams.add(team.id);
-                          }
-                        }),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: selected ? color.withValues(alpha: 0.08) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: selected ? color.withValues(alpha: 0.4) : const Color(0xFFE2E8F0),
-                              width: selected ? 1.5 : 1,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _Label('PARTICIPATING TEAMS (${_selectedTeams.length} Selected)'),
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedTeams.clear();
+                                  _selectedTeams.addAll(storage.teams.map((t) => t.id));
+                                });
+                              },
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: Text(
+                                'Select All',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.01),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedTeams.clear();
+                                });
+                              },
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: color.withValues(alpha: 0.12),
-                                child: Text(
-                                  team.shortName.length >= 2 ? team.shortName.substring(0, 2) : team.shortName,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: color,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              child: Text(
+                                'Clear',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFEF4444),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  team.name,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    color: AppTheme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              if (selected) Icon(Icons.check_circle_rounded, color: color, size: 18),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose specific teams that will play in this tournament.',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary),
+                    ),
+                    const SizedBox(height: 10),
+                    if (storage.teams.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'No teams available yet. Please create teams first.',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
                           ),
                         ),
-                      );
-                    }),
+                      )
+                    else
+                      ...storage.teams.map((team) {
+                        final color = Color(int.tryParse(team.logoColorHex) ?? 0xFF0284C7);
+                        final selected = _selectedTeams.contains(team.id);
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            if (selected) {
+                              _selectedTeams.remove(team.id);
+                            } else {
+                              _selectedTeams.add(team.id);
+                            }
+                          }),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: selected ? color.withValues(alpha: 0.08) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? color.withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
+                                width: selected ? 1.5 : 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.01),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: color.withValues(alpha: 0.12),
+                                  child: Text(
+                                    team.shortName.length >= 2 ? team.shortName.substring(0, 2) : team.shortName,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: color,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        team.name,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          color: AppTheme.textPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${team.players.length} Players',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: selected ? color : Colors.transparent,
+                                    border: Border.all(
+                                      color: selected ? color : const Color(0xFFCBD5E1),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: selected
+                                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -418,16 +534,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                 await storage.addTournament(newTourn);
                               }
 
-                              if (mounted) {
-                                CustomNotification.show(
-                                  context,
-                                  _isEdit
-                                      ? 'Tournament "${_nameCtrl.text}" updated successfully!'
-                                      : 'Tournament "${_nameCtrl.text}" created successfully!',
-                                  type: NotificationType.success,
-                                );
-                                Navigator.pop(context);
-                              }
+                              _handleSubmissionSuccess(_isEdit, _nameCtrl.text);
                             } finally {
                               if (mounted) {
                                 setState(() => _isSubmitting = false);

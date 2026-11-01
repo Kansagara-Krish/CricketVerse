@@ -25,7 +25,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   String _search = '';
   String _roleFilter = 'All';
 
-  final _roles = ['All', 'Batter', 'All-rounder', 'Bowler'];
+  final _roles = ['All', 'Batsman', 'Bowler', 'All-rounder', 'Wicket Keeper'];
 
   void _confirmDeletePlayer(BuildContext context, StorageService storage, _PlayerWithTeam pw) async {
     final confirmed = await ConfirmDialog.show(
@@ -37,12 +37,22 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      storage.removePlayer(pw.teamId, pw.player.id);
-      CustomNotification.show(
-        context,
-        'Player "${pw.player.name}" deleted successfully.',
-        type: NotificationType.success,
-      );
+      final error = await storage.removePlayer(pw.teamId, pw.player.id);
+      if (context.mounted) {
+        if (error != null) {
+          CustomNotification.show(
+            context,
+            error,
+            type: NotificationType.warning,
+          );
+        } else {
+          CustomNotification.show(
+            context,
+            'Player "${pw.player.name}" deleted successfully.',
+            type: NotificationType.success,
+          );
+        }
+      }
     }
   }
 
@@ -54,7 +64,10 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
         .where((pw) {
       final matchesSearch = pw.player.name.toLowerCase().contains(_search.toLowerCase()) ||
           pw.player.nationality.toLowerCase().contains(_search.toLowerCase());
-      final matchesRole = _roleFilter == 'All' || pw.player.role == _roleFilter;
+      final matchesRole = _roleFilter == 'All' ||
+          pw.player.role == _roleFilter ||
+          (_roleFilter == 'Batsman' && (pw.player.role == 'Batter' || pw.player.role == 'Batsman')) ||
+          (_roleFilter == 'Wicket Keeper' && (pw.player.role == 'Wicket Keeper' || pw.player.role == 'Wicketkeeper'));
       return matchesSearch && matchesRole;
     }).toList();
 
@@ -117,13 +130,15 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: _roles.map((r) {
                 final selected = _roleFilter == r;
-                final col = r == 'Batter'
+                final col = (r == 'Batter' || r == 'Batsman')
                     ? AppTheme.primaryBlue
                     : r == 'Bowler'
                         ? AppTheme.accentRed
                         : r == 'All-rounder'
                             ? AppTheme.accentGold
-                            : AppTheme.textPrimary;
+                            : r == 'Wicket Keeper'
+                                ? AppTheme.accentPurple
+                                : AppTheme.textPrimary;
 
                 return GestureDetector(
                   onTap: () => setState(() => _roleFilter = r),
