@@ -56,6 +56,14 @@ export function initSocketIO(server: any) {
       }
     });
 
+    // Relay milestone celebrations from clients to the match room & globally
+    socket.on('milestone_celebration', (data: any) => {
+      if (data && data.matchId) {
+        console.log(`[MILESTONE_DEBUG] Socket received client milestone_celebration relay request:`, data.type, data.batsmanName);
+        broadcastMilestoneCelebration(data.matchId, data);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
     });
@@ -103,5 +111,15 @@ export function sendUserNotification(userId: string, payload: { title: string; m
     console.log(`Sent targeted notification to user:${userId} -> ${payload.title}`);
   } else {
     console.warn('Socket.IO instance not initialized. User notification skipped.');
+  }
+}
+
+export function broadcastMilestoneCelebration(matchId: string, payload: any) {
+  if (ioInstance) {
+    ioInstance.to(`match:${matchId}`).emit('milestone_celebration', payload);
+    ioInstance.emit('milestone_celebration', payload);
+    console.log(`🎉 Broadcasted milestone_celebration for match:${matchId}:`, payload.type, payload.batsmanName);
+  } else {
+    console.warn('Socket.IO instance not initialized. Milestone broadcast skipped.');
   }
 }

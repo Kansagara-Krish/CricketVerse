@@ -12,50 +12,50 @@ class AppConstants {
 
   // ─── Commentary Pool ────────────────────────────────────────────────────────
   static const List<String> sixCommentary = [
-    "🎯 SIX! The ball sails over long-on! Incredible power from the batsman!",
+    "🎯 SIX! The ball sails high into the stands! Incredible power from the batsman!",
     "💥 MAXIMUM! That's out of the stadium! What a clean strike!",
     "🚀 SIX RUNS! Picked up off the pads and dispatched into the crowd!",
     "⚡ MONSTER SIX! Down the ground with absolute authority!",
-    "🌟 HUGE SIX! Over deep midwicket — the crowd goes absolutely wild!",
+    "🌟 HUGE SIX! Smashed high and handsome — the crowd goes absolutely wild!",
     "🎆 TOWERING SIX! Smashed straight back over the bowler's head!",
   ];
 
   static const List<String> fourCommentary = [
-    "🔥 FOUR! Beautiful shot! Races to the boundary at third man!",
-    "💫 BOUNDARY! Cracking cover drive — beats the fielder easily!",
+    "🔥 FOUR! Beautiful shot! Pierces the outfield gap and races to the boundary!",
+    "💫 BOUNDARY! Cracking stroke — timed to perfection to beat the chase!",
     "⚡ FOUR RUNS! Short and wide, cut away elegantly to the fence!",
-    "✨ FOUR! Driven through extra cover with pure elegance!",
-    "🎯 BOUNDARY! Flicked off the hips, races to the fine leg rope!",
+    "✨ FOUR! Driven with pure elegance through the boundary gap!",
+    "🎯 BOUNDARY! Flicked with sublime wrist-work, races away to the rope!",
   ];
 
   static const List<String> singleCommentary = [
-    "• Quick single. Pushed to mid-off and the batsmen cross comfortably.",
-    "• Soft hands to third man. They jog through for one.",
-    "• Tucked away to square leg, easy single.",
-    "• Driven to long-off and the batsmen scamper through.",
-    "• Nudged to midwicket, comfortable single taken.",
+    "• Quick single. Crisp push into the gap and the batsmen cross comfortably.",
+    "• Soft hands into the outfield. They jog through for one.",
+    "• Tucked away neatly, easy single taken to rotate strike.",
+    "• Driven down the pitch and the batsmen scamper through.",
+    "• Nudged into the vacant area, comfortable single taken.",
   ];
 
   static const List<String> dotCommentary = [
-    "◆ Dot ball. Good length delivery played back to the bowler.",
-    "◆ Excellent delivery! Batsman beaten outside the off stump!",
-    "◆ Defended solidly. No run.",
+    "◆ Dot ball. Good length delivery played defensively back to the bowler.",
+    "◆ Excellent delivery! Batsman beaten by the sharp movement!",
+    "◆ Defended solidly off the front foot. No run.",
     "◆ Misses the drive — keeper takes it cleanly.",
-    "◆ Short ball, ducked under. No run.",
+    "◆ Fierce bouncer, ducked under. No run.",
   ];
 
   static const List<String> wicketCommentary = [
     "🔴 WICKET! Clean bowled! The stumps are shattered! Brilliant delivery!",
-    "🔴 OUT! Caught at the boundary — superb catch! Walks back in disbelief!",
-    "🔴 LBW! Plumb in front! The finger goes up immediately!",
+    "🔴 OUT! Caught in the outfield — superb catch! The batsman must depart!",
+    "🔴 LBW! Plumb in front! The umpire's finger goes up immediately!",
     "🔴 RUN OUT! Direct hit! The batsman is yards short of the crease!",
-    "🔴 CAUGHT BEHIND! Thin edge and the keeper pouches it!",
-    "🔴 STUMPED! Quick as lightning — the bails are off before the foot is in!",
+    "🔴 CAUGHT BEHIND! Thin edge and the keeper pouches it cleanly!",
+    "🔴 STUMPED! Quick as lightning — the bails are whipped off in a flash!",
   ];
 
   static const List<String> wideCommentary = [
-    "Wide ball! Strays down the leg side, the batsman lets it go.",
-    "Wide! The ball misses the tramline on the off side.",
+    "Wide ball! Strays beyond the tramline, the batsman lets it go.",
+    "Wide! The ball misses the radar outside the tramline.",
     "Called wide. Umpire signals immediately — extra run added.",
   ];
 

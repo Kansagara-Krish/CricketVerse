@@ -311,6 +311,7 @@ export async function resetMatch(req: Request, res: Response) {
     match.currentNonStrikerId = nonStrikerId;
     match.currentBowlerId = bowlerId;
     match.balls = [];
+    match.celebratedMilestones = [];
 
     // Reset all player stats within this match
     const resetPlayerStats = (arr: any[]) => {
@@ -334,6 +335,7 @@ export async function resetMatch(req: Request, res: Response) {
     match.markModified('teamA');
     match.teamB && match.markModified('teamB');
     match.markModified('balls');
+    match.markModified('celebratedMilestones');
 
     await match.save();
     await invalidateCachedMatch(id);

@@ -85,6 +85,11 @@ class StorageService with ChangeNotifier {
         } else {
           _matches.add(updatedMatch);
         }
+
+        if (updatedMatch.latestMilestone != null) {
+          SocketService.dispatchMilestone(updatedMatch.latestMilestone!.toJson());
+        }
+
         _recalculatePlayerStats();
         notifyListeners();
       } catch (e) {
@@ -274,6 +279,9 @@ class StorageService with ChangeNotifier {
           _matches[idx] = remote;
         } else {
           _matches.add(remote);
+        }
+        if (remote.latestMilestone != null) {
+          SocketService.dispatchMilestone(remote.latestMilestone!.toJson());
         }
         _recalculatePlayerStats();
         notifyListeners();
@@ -736,6 +744,39 @@ class StorageService with ChangeNotifier {
     }
   }
 
+  final Set<String> _localCelebratedMilestones = {};
+
+  Player? _findMatchPlayer(CricketMatch match, String playerId) {
+    if (playerId.isEmpty) return null;
+    final normalized = playerId.trim().toLowerCase();
+
+    // 1. Search playingXI_A (live match state)
+    for (final p in match.playingXI_A) {
+      if (p.id.trim().toLowerCase() == normalized || p.name.trim().toLowerCase() == normalized) {
+        return p;
+      }
+    }
+    // 2. Search playingXI_B (live match state)
+    for (final p in match.playingXI_B) {
+      if (p.id.trim().toLowerCase() == normalized || p.name.trim().toLowerCase() == normalized) {
+        return p;
+      }
+    }
+    // 3. Search teamA.players (squad roster)
+    for (final p in match.teamA.players) {
+      if (p.id.trim().toLowerCase() == normalized || p.name.trim().toLowerCase() == normalized) {
+        return p;
+      }
+    }
+    // 4. Search teamB.players (squad roster)
+    for (final p in match.teamB.players) {
+      if (p.id.trim().toLowerCase() == normalized || p.name.trim().toLowerCase() == normalized) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   Future<bool> updateScore({
     required int runs,
     required String extraType,
@@ -748,6 +789,46 @@ class StorageService with ChangeNotifier {
     String? idempotencyKey,
   }) async {
     if (_activeScorerMatchId == null) return false;
+
+    // Snapshot pre-ball striker stats for fail-safe milestone detection
+    final curMatchIdx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
+    CricketMatch? matchBefore = curMatchIdx != -1 ? _matches[curMatchIdx] : null;
+    int prevStrikerRuns = 0;
+    int prevBallsFaced = 0;
+    String strikerId = '';
+    String strikerName = 'Batsman';
+    String teamName = '';
+    String teamShortName = '';
+    String teamColorHex = '0xFF078B70';
+    int curInnings = 1;
+
+    if (matchBefore != null) {
+      curInnings = matchBefore.isFirstInnings ? 1 : 2;
+      final isTeamABatting = matchBefore.battingTeamId == matchBefore.teamA.id;
+      final battingTeam = isTeamABatting ? matchBefore.teamA : matchBefore.teamB;
+      teamName = battingTeam.name;
+      teamShortName = battingTeam.shortName;
+      teamColorHex = battingTeam.logoColorHex;
+
+      strikerId = matchBefore.currentStrikerId;
+      Player? strikerPlayer = _findMatchPlayer(matchBefore, strikerId);
+
+      // Fallback: If currentStrikerId wasn't found by id, find from batting playingXI
+      if (strikerPlayer == null) {
+        final batXI = isTeamABatting ? matchBefore.playingXI_A : matchBefore.playingXI_B;
+        if (batXI.isNotEmpty) {
+          strikerPlayer = batXI.first;
+          strikerId = strikerPlayer.id;
+        }
+      }
+
+      if (strikerPlayer != null) {
+        prevStrikerRuns = strikerPlayer.runsScored;
+        prevBallsFaced = strikerPlayer.ballsFaced;
+        strikerName = strikerPlayer.name;
+      }
+      debugPrint('[MILESTONE_MANAGER_DEBUG] Pre-ball striker snapshot: name=$strikerName, id=$strikerId, runs=$prevStrikerRuns, balls=$prevBallsFaced');
+    }
 
     try {
       final updated = await ApiService.updateScore(
@@ -765,6 +846,74 @@ class StorageService with ChangeNotifier {
       if (updated != null) {
         final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
         if (idx != -1) _matches[idx] = updated;
+
+        // 1. If backend returned latestMilestone, dispatch and broadcast it
+        if (updated.latestMilestone != null) {
+          debugPrint('[MILESTONE_MANAGER_DEBUG] updateScore: Backend returned latestMilestone: ${updated.latestMilestone!.type} runs for ${updated.latestMilestone!.batsmanName}');
+          SocketService.dispatchMilestone(updated.latestMilestone!.toJson());
+          SocketService.emitMilestoneCelebration(updated.latestMilestone!.toJson());
+        } else if (extraType == 'None' || extraType == 'No Ball') {
+          // 2. Client-side fail-safe detection (e.g. when connecting to remote backend before deployment)
+          final isTeamABatting = updated.battingTeamId == updated.teamA.id;
+          final battingTeam = isTeamABatting ? updated.teamA : updated.teamB;
+          final batXI = isTeamABatting ? updated.playingXI_A : updated.playingXI_B;
+
+          Player? strikerAfter = _findMatchPlayer(updated, strikerId);
+          if (strikerAfter == null && batXI.isNotEmpty) {
+            strikerAfter = batXI.where((p) => p.name.trim().toLowerCase() == strikerName.trim().toLowerCase()).firstOrNull ?? batXI.first;
+          }
+
+          final newStrikerRuns = strikerAfter != null ? strikerAfter.runsScored : (prevStrikerRuns + runs);
+          final newBallsFaced = strikerAfter != null ? strikerAfter.ballsFaced : (prevBallsFaced + (extraType != 'Wide' ? 1 : 0));
+          final finalStrikerName = (strikerAfter != null && strikerAfter.name.isNotEmpty) ? strikerAfter.name : strikerName;
+
+          debugPrint('[MILESTONE_MANAGER_DEBUG] Evaluating milestone: batsman=$finalStrikerName, prevRuns=$prevStrikerRuns, newRuns=$newStrikerRuns, balls=$newBallsFaced');
+
+          final m100Key = '${updated.id}_${curInnings}_${strikerId}_100';
+          final m50Key = '${updated.id}_${curInnings}_${strikerId}_50';
+
+          MilestoneCelebration? detected;
+          if (prevStrikerRuns < 100 && newStrikerRuns >= 100 && !_localCelebratedMilestones.contains(m100Key)) {
+            _localCelebratedMilestones.add(m100Key);
+            detected = MilestoneCelebration(
+              eventId: 'ms_${updated.id}_${curInnings}_${strikerId}_100_${DateTime.now().millisecondsSinceEpoch}',
+              matchId: updated.id,
+              type: '100',
+              batsmanId: strikerId,
+              batsmanName: finalStrikerName,
+              runs: newStrikerRuns,
+              ballsFaced: newBallsFaced,
+              teamName: battingTeam.name.isNotEmpty ? battingTeam.name : teamName,
+              teamShortName: battingTeam.shortName.isNotEmpty ? battingTeam.shortName : teamShortName,
+              teamColorHex: battingTeam.logoColorHex.isNotEmpty ? battingTeam.logoColorHex : teamColorHex,
+              innings: curInnings,
+              timestamp: DateTime.now(),
+            );
+          } else if (prevStrikerRuns < 50 && newStrikerRuns >= 50 && !_localCelebratedMilestones.contains(m50Key)) {
+            _localCelebratedMilestones.add(m50Key);
+            detected = MilestoneCelebration(
+              eventId: 'ms_${updated.id}_${curInnings}_${strikerId}_50_${DateTime.now().millisecondsSinceEpoch}',
+              matchId: updated.id,
+              type: '50',
+              batsmanId: strikerId,
+              batsmanName: finalStrikerName,
+              runs: newStrikerRuns,
+              ballsFaced: newBallsFaced,
+              teamName: battingTeam.name.isNotEmpty ? battingTeam.name : teamName,
+              teamShortName: battingTeam.shortName.isNotEmpty ? battingTeam.shortName : teamShortName,
+              teamColorHex: battingTeam.logoColorHex.isNotEmpty ? battingTeam.logoColorHex : teamColorHex,
+              innings: curInnings,
+              timestamp: DateTime.now(),
+            );
+          }
+
+          if (detected != null) {
+            debugPrint('[MILESTONE_MANAGER_DEBUG] Client detected milestone: ${detected.type} runs by ${detected.batsmanName}');
+            updated.latestMilestone = detected;
+            SocketService.dispatchMilestone(detected.toJson());
+            SocketService.emitMilestoneCelebration(detected.toJson());
+          }
+        }
 
         _recalculatePlayerStats();
         notifyListeners();
@@ -944,7 +1093,19 @@ class StorageService with ChangeNotifier {
     final updated = await ApiService.undoLastBall(_activeScorerMatchId!, idempotencyKey: idempotencyKey);
     if (updated != null) {
       final idx = _matches.indexWhere((m) => m.id == _activeScorerMatchId);
-      if (idx != -1) _matches[idx] = updated;
+      if (idx != -1) {
+        _matches[idx] = updated;
+        final curInnings = updated.isFirstInnings ? 1 : 2;
+        final striker = _findMatchPlayer(updated, updated.currentStrikerId);
+        if (striker != null) {
+          if (striker.runsScored < 100) {
+            _localCelebratedMilestones.remove('${updated.id}_${curInnings}_${striker.id}_100');
+          }
+          if (striker.runsScored < 50) {
+            _localCelebratedMilestones.remove('${updated.id}_${curInnings}_${striker.id}_50');
+          }
+        }
+      }
       _recalculatePlayerStats();
       notifyListeners();
       return true;

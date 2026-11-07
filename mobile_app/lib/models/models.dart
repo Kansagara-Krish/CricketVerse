@@ -220,6 +220,8 @@ class CricketMatch {
   String winnerTeamId;
   String winnerName;
   String resultText;
+  String resultCommentary;
+  MilestoneCelebration? latestMilestone;
 
   CricketMatch({
     required this.id,
@@ -253,6 +255,8 @@ class CricketMatch {
     this.winnerTeamId = "",
     this.winnerName = "",
     this.resultText = "",
+    this.resultCommentary = "",
+    this.latestMilestone,
   });
 
   Map<String, dynamic> toJson() => {
@@ -287,6 +291,8 @@ class CricketMatch {
         'winnerTeamId': winnerTeamId,
         'winnerName': winnerName,
         'resultText': resultText,
+        'resultCommentary': resultCommentary,
+        'latestMilestone': latestMilestone?.toJson(),
       };
 
   factory CricketMatch.fromJson(Map<dynamic, dynamic> json) => CricketMatch(
@@ -330,6 +336,10 @@ class CricketMatch {
         winnerTeamId: json['winnerTeamId']?.toString() ?? '',
         winnerName: json['winnerName']?.toString() ?? '',
         resultText: json['resultText']?.toString() ?? '',
+        resultCommentary: json['resultCommentary']?.toString() ?? '',
+        latestMilestone: json['latestMilestone'] != null && json['latestMilestone'] is Map
+            ? MilestoneCelebration.fromJson(json['latestMilestone'] as Map)
+            : null,
       );
 }
 
@@ -456,6 +466,70 @@ class Manager {
         username: json['username']?.toString() ?? '',
         password: json['password']?.toString() ?? '',
         phone: json['phone']?.toString(),
+      );
+}
+
+class MilestoneCelebration {
+  final String eventId;
+  final String matchId;
+  final String type; // "50" or "100"
+  final String batsmanId;
+  final String batsmanName;
+  final int runs;
+  final int ballsFaced;
+  final String teamName;
+  final String teamShortName;
+  final String teamColorHex;
+  final int innings;
+  final DateTime timestamp;
+
+  MilestoneCelebration({
+    required this.eventId,
+    required this.matchId,
+    required this.type,
+    required this.batsmanId,
+    required this.batsmanName,
+    required this.runs,
+    required this.ballsFaced,
+    required this.teamName,
+    this.teamShortName = '',
+    this.teamColorHex = '0xFF078B70',
+    this.innings = 1,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId,
+        'matchId': matchId,
+        'type': type,
+        'batsmanId': batsmanId,
+        'batsmanName': batsmanName,
+        'runs': runs,
+        'ballsFaced': ballsFaced,
+        'teamName': teamName,
+        'teamShortName': teamShortName,
+        'teamColorHex': teamColorHex,
+        'innings': innings,
+        'timestamp': timestamp.toIso8601String(),
+      };
+
+  factory MilestoneCelebration.fromJson(Map<dynamic, dynamic> json) => MilestoneCelebration(
+        eventId: json['eventId']?.toString() ?? 'ms_${DateTime.now().millisecondsSinceEpoch}',
+        matchId: json['matchId']?.toString() ?? '',
+        type: json['type']?.toString() ?? '50',
+        batsmanId: json['batsmanId']?.toString() ?? '',
+        batsmanName: json['batsmanName']?.toString() ?? 'Batsman',
+        runs: (json['runs'] as num?)?.toInt() ?? 50,
+        ballsFaced: (json['ballsFaced'] as num?)?.toInt() ?? 0,
+        teamName: json['teamName']?.toString() ?? '',
+        teamShortName: json['teamShortName']?.toString() ?? '',
+        teamColorHex: json['teamColorHex']?.toString() ?? '0xFF078B70',
+        innings: (json['innings'] as num?)?.toInt() ?? 1,
+        timestamp: json['timestamp'] != null
+            ? (json['timestamp'] is DateTime
+                ? json['timestamp'] as DateTime
+                : DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now())
+            : DateTime.now(),
       );
 }
 

@@ -8,6 +8,8 @@ class SocketService {
   static final List<void Function(Map<String, dynamic> data)> _matchUpdateListeners = [];
   static final List<void Function(Map<String, dynamic> data)> _teamUpdateListeners = [];
   static final List<void Function(Map<String, dynamic> data)> _notificationListeners = [];
+  static final List<void Function(Map<String, dynamic> data)> _milestoneListeners = [];
+  static final Set<String> _processedMilestoneEventIds = {};
 
   static String get socketUrl {
     // Strips '/api/v1' from ApiService.baseUrl to get the server root
@@ -24,7 +26,7 @@ class SocketService {
       _socket = io.io(
         socketUrl,
         io.OptionBuilder()
-            .setTransports(['websocket']) // Use WebSocket only
+            .setTransports(['websocket', 'polling']) // Support WebSocket with Polling fallback
             .enableAutoConnect()
             .enableReconnection()
             .setReconnectionDelay(1000)
@@ -87,6 +89,60 @@ class SocketService {
 
     _socket!.off('global_notification');
     _socket!.on('global_notification', _handleNotification);
+
+    _socket!.off('milestone_celebration');
+    _socket!.on('milestone_celebration', _handleMilestoneCelebration);
+  }
+
+  static void _handleMilestoneCelebration(dynamic data) {
+    Map<String, dynamic>? parsed;
+    if (data is Map<String, dynamic>) {
+      parsed = data;
+    } else if (data is Map) {
+      parsed = Map<String, dynamic>.from(data);
+    } else if (data is String) {
+      try {
+        parsed = Map<String, dynamic>.from(jsonDecode(data));
+      } catch (_) {}
+    }
+
+    if (parsed != null) {
+      debugPrint('[MILESTONE_MANAGER_DEBUG] Milestone event received: eventId=${parsed['eventId']}, matchId=${parsed['matchId']}, type=${parsed['type']}, batsman=${parsed['batsmanName']}, runs=${parsed['runs']}');
+      final eventId = parsed['eventId']?.toString();
+      if (eventId != null && eventId.isNotEmpty) {
+        if (_processedMilestoneEventIds.contains(eventId)) {
+          debugPrint('[MILESTONE_MANAGER_DEBUG] Duplicate milestone event skipped: $eventId');
+          return;
+        }
+        _processedMilestoneEventIds.add(eventId);
+        if (_processedMilestoneEventIds.length > 200) {
+          _processedMilestoneEventIds.remove(_processedMilestoneEventIds.first);
+        }
+      }
+
+      for (final listener in List.of(_milestoneListeners)) {
+        try {
+          debugPrint('[MILESTONE_MANAGER_DEBUG] Invoking milestone listener for ${parsed['batsmanName']} (${parsed['type']} runs)');
+          listener(parsed);
+        } catch (e) {
+          debugPrint('Error invoking milestone listener: $e');
+        }
+      }
+    }
+  }
+
+  static void dispatchMilestone(dynamic data) {
+    debugPrint('[MILESTONE_MANAGER_DEBUG] SocketService: dispatchMilestone locally called');
+    _handleMilestoneCelebration(data);
+  }
+
+  static void emitMilestoneCelebration(Map<String, dynamic> data) {
+    if (data.isEmpty) return;
+    final matchId = data['matchId']?.toString();
+    debugPrint('[MILESTONE_DEBUG] SocketService: Emitting milestone_celebration to server for match $matchId');
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('milestone_celebration', data);
+    }
   }
 
   static void _handleMatchUpdate(dynamic data) {
@@ -103,6 +159,11 @@ class SocketService {
     }
 
     if (parsed != null) {
+      // Check if this match update bundles a fresh milestone event
+      if (parsed['latestMilestone'] != null && parsed['latestMilestone'] is Map) {
+        _handleMilestoneCelebration(parsed['latestMilestone']);
+      }
+
       for (final listener in List.of(_matchUpdateListeners)) {
         try {
           listener(parsed);
@@ -228,6 +289,19 @@ class SocketService {
 
   static void removeNotificationListener(void Function(Map<String, dynamic> data) onNotification) {
     _notificationListeners.remove(onNotification);
+  }
+
+  static void listenToMilestoneCelebrations(void Function(Map<String, dynamic> data) onMilestone) {
+    if (!_milestoneListeners.contains(onMilestone)) {
+      _milestoneListeners.add(onMilestone);
+    }
+    if (_socket == null || !_socket!.connected) {
+      connect();
+    }
+  }
+
+  static void removeMilestoneCelebrationListener(void Function(Map<String, dynamic> data) onMilestone) {
+    _milestoneListeners.remove(onMilestone);
   }
 
   static bool get isConnected => _socket != null && _socket!.connected;

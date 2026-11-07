@@ -156,7 +156,7 @@ async function seed() {
             wicketType: 'None',
             batsmanName: 'Rohit Sharma',
             bowlerName: 'Deepak Chahar',
-            commentary: 'FOUR! GLORIOUS COVER DRIVE! Rohit Sharma leans into the half-volley and pierces the boundary gap!',
+            commentary: 'FOUR! GLORIOUS STROKE! Rohit Sharma leans into the half-volley and pierces the boundary gap!',
             timestamp: new Date(Date.now() - 3600000).toISOString(),
           },
           {
@@ -167,7 +167,7 @@ async function seed() {
             wicketType: 'None',
             batsmanName: 'Suryakumar Yadav',
             bowlerName: 'Ravindra Jadeja',
-            commentary: 'SIX! MASSIVE HIT! Suryakumar Yadav scoops it over fine leg 90 meters into the stands!',
+            commentary: 'SIX! MASSIVE HIT! Suryakumar Yadav scoops it 90 meters over the boundary into the stands!',
             timestamp: new Date(Date.now() - 1800000).toISOString(),
           },
         ],

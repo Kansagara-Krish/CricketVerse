@@ -187,7 +187,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     setState(() => _isTestingVoice = true);
 
     const sampleText =
-        "SIX! What an extraordinary shot over deep mid-wicket! That has cleared the stadium roof! Welcome to CricketVerse live commentary!";
+        "SIX! What an extraordinary hit into the top tier! That has cleared the stadium roof! Welcome to CricketVerse live commentary!";
 
     if (_voiceProvider == 'inbuilt_tts') {
       final s = _elevenLabsService.settings;

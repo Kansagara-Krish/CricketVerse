@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { MatchModel } from '../models/Match';
 import { TeamModel } from '../models/Team';
 import { redis, invalidateCachedMatch, setCachedMatch } from '../config/redis';
-import { broadcastMatchUpdate, broadcastNotification } from '../sockets/socketHandler';
+import { broadcastMatchUpdate, broadcastNotification, broadcastMilestoneCelebration } from '../sockets/socketHandler';
 
 export function getMaxOvers(matchType: string): number {
   if (!matchType) return 20;
@@ -47,97 +47,162 @@ function decrementOvers(currentOvers: number, ballsRemoved: number): number {
   return parseFloat((oversInt + ballsInt / 10.0).toFixed(1));
 }
 
-function generateAICommentary(
-  batsman: string,
-  bowler: string,
-  runs: number,
-  extraType: string,
-  isWicket: boolean,
-  wicketType: string,
-  overs?: number,
-  totalRuns?: number,
-  totalWickets?: number
+export const FORBIDDEN_FIELD_TERMS = [
+  'mid-off',
+  'mid-on',
+  'leg side',
+  'off side',
+  'cover',
+  'covers',
+  'extra cover',
+  'fine leg',
+  'square leg',
+  'third man',
+  'point',
+  'deep mid-wicket',
+  'mid-wicket',
+  'long-on',
+  'long-off',
+];
+
+export function sanitizeCricketCommentary(text: string): string {
+  if (!text) return '';
+  let sanitized = text;
+  for (const term of FORBIDDEN_FIELD_TERMS) {
+    const regex = new RegExp(`\\b${term.replace('-', '[- ]')}\\b`, 'gi');
+    sanitized = sanitized.replace(regex, 'the boundary');
+  }
+  return sanitized.replace(/\s+/g, ' ').trim();
+}
+
+export function generateAICommentary(
+  param1: any,
+  bowlerArg?: string,
+  runsArg?: number,
+  extraTypeArg?: string,
+  isWicketArg?: boolean,
+  wicketTypeArg?: string,
+  oversArg?: number,
+  totalRunsArg?: number,
+  totalWicketsArg?: number
 ): string {
+  let batsman: string;
+  let bowler: string;
+  let runs: number;
+  let extraType: string;
+  let isWicket: boolean;
+  let wicketType: string;
+  let dismissedBatsman: string | undefined;
+  let incomingBatsman: string | undefined;
+  let totalRuns: number | undefined;
+  let totalWickets: number | undefined;
+
+  if (typeof param1 === 'object' && param1 !== null) {
+    batsman = param1.batsman || 'Batsman';
+    bowler = param1.bowler || 'Bowler';
+    runs = Number(param1.runs) || 0;
+    extraType = param1.extraType || 'None';
+    isWicket = Boolean(param1.isWicket);
+    wicketType = param1.wicketType || 'None';
+    dismissedBatsman = param1.dismissedBatsman;
+    incomingBatsman = param1.incomingBatsman;
+    totalRuns = param1.totalRuns;
+    totalWickets = param1.totalWickets;
+  } else {
+    batsman = String(param1 || 'Batsman');
+    bowler = String(bowlerArg || 'Bowler');
+    runs = Number(runsArg) || 0;
+    extraType = String(extraTypeArg || 'None');
+    isWicket = Boolean(isWicketArg);
+    wicketType = String(wicketTypeArg || 'None');
+    totalRuns = totalRunsArg;
+    totalWickets = totalWicketsArg;
+  }
+
   const selectRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
   const scoreText = totalRuns !== undefined && totalWickets !== undefined ? ` Score: ${totalRuns}/${totalWickets}.` : '';
 
+  let comm = '';
+
   if (isWicket) {
+    const outPlayer = dismissedBatsman || batsman;
+    const inPlayer = incomingBatsman ? ` ${incomingBatsman} walks out to the crease.` : '';
+
     if (wicketType === 'Bowled') {
-      return selectRandom([
-        `BOWLED HIM! Clean through the gate! ${bowler} knocks back middle stump! ${batsman} departs.${scoreText}`,
-        `TIMBERRR! Absolute jaffa from ${bowler}! Shatters the stumps, sending bails flying!${scoreText}`,
+      comm = selectRandom([
+        `BOWLED HIM! Clean through the defense! ${bowler} knocks back middle stump! ${outPlayer} departs.${inPlayer}${scoreText}`,
+        `TIMBERRR! Absolute jaffa from ${bowler}! Shatters the stumps, sending bails flying! ${outPlayer} is out.${inPlayer}${scoreText}`,
+      ]);
+    } else if (wicketType === 'Caught') {
+      comm = selectRandom([
+        `CAUGHT! In the air... and safely pouched! ${outPlayer} tries to clear the rope off ${bowler}, but is caught!${inPlayer}${scoreText}`,
+        `WHAT A CATCH! A stunning diving grab off ${bowler}! ${outPlayer} has to walk back!${inPlayer}${scoreText}`,
+      ]);
+    } else if (wicketType === 'LBW') {
+      comm = selectRandom([
+        `LBW! Huge shout from ${bowler}, and the umpire's finger goes straight up! ${outPlayer} trapped in front!${inPlayer}${scoreText}`,
+        `DEAD PLUMB! ${bowler} strikes the front pad directly in line! ${outPlayer} is dismissed LBW!${inPlayer}${scoreText}`,
+      ]);
+    } else if (wicketType === 'Run Out') {
+      comm = selectRandom([
+        `RUN OUT! DIRECT HIT! Sharp throw to the stumps and ${outPlayer} is caught well short of the crease!${inPlayer}${scoreText}`,
+        `DISASTER RUN OUT! Fatal mix-up between the wickets, bails whipped off and ${outPlayer} is gone!${inPlayer}${scoreText}`,
+      ]);
+    } else {
+      comm = selectRandom([
+        `OUT! ${bowler} strikes with a ripper! Crucial wicket of ${outPlayer}!${inPlayer}${scoreText}`,
+        `WICKET! Breakthrough delivery from ${bowler}! ${outPlayer} departs!${inPlayer}${scoreText}`,
       ]);
     }
-    if (wicketType === 'Caught') {
-      return selectRandom([
-        `CAUGHT! In the air... and taken! ${batsman} goes for the big one off ${bowler}, but finds the fielder at deep mid-wicket.${scoreText}`,
-        `WHAT A CATCH! Fielder dives full length at backward point to grab a stunner off ${bowler}! ${batsman} is out.${scoreText}`,
-      ]);
-    }
-    if (wicketType === 'LBW') {
-      return selectRandom([
-        `LBW! Huge shout from ${bowler}, and the finger goes straight up! ${batsman} is trapped right in front.${scoreText}`,
-        `DEAD PLUMB! ${bowler} hits the front pad on the knee roll! Umpire raises the finger without hesitation!${scoreText}`,
-      ]);
-    }
-    if (wicketType === 'Run Out') {
-      return selectRandom([
-        `RUN OUT! DIRECT HIT! Fielder fires at the striker's end and catches ${batsman} inches short of the crease!${scoreText}`,
-        `DISASTER RUN OUT! Mix-up between the wickets, flat throw to the keeper and bails are whipped off!${scoreText}`,
-      ]);
-    }
-    return selectRandom([
-      `OUT! ${bowler} strikes! ${batsman} tries to smash it but is dismissed! Brilliant delivery!${scoreText}`,
-      `WICKET! ${bowler} breaks through! Crucial wicket of ${batsman} falls.${scoreText}`,
+  } else if (extraType === 'Wide') {
+    comm = `Wide ball! ${bowler} strays too far, ${batsman} leaves it alone. Extra run added.${scoreText}`;
+  } else if (extraType === 'No Ball') {
+    comm = `No Ball! ${bowler} oversteps the bowling crease. An extra run and a Free Hit for ${batsman}!${scoreText}`;
+  } else if (runs === 6) {
+    comm = selectRandom([
+      `SIX! MASSIVE HIT! ${batsman} launches ${bowler} deep into the crowd!${scoreText}`,
+      `MAXIMUM! Sweet timing from ${batsman}! Dispatched cleanly over the rope for SIX!${scoreText}`,
+      `SIX MORE! ${batsman} stands tall and smokes ${bowler} all the way!${scoreText}`,
+      `BOOM! Pure power from ${batsman}! High, handsome and into the stands for SIX!${scoreText}`,
     ]);
+  } else if (runs === 4) {
+    comm = selectRandom([
+      `FOUR! Glorious stroke from ${batsman}! Pierces the infield and races to the boundary!${scoreText}`,
+      `CRACKING BOUNDARY! Fast hands from ${batsman}, drilling ${bowler} to the fence!${scoreText}`,
+      `FOUR RUNS! Pure elegance from ${batsman}, finding the gap with perfection!${scoreText}`,
+      `DELICIOUS TIMING! ${batsman} times ${bowler} exquisitely and it flashes away to the boundary!${scoreText}`,
+    ]);
+  } else if (runs === 0) {
+    comm = selectRandom([
+      `Dot ball. Good length delivery from ${bowler}, safely defended by ${batsman}.`,
+      `Dot ball. ${batsman} plays with soft hands back towards ${bowler}.`,
+      `Well bowled! ${bowler} beats the bat of ${batsman} with a beauty!`,
+      `Fiery bouncer from ${bowler}! ${batsman} ducks under it cleanly.`,
+    ]);
+  } else if (runs === 1) {
+    comm = selectRandom([
+      `Single taken. ${batsman} pushes ${bowler} into the gap to rotate the strike.${scoreText}`,
+      `Quick single! Sharp call from ${batsman} and they scamper through safely.${scoreText}`,
+      `Worked away neatly by ${batsman} for a comfortable single.${scoreText}`,
+    ]);
+  } else if (runs === 2) {
+    comm = `Two runs! Nicely placed by ${batsman}, great hustling between the wickets to complete two.${scoreText}`;
+  } else {
+    comm = `${runs} runs scored. Terrific running between the wickets by ${batsman}.${scoreText}`;
   }
 
-  if (extraType === 'Wide') {
-    return `Wide ball! ${bowler} strays down the leg side, ${batsman} lets it go. Extra run to the total.`;
-  }
-  if (extraType === 'No Ball') {
-    return `No Ball! ${bowler} oversteps the crease. That's an extra run and a Free Hit for ${batsman}!`;
-  }
-
-  if (runs === 6) {
-    return selectRandom([
-      `SIX! MASSIVE HIT! ${batsman} steps out and launches ${bowler} 95 meters into the top tier!${scoreText}`,
-      `MAXIMUM! Incredibly struck by ${batsman}! Picked up off the pads and dispatched into the crowd!${scoreText}`,
-      `SIX MORE! ${batsman} displays pure class, a sweet pull shot that sails comfortably over deep square leg.${scoreText}`,
-      `BOOM! Pure timing and muscle from ${batsman}! Dispatches ${bowler} straight over the bowler's head for SIX!${scoreText}`,
-    ]);
-  }
-  if (runs === 4) {
-    return selectRandom([
-      `FOUR! GLORIOUS COVER DRIVE! ${batsman} leans into the half-volley from ${bowler} and pierces the boundary gap!${scoreText}`,
-      `CRACKING BOUNDARY! Short and wide from ${bowler}, ${batsman} punishes it with a blistering cut for four.${scoreText}`,
-      `FOUR RUNS! Short and wide from ${bowler}, cut away elegantly by ${batsman} to the fence.${scoreText}`,
-      `DELICIOUS WRIST-WORK! ${batsman} flicks ${bowler} past mid-wicket and it races away to the rope!${scoreText}`,
-    ]);
-  }
-  if (runs === 0) {
-    return selectRandom([
-      `Dot ball. Good length delivery from ${bowler}, played defensively back to the bowler.`,
-      `Dot ball. ${batsman} swings and misses a slower off-cutter from ${bowler}.`,
-      `Well bowled! ${bowler} beats ${batsman} outside the off stump with a beautiful outswinger.`,
-      `Fierce 142 km/h bouncer from ${bowler}! ${batsman} ducks under it just in time.`,
-    ]);
-  }
-  if (runs === 1) {
-    return selectRandom([
-      `Single taken. ${batsman} drives ${bowler} down to long-off to rotate the strike.${scoreText}`,
-      `Quick single! Tapped to mid-on by ${batsman}, sharp call and they scramble home.${scoreText}`,
-      `Worked away off the hips by ${batsman} into deep square leg for a single.${scoreText}`,
-    ]);
-  }
-  if (runs === 2) {
-    return `Two runs! Driven into the deep extra cover pocket, swift turn by ${batsman} to steal a second run.${scoreText}`;
-  }
-
-  return `${runs} runs scored. Excellent running between wickets by ${batsman}.${scoreText}`;
+  return sanitizeCricketCommentary(comm);
 }
 
 export function computeMatchResult(match: any) {
+  if (match.status === 'Abandoned') {
+    match.winnerTeamId = '';
+    match.winnerName = 'No Result';
+    match.resultText = 'Match Abandoned';
+    match.resultCommentary = 'The match has been abandoned. No result.';
+    return;
+  }
+
   const tossWinnerStr = String(match.tossWinner || '').trim().toLowerCase();
   const teamAIdStr = String(match.teamAId || match.teamA?.id || '').trim().toLowerCase();
   const teamANameStr = String(match.teamA?.name || '').trim().toLowerCase();
@@ -168,26 +233,48 @@ export function computeMatchResult(match: any) {
   const firstRuns = isTeamAFirst ? Number(match.runsA || 0) : Number(match.runsB || 0);
   const secondRuns = isTeamAFirst ? Number(match.runsB || 0) : Number(match.runsA || 0);
 
+  const firstWickets = isTeamAFirst ? Number(match.wicketsA || 0) : Number(match.wicketsB || 0);
   const secondWickets = isTeamAFirst ? Number(match.wicketsB || 0) : Number(match.wicketsA || 0);
-  const secondTeamPlayers = isTeamAFirst
-    ? (match.playingXI_B?.length || match.teamB?.players?.length || 11)
-    : (match.playingXI_A?.length || match.teamA?.players?.length || 11);
-  const maxWicketsSecond = Math.max(1, secondTeamPlayers - 1);
-  const wicketsInHand = Math.max(1, maxWicketsSecond - secondWickets);
+
+  // In cricket, an innings has at most 10 wickets lost
+  const wicketsInHand = Math.max(1, 10 - secondWickets);
 
   if (secondRuns > firstRuns) {
     match.winnerTeamId = secondBatTeamId;
     match.winnerName = secondBatTeamName;
     match.resultText = `${secondBatTeamName} won by ${wicketsInHand} wicket${wicketsInHand === 1 ? '' : 's'}`;
+    match.resultCommentary = `${secondBatTeamName.toUpperCase()} WIN! ${secondBatTeamName} defeated ${firstBatTeamName} by ${wicketsInHand} wicket${wicketsInHand === 1 ? '' : 's'} (${secondRuns}/${secondWickets} vs ${firstRuns}/${firstWickets}). What a thrilling chase!`;
   } else if (firstRuns > secondRuns) {
     const margin = firstRuns - secondRuns;
     match.winnerTeamId = firstBatTeamId;
     match.winnerName = firstBatTeamName;
     match.resultText = `${firstBatTeamName} won by ${margin} run${margin === 1 ? '' : 's'}`;
+    match.resultCommentary = `${firstBatTeamName.toUpperCase()} WIN! ${firstBatTeamName} defeated ${secondBatTeamName} by ${margin} run${margin === 1 ? '' : 's'} (${firstRuns}/${firstWickets} vs ${secondRuns}/${secondWickets}). Outstanding victory!`;
   } else {
     match.winnerTeamId = '';
     match.winnerName = 'Tie';
     match.resultText = 'Match Tied!';
+    match.resultCommentary = `WHAT A THRILLER! The match ends in a tie! Both sides finished level: ${firstBatTeamName} (${firstRuns}/${firstWickets}) vs ${secondBatTeamName} (${secondRuns}/${secondWickets})!`;
+  }
+
+  // Append result ball if not present
+  if (match.balls && Array.isArray(match.balls) && match.balls.length > 0) {
+    const hasResultBall = match.balls.some(
+      (b: any) => b.batsmanName === 'Match Result' || (b.commentary && b.commentary.includes('WIN!'))
+    );
+    if (!hasResultBall) {
+      match.balls.push({
+        run: 0,
+        extraRun: 0,
+        extraType: 'None',
+        isWicket: false,
+        wicketType: 'None',
+        batsmanName: 'Match Result',
+        bowlerName: '',
+        commentary: match.resultCommentary,
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 }
 
@@ -351,6 +438,7 @@ export async function updateScore(req: Request, res: Response) {
     }
 
     // 2. Batsman Stats Update
+    const prevStrikerRuns = striker ? Number(striker.runsScored || 0) : 0;
     if (striker) {
       if (extraType === 'None' || extraType === 'No Ball') {
         striker.runsScored = (striker.runsScored || 0) + runsNum;
@@ -358,6 +446,55 @@ export async function updateScore(req: Request, res: Response) {
       if (extraType !== 'Wide') {
         striker.ballsFaced = (striker.ballsFaced || 0) + 1;
       }
+    }
+    const newStrikerRuns = striker ? Number(striker.runsScored || 0) : 0;
+
+    // Milestone Detection (50 runs / 100 runs)
+    const currentInnings = match.isFirstInnings ? 1 : 2;
+    match.celebratedMilestones = match.celebratedMilestones || [];
+    let detectedMilestone: any = null;
+
+    if (striker && (extraType === 'None' || extraType === 'No Ball') && runsNum > 0) {
+      const m100Key = `${currentInnings}_${striker.id}_100`;
+      const m50Key = `${currentInnings}_${striker.id}_50`;
+
+      if (prevStrikerRuns < 100 && newStrikerRuns >= 100 && !match.celebratedMilestones.includes(m100Key)) {
+        match.celebratedMilestones.push(m100Key);
+        detectedMilestone = {
+          eventId: `ms_${match.id}_${currentInnings}_${striker.id}_100_${Date.now()}`,
+          matchId: match.id,
+          type: '100',
+          batsmanId: striker.id,
+          batsmanName: striker.name,
+          runs: newStrikerRuns,
+          ballsFaced: striker.ballsFaced || 0,
+          teamName: batTeam?.name || 'Batting Team',
+          teamShortName: batTeam?.shortName || '',
+          teamColorHex: batTeam?.logoColorHex || '0xFF078B70',
+          innings: currentInnings,
+          timestamp: new Date().toISOString(),
+        };
+      } else if (prevStrikerRuns < 50 && newStrikerRuns >= 50 && !match.celebratedMilestones.includes(m50Key)) {
+        match.celebratedMilestones.push(m50Key);
+        detectedMilestone = {
+          eventId: `ms_${match.id}_${currentInnings}_${striker.id}_50_${Date.now()}`,
+          matchId: match.id,
+          type: '50',
+          batsmanId: striker.id,
+          batsmanName: striker.name,
+          runs: newStrikerRuns,
+          ballsFaced: striker.ballsFaced || 0,
+          teamName: batTeam?.name || 'Batting Team',
+          teamShortName: batTeam?.shortName || '',
+          teamColorHex: batTeam?.logoColorHex || '0xFF078B70',
+          innings: currentInnings,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }
+
+    if (detectedMilestone) {
+      console.log(`[MILESTONE_DEBUG] Backend updateScore: milestone detected! Match=${match.id}, Batsman=${striker?.name} (${striker?.id}), Runs=${prevStrikerRuns} -> ${newStrikerRuns}, Type=${detectedMilestone.type}`);
     }
 
     // 3. Bowler Stats Update
@@ -554,11 +691,18 @@ export async function updateScore(req: Request, res: Response) {
     match.markModified('teamA');
     match.teamB && match.markModified('teamB');
     match.markModified('balls');
+    match.markModified('celebratedMilestones');
     await match.save();
 
     await invalidateCachedMatch(matchId);
     const updated = match.toJSON();
+    if (detectedMilestone) {
+      updated.latestMilestone = detectedMilestone;
+    }
     broadcastMatchUpdate(matchId, 'match_update', updated);
+    if (detectedMilestone) {
+      broadcastMilestoneCelebration(matchId, detectedMilestone);
+    }
 
     if (idempotencyKey) {
       idempotencyStore.set(idempotencyKey, { status: 'completed', response: updated, timestamp: Date.now() });
@@ -699,11 +843,28 @@ export async function undoLastBall(req: Request, res: Response) {
     if (lastBall.nonStrikerId) match.currentNonStrikerId = lastBall.nonStrikerId;
     if (lastBall.bowlerId) match.currentBowlerId = lastBall.bowlerId;
 
+    // Milestone rollback on undo if striker's score dropped back below milestone thresholds
+    const currentInnings = match.isFirstInnings ? 1 : 2;
+    if (match.celebratedMilestones && lastBall.strikerId) {
+      const batTeamPlayers = match.battingTeamId === match.teamAId ? match.playingXI_A : match.playingXI_B;
+      const revertedStriker = batTeamPlayers?.find((p: any) => p.id === lastBall.strikerId || (p._id && p._id.toString() === lastBall.strikerId));
+      if (revertedStriker) {
+        const strikerRuns = Number(revertedStriker.runsScored || 0);
+        if (strikerRuns < 100) {
+          match.celebratedMilestones = match.celebratedMilestones.filter(k => k !== `${currentInnings}_${revertedStriker.id}_100`);
+        }
+        if (strikerRuns < 50) {
+          match.celebratedMilestones = match.celebratedMilestones.filter(k => k !== `${currentInnings}_${revertedStriker.id}_50`);
+        }
+      }
+    }
+
     match.markModified('playingXI_A');
     match.markModified('playingXI_B');
     match.markModified('teamA');
     match.teamB && match.markModified('teamB');
     match.markModified('balls');
+    match.markModified('celebratedMilestones');
     await match.save();
 
     await invalidateCachedMatch(matchId);

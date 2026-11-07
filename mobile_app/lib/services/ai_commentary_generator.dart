@@ -15,6 +15,11 @@ class AiCommentaryContext {
   final String style; // 'Hype / Energetic', 'Professional', 'Technical', 'Casual'
   final bool isOverEnd;
   final int? overRuns;
+  final String? dismissedBatsman;
+  final String? incomingBatsman;
+  final bool isAllOut;
+  final int? strikerRuns;
+  final int? bowlerWickets;
 
   const AiCommentaryContext({
     required this.batsman,
@@ -31,6 +36,11 @@ class AiCommentaryContext {
     this.style = 'Hype / Energetic',
     this.isOverEnd = false,
     this.overRuns,
+    this.dismissedBatsman,
+    this.incomingBatsman,
+    this.isAllOut = false,
+    this.strikerRuns,
+    this.bowlerWickets,
   });
 }
 
@@ -38,6 +48,47 @@ class AiCommentaryGenerator {
   static final Random _rng = Random();
 
   static String _pick(List<String> list) => list[_rng.nextInt(list.length)];
+
+  /// Sanitizer to completely eliminate any unwanted fielding position or shot direction descriptions
+  static String sanitize(String raw) {
+    if (raw.isEmpty) return '';
+    String text = raw;
+
+    final replacements = <MapEntry<RegExp, String>>[
+      MapEntry(RegExp(r'\b(towards|to|through|past|over|in)\s+the\s+covers\b', caseSensitive: false), 'through the gap'),
+      MapEntry(RegExp(r'\bthrough\s+the\s+covers\b', caseSensitive: false), 'through the gap'),
+      MapEntry(RegExp(r'\bcover\s+drive\b', caseSensitive: false), 'timed drive'),
+      MapEntry(RegExp(r'\bextra\s+cover\b', caseSensitive: false), 'the outfield gap'),
+      MapEntry(RegExp(r'\bcovers?\b', caseSensitive: false), 'the gap'),
+      MapEntry(RegExp(r'\bdeep\s+mid[- ]wicket\b', caseSensitive: false), 'the boundary'),
+      MapEntry(RegExp(r'\bmid[- ]wicket\b', caseSensitive: false), 'the outfield'),
+      MapEntry(RegExp(r'\bbackward\s+point\b', caseSensitive: false), 'the infield'),
+      MapEntry(RegExp(r'\bdeep\s+point\b', caseSensitive: false), 'the fence'),
+      MapEntry(RegExp(r'\bpoint\s+boundary\b', caseSensitive: false), 'boundary'),
+      MapEntry(RegExp(r'\bpoint\b', caseSensitive: false), 'the gap'),
+      MapEntry(RegExp(r'\bdeep\s+square[- ]leg\b', caseSensitive: false), 'the boundary rope'),
+      MapEntry(RegExp(r'\bsquare[- ]leg\b', caseSensitive: false), 'the boundary'),
+      MapEntry(RegExp(r'\bshort\s+fine[- ]leg\b', caseSensitive: false), 'the infield'),
+      MapEntry(RegExp(r'\bfine[- ]leg\b', caseSensitive: false), 'the boundary fence'),
+      MapEntry(RegExp(r'\bshort\s+third[- ]man\b', caseSensitive: false), 'the infield'),
+      MapEntry(RegExp(r'\bthird[- ]man\b', caseSensitive: false), 'the boundary rope'),
+      MapEntry(RegExp(r'\blong[- ]on\b', caseSensitive: false), 'the boundary ropes'),
+      MapEntry(RegExp(r'\blong[- ]off\b', caseSensitive: false), 'down the ground'),
+      MapEntry(RegExp(r'\bmid[- ]off\b', caseSensitive: false), 'the infield'),
+      MapEntry(RegExp(r'\bmid[- ]on\b', caseSensitive: false), 'the infield'),
+      MapEntry(RegExp(r'\bdown\s+the\s+leg\s+side\b', caseSensitive: false), 'wide outside the line'),
+      MapEntry(RegExp(r'\bleg\s+side\b', caseSensitive: false), 'wide of the pads'),
+      MapEntry(RegExp(r'\boff\s+side\b', caseSensitive: false), 'outside the corridor'),
+      MapEntry(RegExp(r'\bcow[- ]corner\b', caseSensitive: false), 'the stands'),
+      MapEntry(RegExp(r'\bdeep\s+backward\s+square\b', caseSensitive: false), 'the boundary'),
+    ];
+
+    for (final entry in replacements) {
+      text = text.replaceAll(entry.key, entry.value);
+    }
+
+    return text.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+  }
 
   /// Generate smart contextual commentary for a ball event or over finish
   static String generate(AiCommentaryContext ctx) {
@@ -53,39 +104,49 @@ class AiCommentaryGenerator {
 
     // 1. Over Ending Commentary
     if (ctx.isOverEnd) {
-      return _generateOverEndCommentary(ctx, isHype, isTechnical, scoreStr);
+      return sanitize(_generateOverEndCommentary(ctx, isHype, isTechnical, scoreStr));
     }
 
     // 2. Wicket Commentary
     if (ctx.isWicket) {
-      return _generateWicketCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr);
+      return sanitize(_generateWicketCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr));
     }
 
     // 3. Extras Commentary
     if (ctx.extraType == 'Wide') {
-      return _generateWideCommentary(ctx, isHype, isTechnical);
+      return sanitize(_generateWideCommentary(ctx, isHype, isTechnical));
     }
     if (ctx.extraType == 'No Ball') {
-      return _generateNoBallCommentary(ctx, isHype, isTechnical);
+      return sanitize(_generateNoBallCommentary(ctx, isHype, isTechnical));
     }
 
-    // 4. Six Commentary
+    // 4. Milestone Check (50s / 100s)
+    if (ctx.strikerRuns != null) {
+      if (ctx.strikerRuns == 50 || (ctx.strikerRuns! >= 50 && ctx.strikerRuns! - ctx.runs < 50)) {
+        return sanitize("FIFTY! A magnificent half-century for ${ctx.batsman}! Reaches 50 with composure and authority, raising the bat to warm applause! Total $scoreStr.");
+      }
+      if (ctx.strikerRuns == 100 || (ctx.strikerRuns! >= 100 && ctx.strikerRuns! - ctx.runs < 100)) {
+        return sanitize("A SENSATIONAL HUNDRED! A masterclass century from ${ctx.batsman}! Takes off the helmet to salute a standing ovation from the crowd! Total $scoreStr.");
+      }
+    }
+
+    // 5. Six Commentary
     if (ctx.runs == 6) {
-      return _generateSixCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr);
+      return sanitize(_generateSixCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr));
     }
 
-    // 5. Four Commentary
+    // 6. Four Commentary
     if (ctx.runs == 4) {
-      return _generateFourCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr);
+      return sanitize(_generateFourCommentary(ctx, isHype, isTechnical, isCasual, ballNumberStr, scoreStr));
     }
 
-    // 6. Dot Ball Commentary
+    // 7. Dot Ball Commentary
     if (ctx.runs == 0) {
-      return _generateDotCommentary(ctx, isHype, isTechnical, ballNumberStr);
+      return sanitize(_generateDotCommentary(ctx, isHype, isTechnical, ballNumberStr));
     }
 
-    // 7. Running between wickets (1, 2, 3 runs)
-    return _generateRunCommentary(ctx, isHype, isTechnical, ballNumberStr, scoreStr);
+    // 8. Running between wickets (1, 2, 3 runs)
+    return sanitize(_generateRunCommentary(ctx, isHype, isTechnical, ballNumberStr, scoreStr));
   }
 
   static String _generateOverEndCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, String scoreStr) {
@@ -116,66 +177,94 @@ class AiCommentaryGenerator {
 
   static String _generateWicketCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, bool isCasual, String ballStr, String scoreStr) {
     final wType = ctx.wicketType;
+    final outBatter = (ctx.dismissedBatsman != null && ctx.dismissedBatsman!.trim().isNotEmpty)
+        ? ctx.dismissedBatsman!.trim()
+        : ctx.batsman;
+    final hasIncoming = ctx.incomingBatsman != null && ctx.incomingBatsman!.trim().isNotEmpty && !ctx.isAllOut;
+    final newBatter = ctx.incomingBatsman?.trim() ?? '';
 
-    if (wType == 'Bowled') {
-      if (isHype) {
-        return _pick([
-          "BOWLED HIM! Clean through the gate! ${ctx.bowler} knocks back middle stump on $ballStr! ${ctx.batsman} is gone and score is $scoreStr!",
-          "TIMBERRR! Absolute jaffa from ${ctx.bowler}! Shatters the stumps, sending the bails flying into orbit!",
-          "WHAT A DELIVERY! ${ctx.bowler} uproots the off-stump! ${ctx.batsman} had no answer to that 145 clicks thunderbolt!",
-        ]);
+    if (hasIncoming) {
+      if (wType == 'Bowled') {
+        final tpls = [
+          "BOWLED HIM! Clean through the gate! ${ctx.bowler} shatters the stumps to dismiss $outBatter! $newBatter walks in as the new batsman. Score $scoreStr.",
+          "TIMBERRR! Absolute jaffa from ${ctx.bowler}! $outBatter has been cleaned up. $newBatter comes to the crease. Total $scoreStr.",
+          "WHAT A DELIVERY! ${ctx.bowler} knocks back middle stump! $outBatter departs, and $newBatter arrives at the crease.",
+        ];
+        return _pick(tpls);
       }
-      return "OUT! Bowled! ${ctx.bowler} penetrates ${ctx.batsman}'s defense with a sharp in-swinger, crashing into the stumps. Score $scoreStr.";
-    }
 
-    if (wType == 'Caught') {
-      if (isHype) {
-        return _pick([
-          "CAUGHT! In the air... and taken safely! ${ctx.batsman} miscues the pull shot off ${ctx.bowler} on $ballStr! Huge breakthrough!",
-          "WHAT A CATCH! Fielder dives full length at backward point to grab a stunner off ${ctx.bowler}! ${ctx.batsman} has to walk back at $scoreStr!",
-          "GONE! Top edge flies high into the night sky... settled underneath and caught calmly by the fielder at deep square leg!",
-        ]);
+      if (wType == 'Caught') {
+        final tpls = [
+          "CAUGHT! High in the air and taken safely! ${ctx.bowler} gets the breakthrough as $outBatter departs. $newBatter walks in as the new batsman. Score $scoreStr.",
+          "WHAT A CATCH! Sensational grab to dismiss $outBatter off the bowling of ${ctx.bowler}! $newBatter comes to the crease.",
+          "OUT! $outBatter mistimes the stroke and is caught! Tremendous bowling from ${ctx.bowler}. $newBatter is the new batsman.",
+        ];
+        return _pick(tpls);
       }
-      return "WICKET! Caught! ${ctx.batsman} tries to go over mid-off against ${ctx.bowler} but finds the fielder directly. Score drops to $scoreStr.";
-    }
 
-    if (wType == 'LBW') {
-      if (isHype) {
-        return _pick([
-          "HUGE SHOUT FOR LBW! The finger goes straight up! ${ctx.bowler} traps ${ctx.batsman} plumb in front on $ballStr! Score is $scoreStr!",
-          "DEAD PLUMB! ${ctx.bowler} hits the front pad on the knee roll! Umpire raises the finger without hesitation!",
-        ]);
+      if (wType == 'LBW') {
+        final tpls = [
+          "LBW! Huge shout from ${ctx.bowler}, and the umpire's finger goes straight up! $outBatter is trapped right in front. $newBatter comes to the crease. Score $scoreStr.",
+          "DEAD PLUMB! ${ctx.bowler} strikes the front pad and $outBatter must depart! $newBatter walks in as the new batsman.",
+          "OUT! Trapped right in front of the stumps! $outBatter is given out LBW to ${ctx.bowler}. $newBatter walks in as the next batter.",
+        ];
+        return _pick(tpls);
       }
-      return "OUT! LBW! Rapid yorker from ${ctx.bowler} beats the inside edge and strikes ${ctx.batsman} on the pads. Score $scoreStr.";
+
+      if (wType == 'Run Out') {
+        final tpls = [
+          "RUN OUT! DIRECT HIT! Fantastic throw and $outBatter is caught short of the crease! $newBatter walks in as the new batsman. Score $scoreStr.",
+          "DISASTER RUN OUT! Terrible mix-up between the wickets, and $outBatter is dismissed! $newBatter comes to the crease.",
+        ];
+        return _pick(tpls);
+      }
+
+      if (wType == 'Stumped') {
+        final tpls = [
+          "STUMPED! Beaten in flight by ${ctx.bowler}, lightning-fast glovework whips off the bails! $outBatter departs and $newBatter is the new batsman. Score $scoreStr.",
+          "OUT! Dragged his foot out and the bails are off in a flash! $outBatter is stumped off ${ctx.bowler}. $newBatter comes to the middle.",
+        ];
+        return _pick(tpls);
+      }
+
+      final tpls = [
+        "WICKET! $outBatter is OUT! ${ctx.bowler} strikes with precision. $newBatter walks in as the new batsman. Score $scoreStr.",
+        "What a breakthrough! $outBatter departs off ${ctx.bowler}'s bowling, and $newBatter comes to the crease.",
+        "WICKET! $outBatter has been dismissed. $newBatter is the new batsman. Total $scoreStr.",
+      ];
+      return _pick(tpls);
+    } else if (ctx.isAllOut) {
+      final tpls = [
+        "WICKET AND ALL OUT! ${ctx.bowler} dismisses $outBatter! That is the final wicket and the batting side is all out. Score $scoreStr.",
+        "INNINGS WRAPPED UP! $outBatter departs to ${ctx.bowler}! The innings folds as all wickets have fallen. Total $scoreStr.",
+        "BOWLED OUT! ${ctx.bowler} claims $outBatter for the final wicket! Innings closed at $scoreStr.",
+      ];
+      return _pick(tpls);
     }
 
-    if (wType == 'Run Out') {
-      return _pick([
-        "RUN OUT! DIRECT HIT! Fielder fires at the striker's end and catches ${ctx.batsman} inches short of the crease! Total $scoreStr!",
-        "DISASTER RUN OUT! Hesitation between the wickets, throw comes in flat and the bails are whipped off! ${ctx.batsman} is out!",
-      ]);
-    }
-
-    // Default wicket
-    if (isHype) {
-      return "OUT! Massive breakthrough for ${ctx.bowler}! ${ctx.batsman} departs on $ballStr as score reads $scoreStr!";
-    }
-    return "WICKET! ${ctx.bowler} strikes to remove ${ctx.batsman}. Crucial blow to the batting team, score is $scoreStr.";
+    // Graceful fallback when incoming batsman is not yet known without inventing generic names
+    final tpls = [
+      "WICKET! $outBatter is OUT! ${ctx.bowler} strikes at a crucial moment in the match. Score $scoreStr.",
+      "What a breakthrough! $outBatter departs to a brilliant delivery from ${ctx.bowler}.",
+      "WICKET! $outBatter has been dismissed! Clinical bowling by ${ctx.bowler}. Score $scoreStr.",
+    ];
+    return _pick(tpls);
   }
 
   static String _generateSixCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, bool isCasual, String ballStr, String scoreStr) {
     if (isHype) {
       final tpls = [
         "SIX! MASSIVE HIT! ${ctx.batsman} steps out on $ballStr and launches ${ctx.bowler} 95 meters into the top tier! Score moves to $scoreStr!",
-        "THAT IS MONSTROUS! ${ctx.batsman} reads the slower ball and deposits ${ctx.bowler} over long-on for a huge maximum!",
+        "THAT IS MONSTROUS! ${ctx.batsman} reads the slower delivery and deposits ${ctx.bowler} high into the stands for a huge maximum!",
         "INTO THE CROWD! Pure timing and muscle from ${ctx.batsman}! Dispatches ${ctx.bowler} straight back over bowler's head for SIX!",
-        "BOOM! What a sensational stroke on $ballStr! ${ctx.batsman} pulls ${ctx.bowler} effortlessly over deep square leg for SIX! Score $scoreStr!",
+        "BOOM! What a sensational stroke on $ballStr! ${ctx.batsman} connects cleanly off ${ctx.bowler} and clears the boundary rope with ease! Score $scoreStr!",
+        "MONSTROUS HIT! ${ctx.batsman} connects with ferocious power, sending the ball soaring high into the grandstand!",
       ];
       return _pick(tpls);
     } else if (isTech) {
       final tpls = [
-        "SIX! Picked up beautifully from length. ${ctx.batsman} transfers weight quickly onto backfoot and lofts ${ctx.bowler} over deep mid-wicket.",
-        "MAXIMUM! Superb bat speed from ${ctx.batsman}. Meets the ball on the rise, clearing the long-off boundary with perfection.",
+        "SIX! Picked up beautifully from length. ${ctx.batsman} transfers weight quickly onto the backfoot and lofts ${ctx.bowler} over the boundary.",
+        "MAXIMUM! Superb bat speed from ${ctx.batsman}. Meets the ball on the rise, clearing the ropes with perfection.",
       ];
       return _pick(tpls);
     } else {
@@ -190,22 +279,23 @@ class AiCommentaryGenerator {
   static String _generateFourCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, bool isCasual, String ballStr, String scoreStr) {
     if (isHype) {
       final tpls = [
-        "FOUR! GLORIOUS COVER DRIVE! ${ctx.batsman} leans into the half-volley from ${ctx.bowler} and pierces the gap for four! Score $scoreStr!",
-        "CRACKING SHOT! Short and wide from ${ctx.bowler}, ${ctx.batsman} punishes it with a blistering cut to the point boundary!",
-        "FOUR RUNS! Delicious wrist-work on $ballStr! ${ctx.batsman} flicks ${ctx.bowler} past mid-wicket and it races to the rope!",
-        "BOUNDARY! Audacious ramp shot over short third man! ${ctx.batsman} outfoxes ${ctx.bowler} for four valuable runs!",
+        "FOUR! GLORIOUS STROKE! ${ctx.batsman} leans into the half-volley from ${ctx.bowler} and pierces the boundary gap for four! Score $scoreStr!",
+        "CRACKING SHOT! Short and wide from ${ctx.bowler}, ${ctx.batsman} punishes it with a blistering cut to the boundary!",
+        "FOUR RUNS! Delicious wrist-work on $ballStr! ${ctx.batsman} flicks ${ctx.bowler} with supreme timing and it races to the rope!",
+        "BOUNDARY! Audacious ramp stroke! ${ctx.batsman} outfoxes ${ctx.bowler} for four valuable runs!",
+        "FOUR! Superb balance and intent from ${ctx.batsman}, drilling the ball past the infield to find the fence!",
       ];
       return _pick(tpls);
     } else if (isTech) {
       final tpls = [
-        "FOUR! Text-book cover drive. Head over the ball, high elbow, and ${ctx.batsman} finds the gap between cover and mid-off with precision.",
-        "BOUNDARY! ${ctx.batsman} rides the bounce effectively off ${ctx.bowler}, opening the face of the bat to beat backward point.",
+        "FOUR! Textbook stroke. Head over the ball, high elbow, and ${ctx.batsman} finds the outfield gap with precision.",
+        "BOUNDARY! ${ctx.batsman} rides the bounce effectively off ${ctx.bowler}, opening the face of the bat to beat the fielders.",
       ];
       return _pick(tpls);
     } else {
       final tpls = [
         "FOUR! Nicely timed by ${ctx.batsman}. Beats the chasing fielder and trickles into the boundary fence. Score $scoreStr.",
-        "Four runs on $ballStr. ${ctx.batsman} drives ${ctx.bowler} smoothly through the covers.",
+        "Four runs on $ballStr. ${ctx.batsman} drives ${ctx.bowler} smoothly into the gap for four.",
       ];
       return _pick(tpls);
     }
@@ -216,7 +306,7 @@ class AiCommentaryGenerator {
       final tpls = [
         "Dot ball! Fierce 142 km/h bouncer from ${ctx.bowler}! ${ctx.batsman} ducks under it just in time on $ballStr!",
         "Beaten all ends up! Sharp away swing from ${ctx.bowler} whizzes past ${ctx.batsman}'s outside edge! Brilliant bowling!",
-        "No run! Pushed straight to extra cover. Fielder attacks the ball with great agility to prevent the single.",
+        "No run! Pushed with soft hands. Fielder attacks the ball with great agility to prevent the single.",
       ];
       return _pick(tpls);
     } else if (isTech) {
@@ -228,7 +318,7 @@ class AiCommentaryGenerator {
     } else {
       final tpls = [
         "Dot ball on $ballStr. Defended gently back down the pitch to ${ctx.bowler}.",
-        "No run conceded. ${ctx.bowler} keeps it tight outside off stump.",
+        "No run conceded. ${ctx.bowler} keeps it tight and disciplined.",
       ];
       return _pick(tpls);
     }
@@ -238,26 +328,31 @@ class AiCommentaryGenerator {
     final r = ctx.runs;
     if (r == 1) {
       final tpls = [
-        "Single taken on $ballStr. ${ctx.batsman} pushes ${ctx.bowler} towards long-off to rotate the strike. Score $scoreStr.",
-        "One run. Worked away gently towards deep square leg by ${ctx.batsman}. Good running between the wickets.",
-        "Quick single! Tapped to mid-on, sharp call from ${ctx.batsman} and they scramble home comfortably. Total $scoreStr.",
+        "Single taken on $ballStr. ${ctx.batsman} punches ${ctx.bowler} down the ground to rotate the strike. Score $scoreStr.",
+        "One run. Worked away gently with soft hands by ${ctx.batsman}. Good running between the wickets.",
+        "Quick single! Crisp push into the gap, sharp call from ${ctx.batsman} and they scramble home comfortably. Total $scoreStr.",
+        "Smart cricket! ${ctx.batsman} glides it into the vacant space and sprints across for a single.",
       ];
       return _pick(tpls);
     }
     if (r == 2) {
       final tpls = [
-        "Two runs! Driven into the deep extra cover pocket, swift turn by ${ctx.batsman} to steal a second run! Score $scoreStr.",
-        "Couple of runs on $ballStr. Clipped off the pads into the deep mid-wicket vacant area.",
+        "Two runs! Driven firmly into the outfield gap, swift turn by ${ctx.batsman} to steal a second run! Score $scoreStr.",
+        "Couple of runs on $ballStr. Clipped off the pads into the vacant outfield area with aggressive running.",
       ];
       return _pick(tpls);
+    }
+    if (r == 3) {
+      return "Three runs! Magnificent athletic running between the wickets by ${ctx.batsman}, putting pressure on the fielding unit! Score reaches $scoreStr.";
     }
     return "$r runs scored on $ballStr. Excellent athletic running between wickets by ${ctx.batsman}. Score reaches $scoreStr.";
   }
 
   static String _generateWideCommentary(AiCommentaryContext ctx, bool isHype, bool isTech) {
     return _pick([
-      "Wide ball! ${ctx.bowler} sprays it down the leg side beyond the tramline. Extra run added to the scoreboard.",
-      "Wide called by the umpire! ${ctx.bowler} loses radar outside off stump. Free run to the batting team.",
+      "Wide ball! ${ctx.bowler} sprays it beyond the tramline. Extra run added to the scoreboard.",
+      "Wide called by the umpire! ${ctx.bowler} loses radar. Free run conceded to the batting team.",
+      "Wide delivery! Ball strays wide of the line, extra run added to the total.",
     ]);
   }
 
@@ -268,9 +363,39 @@ class AiCommentaryGenerator {
     return "No ball signaled! Overstepping from ${ctx.bowler}. Penalty run awarded and Free Hit coming up!";
   }
 
+  /// Generate official full match result commentary
+  static String generateMatchResultCommentary({
+    required String winnerName,
+    required String loserName,
+    required int winnerRuns,
+    required int winnerWickets,
+    required int loserRuns,
+    required int loserWickets,
+    required bool isWinByWickets,
+    required int margin,
+    int? target,
+    bool isTied = false,
+    bool isAbandoned = false,
+  }) {
+    if (isAbandoned) {
+      return "The match has been abandoned. No result.";
+    }
+    if (isTied) {
+      return "What a thrilling contest! Both teams finished with the same score. The match ends in a tie. $winnerName scored $winnerRuns/$winnerWickets, while $loserName finished at $loserRuns/$loserWickets.";
+    }
+
+    if (isWinByWickets) {
+      final targetStr = target != null && target > 0 ? ", successfully chasing the target of $target runs" : "";
+      final wMargin = margin.clamp(1, 10);
+      return "${winnerName.toUpperCase()} WIN! $winnerName have defeated $loserName by $wMargin wicket${wMargin == 1 ? '' : 's'}$targetStr. $winnerName finished at $winnerRuns/$winnerWickets, while $loserName scored $loserRuns/$loserWickets. A brilliant run chase!";
+    } else {
+      return "${winnerName.toUpperCase()} WIN! $winnerName have defeated $loserName by $margin run${margin == 1 ? '' : 's'}. $winnerName scored $winnerRuns/$winnerWickets, while $loserName finished at $loserRuns/$loserWickets. A brilliant performance from $winnerName!";
+    }
+  }
+
   /// Helper to convert simple natural language prompt or match state into rich broadcast commentary
   static String formatCustomCommentary(String rawText, {String style = 'Hype / Energetic'}) {
-    final clean = rawText.trim();
+    final clean = sanitize(rawText.trim());
     if (clean.isEmpty) return "Welcome to CricketVerse live commentary!";
     
     // If it's already well-formatted commentary, return it

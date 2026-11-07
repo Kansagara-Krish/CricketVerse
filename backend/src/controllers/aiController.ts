@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { AiConfigModel } from '../models/AiConfig';
+import { generateAICommentary, sanitizeCricketCommentary } from './scoringController';
 
 dotenv.config();
 
@@ -255,27 +256,27 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
 }
 
 export async function generateCustomCommentary(req: Request, res: Response) {
-  const { batsman, bowler, runs, isWicket, wicketType, extraType, situation } = req.body;
+  const { batsman, bowler, runs, isWicket, wicketType, extraType, situation, dismissedBatsman, incomingBatsman, totalRuns, totalWickets } = req.body;
 
   try {
-    let commentary = `${bowler || 'Bowler'} delivers to ${batsman || 'Batsman'}. `;
-    if (isWicket) {
-      commentary += `OUT! ${wicketType || 'Wicket'}! Crucial breakthrough!`;
-    } else if (runs === 6) {
-      commentary += `SIX! Smashed high and handsome over the boundary rope!`;
-    } else if (runs === 4) {
-      commentary += `FOUR! Pure placement and elegance to find the fence!`;
-    } else if (runs === 0) {
-      commentary += `Dot ball, neatly defended.`;
-    } else {
-      commentary += `${runs} runs taken.`;
-    }
+    let commentary = generateAICommentary({
+      batsman: batsman || 'Batsman',
+      bowler: bowler || 'Bowler',
+      runs: Number(runs) || 0,
+      extraType: extraType || 'None',
+      isWicket: Boolean(isWicket),
+      wicketType: wicketType || 'None',
+      dismissedBatsman: dismissedBatsman || batsman,
+      incomingBatsman: incomingBatsman,
+      totalRuns: totalRuns !== undefined ? Number(totalRuns) : undefined,
+      totalWickets: totalWickets !== undefined ? Number(totalWickets) : undefined,
+    });
 
     if (situation) {
-      commentary += ` ${situation}`;
+      commentary += ` ${sanitizeCricketCommentary(situation)}`;
     }
 
-    return res.status(200).json({ commentary });
+    return res.status(200).json({ commentary: sanitizeCricketCommentary(commentary) });
   } catch (err) {
     console.error('Error generating custom commentary:', err);
     return res.status(500).json({ error: 'Internal server error.' });

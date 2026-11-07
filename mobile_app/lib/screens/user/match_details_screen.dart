@@ -13,6 +13,9 @@ import '../../core/routes/app_routes.dart';
 import '../../core/widgets/custom_notification.dart';
 import '../../core/widgets/network_status_bar.dart';
 import '../../services/network_connectivity_service.dart';
+import '../../services/socket_service.dart';
+import '../../services/milestone_sound_service.dart';
+import '../shared/milestone_celebration_overlay.dart';
 
 
 
@@ -36,6 +39,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   int _lastHandledBallCount = 0;
   Timer? _liveCommentaryDelayTimer;
   Timer? _periodicSyncTimer;
+  MilestoneCelebration? _activeMilestone;
+  bool _isMilestoneSoundEnabled = true;
 
   @override
   void initState() {
@@ -53,6 +58,17 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     ElevenLabsService().loadSettings().then((_) {
       if (mounted) setState(() {});
     });
+
+    MilestoneSoundService().init().then((_) {
+      if (mounted) {
+        setState(() {
+          _isMilestoneSoundEnabled = MilestoneSoundService().isSoundEnabled;
+        });
+      }
+    });
+
+    SocketService.listenToMilestoneCelebrations(_onMilestoneCelebrationReceived);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storage = Provider.of<StorageService>(context, listen: false);
       storage.subscribeToMatchLiveUpdates(widget.matchId);
@@ -91,8 +107,25 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     });
   }
 
+  void _onMilestoneCelebrationReceived(Map<String, dynamic> data) {
+    if (!mounted) return;
+    try {
+      final milestone = MilestoneCelebration.fromJson(data);
+      debugPrint('[MILESTONE_DEBUG] MatchDetailsScreen: Received milestone celebration: ${milestone.type} runs by ${milestone.batsmanName} (Match: ${milestone.matchId})');
+      if (milestone.matchId == widget.matchId) {
+        MilestoneSoundService().playCelebrationSound(milestone.type);
+        setState(() {
+          _activeMilestone = milestone;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error triggering user milestone celebration: $e');
+    }
+  }
+
   @override
   void dispose() {
+    SocketService.removeMilestoneCelebrationListener(_onMilestoneCelebrationReceived);
     _periodicSyncTimer?.cancel();
     _liveCommentaryDelayTimer?.cancel();
     Provider.of<StorageService>(context, listen: false).unsubscribeFromMatchLiveUpdates(widget.matchId);
@@ -272,72 +305,90 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final hasTeamABatted = match.runsA > 0 || match.wicketsA > 0 || match.oversA > 0 || isTeamABatting || match.status == 'Completed';
     final hasTeamBBatted = match.runsB > 0 || match.wicketsB > 0 || match.oversB > 0 || !isTeamABatting || match.status == 'Completed';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F9F6),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF3F9F6),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            Stack(
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xFFF3F9F6),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFF3F9F6),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE2E8F0),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.person, color: Color(0xFF64748B), size: 22),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
+                Stack(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE2E8F0),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.person, color: Color(0xFF64748B), size: 22),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'CricketVerse AI',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      'Play • Predict • Stay Ahead',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'CricketVerse AI',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17,
-                    color: const Color(0xFF0F172A),
-                  ),
+            actions: [
+              IconButton(
+                tooltip: _isMilestoneSoundEnabled ? 'Celebration Sound ON' : 'Celebration Sound Muted',
+                icon: Icon(
+                  _isMilestoneSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                  color: _isMilestoneSoundEnabled ? const Color(0xFF078B70) : const Color(0xFF94A3B8),
+                  size: 22,
                 ),
-                Text(
-                  'Play • Predict • Stay Ahead',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10.5,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          InkWell(
+                onPressed: () async {
+                  await MilestoneSoundService().toggleSound();
+                  if (mounted) {
+                    setState(() {
+                      _isMilestoneSoundEnabled = MilestoneSoundService().isSoundEnabled;
+                    });
+                  }
+                },
+              ),
+              InkWell(
             onTap: () {
               Navigator.pushNamed(
                 context,
@@ -573,7 +624,23 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           ),
         ],
       ),
-    );
+    ),
+    if (_activeMilestone != null)
+      Positioned.fill(
+        child: MilestoneCelebrationOverlay(
+          key: ValueKey(_activeMilestone!.eventId),
+          milestone: _activeMilestone!,
+          onDismiss: () {
+            if (mounted) {
+              setState(() {
+                _activeMilestone = null;
+              });
+            }
+          },
+        ),
+      ),
+  ],
+);
   }
 
   Widget _buildHeaderTeamRow({

@@ -15,6 +15,7 @@ import '../../core/widgets/card_entrance_animation.dart';
 import '../../services/socket_service.dart';
 import '../../core/widgets/network_status_bar.dart';
 import '../../services/network_connectivity_service.dart';
+import '../shared/milestone_celebration_overlay.dart';
 
 class ScorerDashboard extends StatefulWidget {
   const ScorerDashboard({super.key});
@@ -34,6 +35,7 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
   String? _processingAction;
   String? _successAction;
   String? _errorAction;
+  MilestoneCelebration? _activeMilestone;
 
   Future<void> _handleScoringAction({
     required String actionId,
@@ -125,6 +127,9 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
       }
     });
 
+    // Listen to real-time milestone celebrations (50 & 100 runs)
+    SocketService.listenToMilestoneCelebrations(_onMilestoneReceived);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storage = Provider.of<StorageService>(context, listen: false);
       if (storage.activeScorerMatchId != null) {
@@ -133,8 +138,34 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
     });
   }
 
+  void _onMilestoneReceived(Map<String, dynamic> data) {
+    debugPrint('[MILESTONE_MANAGER_DEBUG] Manager listener executed with raw data: $data');
+    if (!mounted) return;
+    try {
+      final storage = Provider.of<StorageService>(context, listen: false);
+      final milestone = MilestoneCelebration.fromJson(data);
+      debugPrint('[MILESTONE_MANAGER_DEBUG] Milestone model parsed: type=${milestone.type}, batsman=${milestone.batsmanName}, runs=${milestone.runs}, balls=${milestone.ballsFaced}, matchId=${milestone.matchId}');
+
+      final activeMatchId = storage.activeScorerMatchId?.trim().toLowerCase();
+      final eventMatchId = milestone.matchId.trim().toLowerCase();
+      final isMatchRelevant = activeMatchId == null || activeMatchId.isEmpty || eventMatchId.isEmpty || activeMatchId == eventMatchId;
+
+      if (isMatchRelevant) {
+        debugPrint('[MILESTONE_MANAGER_DEBUG] Toast state updated: _activeMilestone set to ${milestone.type} (${milestone.batsmanName})');
+        setState(() {
+          _activeMilestone = milestone;
+        });
+      } else {
+        debugPrint('[MILESTONE_MANAGER_DEBUG] Milestone skipped: active match ($activeMatchId) != event match ($eventMatchId)');
+      }
+    } catch (e) {
+      debugPrint('[MILESTONE_MANAGER_DEBUG] Error processing milestone in manager: $e');
+    }
+  }
+
   @override
   void dispose() {
+    SocketService.removeMilestoneCelebrationListener(_onMilestoneReceived);
     final storage = Provider.of<StorageService>(context, listen: false);
     if (storage.activeScorerMatchId != null) {
       storage.unsubscribeFromMatchLiveUpdates(storage.activeScorerMatchId!);
@@ -175,9 +206,27 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           SystemNavigator.pop();
         }
       },
-      child: matchId == null
-          ? _buildAssignedMatchesListView(storage)
-          : _buildMatchScoreUpdatePage(storage, matchId),
+      child: Stack(
+        children: [
+          matchId == null
+              ? _buildAssignedMatchesListView(storage)
+              : _buildMatchScoreUpdatePage(storage, matchId),
+          if (matchId == null && _activeMilestone != null)
+            MilestoneManagerToast(
+              key: ValueKey(_activeMilestone!.eventId),
+              milestone: _activeMilestone!,
+              topOffset: MediaQuery.of(context).padding.top + kToolbarHeight + 8,
+              onDismiss: () {
+                if (mounted) {
+                  debugPrint('[MILESTONE_MANAGER_DEBUG] Toast dismissed: ${_activeMilestone?.eventId}');
+                  setState(() {
+                    _activeMilestone = null;
+                  });
+                }
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -523,17 +572,35 @@ class _ScorerDashboardState extends State<ScorerDashboard> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          NetworkStatusBar(
-            pendingCount: storage.pendingScoreCount,
-            onRetry: () => NetworkConnectivityService().checkConnectivity(),
+          Column(
+            children: [
+              NetworkStatusBar(
+                pendingCount: storage.pendingScoreCount,
+                onRetry: () => NetworkConnectivityService().checkConnectivity(),
+              ),
+              Expanded(
+                child: ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
+                    ? _buildSetupView(match, storage)
+                    : _buildScoringView(match, storage)),
+              ),
+            ],
           ),
-          Expanded(
-            child: ((match.status == 'Upcoming' || match.tossWinner.isEmpty || match.tossDecision.isEmpty)
-                ? _buildSetupView(match, storage)
-                : _buildScoringView(match, storage)),
-          ),
+          if (_activeMilestone != null)
+            MilestoneManagerToast(
+              key: ValueKey(_activeMilestone!.eventId),
+              milestone: _activeMilestone!,
+              topOffset: 10.0,
+              onDismiss: () {
+                if (mounted) {
+                  debugPrint('[MILESTONE_MANAGER_DEBUG] Toast dismissed: ${_activeMilestone?.eventId}');
+                  setState(() {
+                    _activeMilestone = null;
+                  });
+                }
+              },
+            ),
         ],
       ),
     );

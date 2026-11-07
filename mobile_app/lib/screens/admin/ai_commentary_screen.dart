@@ -100,7 +100,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
         id: 'seed_1',
         label: '6',
         color: AppTheme.primaryGreen,
-        text: 'SIX! Smashed high over long-on! That clears the boundary ropes with tremendous power! Score moves to 120/2.',
+        text: 'SIX! Smashed high into the grandstand! That clears the boundary ropes with tremendous power! Score moves to 120/2.',
         batsman: widget.match.teamA.players.isNotEmpty ? widget.match.teamA.players[0].name : 'V. Kohli',
         bowler: widget.match.teamB.players.isNotEmpty ? widget.match.teamB.players.last.name : 'M. Starc',
         timestamp: now.subtract(const Duration(seconds: 15)),
@@ -109,7 +109,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
         id: 'seed_2',
         label: '4',
         color: AppTheme.primaryBlue,
-        text: 'FOUR! Sliced beautifully past backward point! Races away into the fence.',
+        text: 'FOUR! Sliced beautifully into the boundary gap! Races away to the fence.',
         batsman: widget.match.teamA.players.isNotEmpty ? widget.match.teamA.players[0].name : 'V. Kohli',
         bowler: widget.match.teamB.players.isNotEmpty ? widget.match.teamB.players.last.name : 'M. Starc',
         timestamp: now.subtract(const Duration(seconds: 40)),
@@ -118,7 +118,7 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
         id: 'seed_3',
         label: 'W',
         color: AppTheme.accentRed,
-        text: 'OUT! Clean bowled! In-swinging yorker rattles the middle stump! Huge breakthrough!',
+        text: 'WICKET! Rohit Sharma is OUT! M. Starc shatters the middle stump! Suryakumar Yadav walks in as the new batsman.',
         batsman: widget.match.teamA.players.length > 1 ? widget.match.teamA.players[1].name : 'R. Sharma',
         bowler: widget.match.teamB.players.isNotEmpty ? widget.match.teamB.players.last.name : 'M. Starc',
         timestamp: now.subtract(const Duration(minutes: 1)),
@@ -214,6 +214,11 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
       color = Colors.white70;
     }
 
+    final dismissedName = isWicket ? batName : null;
+    final incomingName = isWicket
+        ? (battingTeam.players.length > 1 ? battingTeam.players[1].name : 'New Batter')
+        : null;
+
     final commentaryText = AiCommentaryGenerator.generate(
       AiCommentaryContext(
         batsman: batName,
@@ -224,6 +229,8 @@ class _AiCommentaryScreenState extends State<AiCommentaryScreen> with SingleTick
         currentOvers: currentOvers,
         totalRuns: totalRuns + run,
         totalWickets: totalWickets + (isWicket ? 1 : 0),
+        dismissedBatsman: dismissedName,
+        incomingBatsman: incomingName,
         style: _elevenLabs.settings.commentaryStyle,
       ),
     );
