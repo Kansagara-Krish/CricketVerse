@@ -490,6 +490,23 @@ export async function updateScore(req: Request, res: Response) {
           innings: currentInnings,
           timestamp: new Date().toISOString(),
         };
+      } else if (runsNum === 6 && (extraType === 'None' || extraType === 'No Ball')) {
+        detectedMilestone = {
+          eventId: `six_${match.id}_${currentInnings}_${Date.now()}`,
+          matchId: match.id,
+          type: 'SIX',
+          batsmanId: striker.id,
+          batsmanName: striker.name,
+          runs: 6,
+          ballsFaced: striker.ballsFaced || 0,
+          bowlerId: bowler ? bowler.id : '',
+          bowlerName: bowlerName,
+          teamName: batTeam?.name || 'Batting Team',
+          teamShortName: batTeam?.shortName || '',
+          teamColorHex: batTeam?.logoColorHex || '0xFF078B70',
+          innings: currentInnings,
+          timestamp: new Date().toISOString(),
+        };
       }
     }
 
@@ -498,6 +515,7 @@ export async function updateScore(req: Request, res: Response) {
     }
 
     // 3. Bowler Stats Update
+    const prevBowlerWickets = bowler ? (bowler.wicketsTaken || 0) : 0;
     if (bowler) {
       if (extraType === 'None' || extraType === 'Wide' || extraType === 'No Ball') {
         bowler.runsConceded = (bowler.runsConceded || 0) + totalRunsThisBall;
@@ -512,12 +530,62 @@ export async function updateScore(req: Request, res: Response) {
 
     // 4. Record dismissal on the dismissed player
     const actualDismissedId = dismissedPlayerId || (isWicket ? currentStrikerId : null);
+    let dismissedPlayer: any = null;
     if (isWicket && actualDismissedId) {
-      const dismissedPlayer = batTeamPlayers.find((p: any) => p.id === actualDismissedId);
+      dismissedPlayer = batTeamPlayers.find((p: any) => p.id === actualDismissedId);
       if (dismissedPlayer) {
         dismissedPlayer.isOut = true;
         dismissedPlayer.dismissalInfo = `${wicketType || 'Out'} b ${bowlerName}`;
       }
+    }
+
+    const isBowlerCredited = isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(wicketType);
+    const newBowlerWickets = bowler ? (bowler.wicketsTaken || 0) : 0;
+    if (isBowlerCredited && bowler && prevBowlerWickets < 5 && newBowlerWickets >= 5) {
+      const m5wKey = `${currentInnings}_${bowler.id}_5w`;
+      if (!match.celebratedMilestones.includes(m5wKey)) {
+        match.celebratedMilestones.push(m5wKey);
+        detectedMilestone = {
+          eventId: `5w_${match.id}_${currentInnings}_${bowler.id}_${Date.now()}`,
+          matchId: match.id,
+          type: 'FIVE_WICKET',
+          bowlerId: bowler.id,
+          bowlerName: bowler.name,
+          bowlerWickets: newBowlerWickets,
+          bowlerRunsConceded: bowler.runsConceded || 0,
+          bowlerOvers: bowler.oversBowled || 0,
+          batsmanId: '',
+          batsmanName: bowler.name,
+          runs: 0,
+          ballsFaced: 0,
+          teamName: bowlTeam?.name || 'Bowling Team',
+          teamShortName: bowlTeam?.shortName || '',
+          teamColorHex: bowlTeam?.logoColorHex || '0xFF078B70',
+          innings: currentInnings,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } else if (isWicket && !detectedMilestone) {
+      detectedMilestone = {
+        eventId: `wkt_${match.id}_${currentInnings}_${actualDismissedId || Date.now()}_${Date.now()}`,
+        matchId: match.id,
+        type: 'WICKET',
+        batsmanId: actualDismissedId || '',
+        batsmanName: dismissedPlayer?.name || batsmanName,
+        bowlerId: isBowlerCredited && bowler ? bowler.id : '',
+        bowlerName: isBowlerCredited ? bowlerName : '',
+        dismissalType: wicketType || 'Out',
+        teamRuns: isTeamABatting ? match.runsA : match.runsB,
+        teamWickets: isTeamABatting ? match.wicketsA : match.wicketsB,
+        teamOvers: isTeamABatting ? match.oversA : match.oversB,
+        runs: dismissedPlayer?.runsScored || 0,
+        ballsFaced: dismissedPlayer?.ballsFaced || 0,
+        teamName: batTeam?.name || 'Batting Team',
+        teamShortName: batTeam?.shortName || '',
+        teamColorHex: batTeam?.logoColorHex || '0xFF078B70',
+        innings: currentInnings,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     // Sync stats into teamA and teamB player arrays
@@ -675,6 +743,27 @@ export async function updateScore(req: Request, res: Response) {
       if (isTargetChased || isTeamAllOut || isOversCompleted) {
         match.status = 'Completed';
         computeMatchResult(match);
+
+        const mWinKey = `match_${match.id}_completed`;
+        if (!match.celebratedMilestones.includes(mWinKey)) {
+          match.celebratedMilestones.push(mWinKey);
+          detectedMilestone = {
+            eventId: `win_${match.id}_${Date.now()}`,
+            matchId: match.id,
+            type: 'MATCH_WON',
+            winnerTeamName: match.winnerName,
+            resultText: match.resultText,
+            teamName: match.winnerName,
+            teamShortName: '',
+            teamColorHex: '0xFFD9A52A',
+            runs: isTeamABatting ? match.runsA : match.runsB,
+            ballsFaced: 0,
+            batsmanId: '',
+            batsmanName: match.winnerName,
+            innings: match.isFirstInnings ? 1 : 2,
+            timestamp: new Date().toISOString(),
+          };
+        }
 
         try {
           broadcastNotification({
@@ -859,6 +948,21 @@ export async function undoLastBall(req: Request, res: Response) {
       }
     }
 
+    if (match.celebratedMilestones && lastBall.bowlerId) {
+      const bowlTeamPlayers = match.battingTeamId === match.teamAId ? match.playingXI_B : match.playingXI_A;
+      const revertedBowler = bowlTeamPlayers?.find((p: any) => p.id === lastBall.bowlerId || (p._id && p._id.toString() === lastBall.bowlerId));
+      if (revertedBowler) {
+        const bowlerWickets = Number(revertedBowler.wicketsTaken || 0);
+        if (bowlerWickets < 5) {
+          match.celebratedMilestones = match.celebratedMilestones.filter(k => k !== `${currentInnings}_${revertedBowler.id}_5w`);
+        }
+      }
+    }
+
+    if (match.status !== 'Completed') {
+      match.celebratedMilestones = (match.celebratedMilestones || []).filter(k => k !== `match_${match.id}_completed`);
+    }
+
     match.markModified('playingXI_A');
     match.markModified('playingXI_B');
     match.markModified('teamA');
@@ -974,6 +1078,28 @@ export async function endInningsOrMatch(req: Request, res: Response) {
       match.status = 'Completed';
       computeMatchResult(match);
 
+      const mWinKey = `match_${match.id}_completed`;
+      if (!match.celebratedMilestones.includes(mWinKey)) {
+        match.celebratedMilestones.push(mWinKey);
+        const winCelebration = {
+          eventId: `win_${match.id}_${Date.now()}`,
+          matchId: match.id,
+          type: 'MATCH_WON',
+          winnerTeamName: match.winnerName,
+          resultText: match.resultText,
+          teamName: match.winnerName,
+          teamShortName: '',
+          teamColorHex: '0xFFD9A52A',
+          runs: 0,
+          ballsFaced: 0,
+          batsmanId: '',
+          batsmanName: match.winnerName,
+          innings: 2,
+          timestamp: new Date().toISOString(),
+        };
+        broadcastMilestoneCelebration(matchId, winCelebration);
+      }
+
       try {
         broadcastNotification({
           title: '🏆 Match Completed!',
@@ -1006,6 +1132,28 @@ export async function endMatchForce(req: Request, res: Response) {
 
     match.status = 'Completed';
     computeMatchResult(match);
+
+    const mWinKey = `match_${match.id}_completed`;
+    if (!match.celebratedMilestones.includes(mWinKey)) {
+      match.celebratedMilestones.push(mWinKey);
+      const winCelebration = {
+        eventId: `win_${match.id}_${Date.now()}`,
+        matchId: match.id,
+        type: 'MATCH_WON',
+        winnerTeamName: match.winnerName,
+        resultText: match.resultText,
+        teamName: match.winnerName,
+        teamShortName: '',
+        teamColorHex: '0xFFD9A52A',
+        runs: 0,
+        ballsFaced: 0,
+        batsmanId: '',
+        batsmanName: match.winnerName,
+        innings: match.isFirstInnings ? 1 : 2,
+        timestamp: new Date().toISOString(),
+      };
+      broadcastMilestoneCelebration(matchId, winCelebration);
+    }
 
     try {
       broadcastNotification({

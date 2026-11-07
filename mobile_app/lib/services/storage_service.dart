@@ -125,14 +125,95 @@ class StorageService with ChangeNotifier {
     });
   }
 
+  void isolateMatchStats(CricketMatch m) {
+    final Map<String, Player> matchPlayerMap = {};
+    final Map<String, Player> nameMap = {};
+
+    void registerPlayers(List<Player> players) {
+      for (final p in players) {
+        p.runsScored = 0;
+        p.ballsFaced = 0;
+        p.wicketsTaken = 0;
+        p.runsConceded = 0;
+        p.oversBowled = 0.0;
+        p.isOut = false;
+        p.dismissalInfo = '';
+        matchPlayerMap[p.id] = p;
+        nameMap[p.name.trim().toLowerCase()] = p;
+      }
+    }
+
+    registerPlayers(m.playingXI_A);
+    registerPlayers(m.playingXI_B);
+
+    final Map<String, int> legalBallsMap = {};
+
+    // Calculate match stats strictly from this match's confirmed balls
+    for (final b in m.balls) {
+      final runs = b.run;
+      final extraRuns = b.extraRun;
+      final extraType = b.extraType;
+      final isWicket = b.isWicket;
+      final wicketType = b.wicketType;
+
+      Player? striker = b.strikerId != null ? matchPlayerMap[b.strikerId] : null;
+      striker ??= nameMap[b.batsmanName.trim().toLowerCase()];
+
+      if (striker != null) {
+        if (extraType == 'None' || extraType == 'No Ball') {
+          striker.runsScored += runs;
+        }
+        if (extraType != 'Wide') {
+          striker.ballsFaced += 1;
+        }
+      }
+
+      Player? bowler = b.bowlerId != null ? matchPlayerMap[b.bowlerId] : null;
+      bowler ??= nameMap[b.bowlerName.trim().toLowerCase()];
+
+      if (bowler != null) {
+        if (extraType == 'None' || extraType == 'Wide' || extraType == 'No Ball') {
+          bowler.runsConceded += (runs + extraRuns);
+        }
+        final isLegal = extraType != 'Wide' && extraType != 'No Ball';
+        if (isLegal) {
+          legalBallsMap[bowler.id] = (legalBallsMap[bowler.id] ?? 0) + 1;
+        }
+        final isBowlerCredited = isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].contains(wicketType);
+        if (isBowlerCredited) {
+          bowler.wicketsTaken += 1;
+        }
+      }
+
+      if (isWicket) {
+        Player? dismissed = striker;
+        if (dismissed != null) {
+          dismissed.isOut = true;
+          dismissed.dismissalInfo = '${wicketType.isNotEmpty ? wicketType : "Out"} b ${b.bowlerName}';
+        }
+      }
+    }
+
+    // Set oversBowled
+    for (final p in matchPlayerMap.values) {
+      final legalBalls = legalBallsMap[p.id] ?? 0;
+      final ov = (legalBalls ~/ 6) + ((legalBalls % 6) / 10.0);
+      p.oversBowled = double.parse(ov.toStringAsFixed(1));
+    }
+
+    // Ensure teamA.players and teamB.players match the match-isolated playingXI lists
+    m.teamA.players.clear();
+    m.teamA.players.addAll(m.playingXI_A);
+    m.teamB.players.clear();
+    m.teamB.players.addAll(m.playingXI_B);
+  }
+
   void _syncSingleMatchWithTeams(CricketMatch m, Map<String, Team> teamMap) {
     // 1. Sync Team A
     final liveA = teamMap[m.teamA.id];
     if (liveA != null) {
       m.teamA.name = liveA.name;
       m.teamA.shortName = liveA.shortName;
-      m.teamA.players.clear();
-      m.teamA.players.addAll(liveA.players);
 
       final livePlayerMapA = {for (var p in liveA.players) p.id: p};
       final existingXI = List<Player>.from(m.playingXI_A);
@@ -154,7 +235,7 @@ class StorageService with ChangeNotifier {
             wicketsTaken: p.wicketsTaken,
             runsConceded: p.runsConceded,
             oversBowled: p.oversBowled,
-            matchesPlayed: p.matchesPlayed,
+            matchesPlayed: 1,
             isOut: p.isOut,
             dismissalInfo: p.dismissalInfo,
           ));
@@ -175,11 +256,28 @@ class StorageService with ChangeNotifier {
 
       for (var lp in liveA.players) {
         if (!seenIdsA.contains(lp.id)) {
-          updatedXiA.add(lp);
+          updatedXiA.add(Player(
+            id: lp.id,
+            name: lp.name,
+            role: lp.role,
+            nationality: lp.nationality,
+            isCaptain: lp.isCaptain,
+            isViceCaptain: lp.isViceCaptain,
+            runsScored: 0,
+            ballsFaced: 0,
+            wicketsTaken: 0,
+            runsConceded: 0,
+            oversBowled: 0.0,
+            matchesPlayed: 1,
+            isOut: false,
+            dismissalInfo: '',
+          ));
           seenIdsA.add(lp.id);
         }
       }
       m.playingXI_A = updatedXiA;
+      m.teamA.players.clear();
+      m.teamA.players.addAll(updatedXiA);
     }
 
     // 2. Sync Team B
@@ -187,8 +285,6 @@ class StorageService with ChangeNotifier {
     if (liveB != null) {
       m.teamB.name = liveB.name;
       m.teamB.shortName = liveB.shortName;
-      m.teamB.players.clear();
-      m.teamB.players.addAll(liveB.players);
 
       final livePlayerMapB = {for (var p in liveB.players) p.id: p};
       final existingXI = List<Player>.from(m.playingXI_B);
@@ -210,7 +306,7 @@ class StorageService with ChangeNotifier {
             wicketsTaken: p.wicketsTaken,
             runsConceded: p.runsConceded,
             oversBowled: p.oversBowled,
-            matchesPlayed: p.matchesPlayed,
+            matchesPlayed: 1,
             isOut: p.isOut,
             dismissalInfo: p.dismissalInfo,
           ));
@@ -231,11 +327,28 @@ class StorageService with ChangeNotifier {
 
       for (var lp in liveB.players) {
         if (!seenIdsB.contains(lp.id)) {
-          updatedXiB.add(lp);
+          updatedXiB.add(Player(
+            id: lp.id,
+            name: lp.name,
+            role: lp.role,
+            nationality: lp.nationality,
+            isCaptain: lp.isCaptain,
+            isViceCaptain: lp.isViceCaptain,
+            runsScored: 0,
+            ballsFaced: 0,
+            wicketsTaken: 0,
+            runsConceded: 0,
+            oversBowled: 0.0,
+            matchesPlayed: 1,
+            isOut: false,
+            dismissalInfo: '',
+          ));
           seenIdsB.add(lp.id);
         }
       }
       m.playingXI_B = updatedXiB;
+      m.teamB.players.clear();
+      m.teamB.players.addAll(updatedXiB);
     }
 
     // 3. Update player names in ball records
@@ -258,6 +371,9 @@ class StorageService with ChangeNotifier {
         ball.bowlerName = allPlayersMap[ball.bowlerId]!.name;
       }
     }
+
+    // Isolate match stats strictly from confirmed match balls
+    isolateMatchStats(m);
   }
 
   void _syncAllMatchesWithLatestTeams() {
@@ -324,6 +440,10 @@ class StorageService with ChangeNotifier {
   void _recalculatePlayerStats() {
     if (_teams.isEmpty) return;
 
+    for (var m in _matches) {
+      isolateMatchStats(m);
+    }
+
     final Map<String, int> runsMap = {};
     final Map<String, int> ballsMap = {};
     final Map<String, int> wicketsMap = {};
@@ -370,15 +490,17 @@ class StorageService with ChangeNotifier {
         final lb = legalBallsMap[player.id];
         final mc = matchesCountMap[player.id];
 
-        if (r != null && r > player.runsScored) player.runsScored = r;
-        if (b != null && b > player.ballsFaced) player.ballsFaced = b;
-        if (w != null && w > player.wicketsTaken) player.wicketsTaken = w;
-        if (c != null && c > player.runsConceded) player.runsConceded = c;
+        player.runsScored = r ?? 0;
+        player.ballsFaced = b ?? 0;
+        player.wicketsTaken = w ?? 0;
+        player.runsConceded = c ?? 0;
         if (lb != null) {
           final totalOvers = (lb ~/ 6) + (lb % 6) / 10.0;
-          if (totalOvers > player.oversBowled) player.oversBowled = totalOvers;
+          player.oversBowled = double.parse(totalOvers.toStringAsFixed(1));
+        } else {
+          player.oversBowled = 0.0;
         }
-        if (mc != null && mc > player.matchesPlayed) player.matchesPlayed = mc;
+        player.matchesPlayed = mc ?? 0;
       }
     }
   }
@@ -801,6 +923,8 @@ class StorageService with ChangeNotifier {
     String teamShortName = '';
     String teamColorHex = '0xFF078B70';
     int curInnings = 1;
+    Player? bowlerBefore;
+    int prevBowlerWickets = 0;
 
     if (matchBefore != null) {
       curInnings = matchBefore.isFirstInnings ? 1 : 2;
@@ -827,6 +951,11 @@ class StorageService with ChangeNotifier {
         prevBallsFaced = strikerPlayer.ballsFaced;
         strikerName = strikerPlayer.name;
       }
+
+      if (matchBefore.currentBowlerId.isNotEmpty) {
+        bowlerBefore = _findMatchPlayer(matchBefore, matchBefore.currentBowlerId);
+        prevBowlerWickets = bowlerBefore?.wicketsTaken ?? 0;
+      }
       debugPrint('[MILESTONE_MANAGER_DEBUG] Pre-ball striker snapshot: name=$strikerName, id=$strikerId, runs=$prevStrikerRuns, balls=$prevBallsFaced');
     }
 
@@ -849,13 +978,14 @@ class StorageService with ChangeNotifier {
 
         // 1. If backend returned latestMilestone, dispatch and broadcast it
         if (updated.latestMilestone != null) {
-          debugPrint('[MILESTONE_MANAGER_DEBUG] updateScore: Backend returned latestMilestone: ${updated.latestMilestone!.type} runs for ${updated.latestMilestone!.batsmanName}');
+          debugPrint('[MILESTONE_MANAGER_DEBUG] updateScore: Backend returned latestMilestone: ${updated.latestMilestone!.type} for ${updated.latestMilestone!.batsmanName}');
           SocketService.dispatchMilestone(updated.latestMilestone!.toJson());
           SocketService.emitMilestoneCelebration(updated.latestMilestone!.toJson());
-        } else if (extraType == 'None' || extraType == 'No Ball') {
-          // 2. Client-side fail-safe detection (e.g. when connecting to remote backend before deployment)
+        } else {
+          // 2. Client-side fail-safe detection
           final isTeamABatting = updated.battingTeamId == updated.teamA.id;
           final battingTeam = isTeamABatting ? updated.teamA : updated.teamB;
+          final bowlingTeam = isTeamABatting ? updated.teamB : updated.teamA;
           final batXI = isTeamABatting ? updated.playingXI_A : updated.playingXI_B;
 
           Player? strikerAfter = _findMatchPlayer(updated, strikerId);
@@ -866,8 +996,6 @@ class StorageService with ChangeNotifier {
           final newStrikerRuns = strikerAfter != null ? strikerAfter.runsScored : (prevStrikerRuns + runs);
           final newBallsFaced = strikerAfter != null ? strikerAfter.ballsFaced : (prevBallsFaced + (extraType != 'Wide' ? 1 : 0));
           final finalStrikerName = (strikerAfter != null && strikerAfter.name.isNotEmpty) ? strikerAfter.name : strikerName;
-
-          debugPrint('[MILESTONE_MANAGER_DEBUG] Evaluating milestone: batsman=$finalStrikerName, prevRuns=$prevStrikerRuns, newRuns=$newStrikerRuns, balls=$newBallsFaced');
 
           final m100Key = '${updated.id}_${curInnings}_${strikerId}_100';
           final m50Key = '${updated.id}_${curInnings}_${strikerId}_50';
@@ -905,10 +1033,100 @@ class StorageService with ChangeNotifier {
               innings: curInnings,
               timestamp: DateTime.now(),
             );
+          } else if (runs == 6 && (extraType == 'None' || extraType == 'No Ball')) {
+            detected = MilestoneCelebration(
+              eventId: 'six_${updated.id}_${curInnings}_${DateTime.now().millisecondsSinceEpoch}',
+              matchId: updated.id,
+              type: 'SIX',
+              batsmanId: strikerId,
+              batsmanName: finalStrikerName,
+              runs: 6,
+              ballsFaced: newBallsFaced,
+              bowlerId: bowlerBefore?.id ?? '',
+              bowlerName: bowlerBefore?.name ?? '',
+              teamName: battingTeam.name.isNotEmpty ? battingTeam.name : teamName,
+              teamShortName: battingTeam.shortName.isNotEmpty ? battingTeam.shortName : teamShortName,
+              teamColorHex: battingTeam.logoColorHex.isNotEmpty ? battingTeam.logoColorHex : teamColorHex,
+              innings: curInnings,
+              timestamp: DateTime.now(),
+            );
+          } else if (isWicket) {
+            final isBowlerCredited = !['Run Out', 'Retired Out', 'Retired Hurt'].contains(wicketType);
+            final bowlerAfter = bowlerBefore != null ? _findMatchPlayer(updated, bowlerBefore.id) : null;
+            final newBowlerWickets = bowlerAfter?.wicketsTaken ?? (prevBowlerWickets + (isBowlerCredited ? 1 : 0));
+            final m5wKey = '${updated.id}_${curInnings}_${bowlerBefore?.id}_5w';
+
+            if (isBowlerCredited && bowlerBefore != null && prevBowlerWickets < 5 && newBowlerWickets >= 5 && !_localCelebratedMilestones.contains(m5wKey)) {
+              _localCelebratedMilestones.add(m5wKey);
+              detected = MilestoneCelebration(
+                eventId: '5w_${updated.id}_${curInnings}_${bowlerBefore.id}_${DateTime.now().millisecondsSinceEpoch}',
+                matchId: updated.id,
+                type: 'FIVE_WICKET',
+                bowlerId: bowlerBefore.id,
+                bowlerName: bowlerBefore.name,
+                bowlerWickets: newBowlerWickets,
+                bowlerRunsConceded: bowlerAfter?.runsConceded ?? bowlerBefore.runsConceded,
+                bowlerOvers: bowlerAfter?.oversBowled ?? bowlerBefore.oversBowled,
+                batsmanId: '',
+                batsmanName: bowlerBefore.name,
+                runs: 0,
+                ballsFaced: 0,
+                teamName: bowlingTeam.name,
+                teamShortName: bowlingTeam.shortName,
+                teamColorHex: bowlingTeam.logoColorHex,
+                innings: curInnings,
+                timestamp: DateTime.now(),
+              );
+            } else {
+              detected = MilestoneCelebration(
+                eventId: 'wkt_${updated.id}_${curInnings}_${DateTime.now().millisecondsSinceEpoch}',
+                matchId: updated.id,
+                type: 'WICKET',
+                batsmanId: dismissedPlayerId ?? strikerId,
+                batsmanName: dismissedPlayerId != null
+                    ? (_findMatchPlayer(updated, dismissedPlayerId)?.name ?? finalStrikerName)
+                    : finalStrikerName,
+                bowlerId: isBowlerCredited ? (bowlerBefore?.id ?? '') : '',
+                bowlerName: isBowlerCredited ? (bowlerBefore?.name ?? '') : '',
+                dismissalType: wicketType.isNotEmpty ? wicketType : 'Out',
+                teamRuns: isTeamABatting ? updated.runsA : updated.runsB,
+                teamWickets: isTeamABatting ? updated.wicketsA : updated.wicketsB,
+                teamOvers: isTeamABatting ? updated.oversA : updated.oversB,
+                runs: strikerAfter?.runsScored ?? prevStrikerRuns,
+                ballsFaced: newBallsFaced,
+                teamName: battingTeam.name.isNotEmpty ? battingTeam.name : teamName,
+                teamShortName: battingTeam.shortName.isNotEmpty ? battingTeam.shortName : teamShortName,
+                teamColorHex: battingTeam.logoColorHex.isNotEmpty ? battingTeam.logoColorHex : teamColorHex,
+                innings: curInnings,
+                timestamp: DateTime.now(),
+              );
+            }
+          }
+
+          if (updated.status == 'Completed' && updated.winnerName.isNotEmpty) {
+            final winKey = 'win_${updated.id}';
+            if (!_localCelebratedMilestones.contains(winKey)) {
+              _localCelebratedMilestones.add(winKey);
+              final winCelebration = MilestoneCelebration(
+                eventId: 'win_${updated.id}_${DateTime.now().millisecondsSinceEpoch}',
+                matchId: updated.id,
+                type: 'MATCH_WON',
+                winnerTeamName: updated.winnerName,
+                resultText: updated.resultText,
+                teamName: updated.winnerName,
+                batsmanId: '',
+                batsmanName: updated.winnerName,
+                runs: isTeamABatting ? updated.runsA : updated.runsB,
+                ballsFaced: 0,
+                innings: curInnings,
+                timestamp: DateTime.now(),
+              );
+              detected = winCelebration;
+            }
           }
 
           if (detected != null) {
-            debugPrint('[MILESTONE_MANAGER_DEBUG] Client detected milestone: ${detected.type} runs by ${detected.batsmanName}');
+            debugPrint('[MILESTONE_MANAGER_DEBUG] Client detected milestone: ${detected.type} for ${detected.batsmanName}');
             updated.latestMilestone = detected;
             SocketService.dispatchMilestone(detected.toJson());
             SocketService.emitMilestoneCelebration(detected.toJson());

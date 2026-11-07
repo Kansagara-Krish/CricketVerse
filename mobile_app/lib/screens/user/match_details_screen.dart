@@ -15,6 +15,7 @@ import '../../core/widgets/network_status_bar.dart';
 import '../../services/network_connectivity_service.dart';
 import '../../services/socket_service.dart';
 import '../../services/milestone_sound_service.dart';
+import '../../services/celebration_queue_service.dart';
 import '../shared/milestone_celebration_overlay.dart';
 
 
@@ -41,6 +42,9 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
   Timer? _periodicSyncTimer;
   MilestoneCelebration? _activeMilestone;
   bool _isMilestoneSoundEnabled = true;
+  bool _wasCommentaryPlayingBeforeCelebration = false;
+  String? _pausedCommentaryText;
+  int _pausedCommentaryIndex = -1;
 
   @override
   void initState() {
@@ -67,6 +71,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
       }
     });
 
+    CelebrationQueueService().activeCelebrationNotifier.addListener(_onActiveCelebrationChanged);
     SocketService.listenToMilestoneCelebrations(_onMilestoneCelebrationReceived);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -107,16 +112,62 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     });
   }
 
+  void _onActiveCelebrationChanged() {
+    if (!mounted) return;
+    final active = CelebrationQueueService().activeCelebrationNotifier.value;
+    if (active != null && active.matchId == widget.matchId) {
+      // Step 3: If AI voice commentary was playing, pause it safely during the celebration effect
+      final isSpeaking = _isPlayingVoice || ElevenLabsService().isPlaying;
+      if (isSpeaking) {
+        _wasCommentaryPlayingBeforeCelebration = true;
+        _pausedCommentaryText = ElevenLabsService().currentPlayingTextNotifier.value;
+        _pausedCommentaryIndex = _playingVoiceIndex;
+        ElevenLabsService().stopAudio();
+        _flutterTts.stop();
+        setState(() {
+          _isPlayingVoice = false;
+          _playingVoiceIndex = -1;
+        });
+      } else {
+        _wasCommentaryPlayingBeforeCelebration = false;
+        _pausedCommentaryText = null;
+        _pausedCommentaryIndex = -1;
+      }
+
+      // Step 2: Play short celebration sound effect
+      if (_isMilestoneSoundEnabled) {
+        MilestoneSoundService().playCelebrationSound(
+          active.type,
+          onComplete: () {
+            // Step 4: After effect finishes, resume commentary only if it was playing before
+            if (_wasCommentaryPlayingBeforeCelebration && mounted && _pausedCommentaryText != null && _pausedCommentaryText!.isNotEmpty) {
+              _playVoiceCommentary(_pausedCommentaryIndex, _pausedCommentaryText!);
+              _wasCommentaryPlayingBeforeCelebration = false;
+            }
+            // Step 5: If commentary was not playing, do not automatically start it.
+          },
+        );
+      }
+
+      setState(() {
+        _activeMilestone = active;
+      });
+    } else {
+      if (_activeMilestone != null) {
+        setState(() {
+          _activeMilestone = null;
+        });
+      }
+    }
+  }
+
   void _onMilestoneCelebrationReceived(Map<String, dynamic> data) {
     if (!mounted) return;
     try {
       final milestone = MilestoneCelebration.fromJson(data);
-      debugPrint('[MILESTONE_DEBUG] MatchDetailsScreen: Received milestone celebration: ${milestone.type} runs by ${milestone.batsmanName} (Match: ${milestone.matchId})');
+      debugPrint('[MILESTONE_DEBUG] MatchDetailsScreen: Received milestone celebration: ${milestone.type} (Match: ${milestone.matchId})');
       if (milestone.matchId == widget.matchId) {
-        MilestoneSoundService().playCelebrationSound(milestone.type);
-        setState(() {
-          _activeMilestone = milestone;
-        });
+        CelebrationQueueService().enqueue(milestone);
       }
     } catch (e) {
       debugPrint('Error triggering user milestone celebration: $e');
@@ -125,6 +176,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
 
   @override
   void dispose() {
+    CelebrationQueueService().activeCelebrationNotifier.removeListener(_onActiveCelebrationChanged);
+    CelebrationQueueService().clearMatch(widget.matchId);
     SocketService.removeMilestoneCelebrationListener(_onMilestoneCelebrationReceived);
     _periodicSyncTimer?.cancel();
     _liveCommentaryDelayTimer?.cancel();
@@ -275,24 +328,31 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final battingTeam = isTeamABatting ? match.teamA : match.teamB;
     final bowlingTeam = isTeamABatting ? match.teamB : match.teamA;
 
-    final striker = battingTeam.players.firstWhere(
+    final battingPlayers = isTeamABatting
+        ? (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players)
+        : (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players);
+    final bowlingPlayers = isTeamABatting
+        ? (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players)
+        : (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players);
+
+    final striker = battingPlayers.firstWhere(
       (p) => p.id == match.currentStrikerId,
-      orElse: () => battingTeam.players.isNotEmpty
-          ? battingTeam.players[0]
+      orElse: () => battingPlayers.isNotEmpty
+          ? battingPlayers[0]
           : Player(id: '', name: 'Batsman', role: 'Batter', nationality: ''),
     );
-    final nonStriker = battingTeam.players.firstWhere(
+    final nonStriker = battingPlayers.firstWhere(
       (p) => p.id == match.currentNonStrikerId,
-      orElse: () => battingTeam.players.length > 1
-          ? battingTeam.players[1]
-          : (battingTeam.players.isNotEmpty
-              ? battingTeam.players[0]
+      orElse: () => battingPlayers.length > 1
+          ? battingPlayers[1]
+          : (battingPlayers.isNotEmpty
+              ? battingPlayers[0]
               : Player(id: '', name: 'Batsman', role: 'Batter', nationality: '')),
     );
-    final bowler = bowlingTeam.players.firstWhere(
+    final bowler = bowlingPlayers.firstWhere(
       (p) => p.id == match.currentBowlerId,
-      orElse: () => bowlingTeam.players.isNotEmpty
-          ? bowlingTeam.players.last
+      orElse: () => bowlingPlayers.isNotEmpty
+          ? bowlingPlayers.last
           : Player(id: '', name: 'Bowler', role: 'Bowler', nationality: ''),
     );
 
@@ -394,6 +454,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 context,
                 AppRoutes.matchSummaryDownload,
                 arguments: {
+                  'match': match,
+                  'matchId': match.id,
                   'title': '${match.teamA.shortName} vs ${match.teamB.shortName}',
                   'teamAName': match.teamA.name,
                   'teamAShort': match.teamA.shortName,
@@ -406,8 +468,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                   'result': match.status == 'Completed'
                       ? (match.resultText.isNotEmpty ? match.resultText : '${match.runsA > match.runsB ? match.teamA.name : match.teamB.name} won the match')
                       : 'Match is ${match.status.toLowerCase()}',
-                  'teamAPlayers': match.teamA.players.map((p) => p.name).toList(),
-                  'teamBPlayers': match.teamB.players.map((p) => p.name).toList(),
+                  'teamAPlayers': (match.playingXI_A.isNotEmpty ? match.playingXI_A : match.teamA.players).map((p) => p.name).toList(),
+                  'teamBPlayers': (match.playingXI_B.isNotEmpty ? match.playingXI_B : match.teamB.players).map((p) => p.name).toList(),
                 },
               );
             },
@@ -632,9 +694,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
           milestone: _activeMilestone!,
           onDismiss: () {
             if (mounted) {
-              setState(() {
-                _activeMilestone = null;
-              });
+              CelebrationQueueService().dismissCurrent();
             }
           },
         ),
@@ -860,12 +920,21 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
     final innOvers = isInn1 ? match.oversA : match.oversB;
     final innCrr = innOvers > 0 ? (innRuns / innOvers).toStringAsFixed(2) : '0.00';
 
-    // Calculate Extras breakdown from match.balls
+    final selectedInningsNum = isInn1 ? 1 : 2;
+    final innBalls = match.balls.where((b) {
+      if (b.innings != null) return b.innings == selectedInningsNum;
+      if (b.battingTeamId != null && b.battingTeamId!.isNotEmpty) {
+        return b.battingTeamId == innBatTeam.id;
+      }
+      return isInn1;
+    }).toList();
+
+    // Calculate Extras breakdown from selected innings confirmed balls
     int wides = 0;
     int noBalls = 0;
     int legByes = 0;
     int byes = 0;
-    for (var b in match.balls) {
+    for (var b in innBalls) {
       if (b.extraType == 'Wide') wides += (b.extraRun > 0 ? b.extraRun : 1);
       if (b.extraType == 'No Ball') noBalls += (b.extraRun > 0 ? b.extraRun : 1);
       if (b.extraType == 'Leg Bye') legByes += (b.extraRun > 0 ? b.extraRun : 1);
@@ -1271,18 +1340,24 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                     final isCurrentNonStriker = p.id == match.currentNonStrikerId && match.status == 'Live';
 
                     // Compute runs and boundaries from match balls or player object
-                    final pBalls = match.balls.where((b) => b.strikerId == p.id).toList();
+                    final pBalls = innBalls.where((b) => b.strikerId == p.id || (b.strikerId == null && b.batsmanName.trim().toLowerCase() == p.name.trim().toLowerCase())).toList();
                     final fours = pBalls.where((b) => b.run == 4 && (b.extraType == 'None' || b.extraType == 'No Ball')).length;
                     final sixes = pBalls.where((b) => b.run == 6 && (b.extraType == 'None' || b.extraType == 'No Ball')).length;
-                    final runsScored = p.runsScored;
-                    final ballsFaced = p.ballsFaced;
+                    int runsScored = p.runsScored;
+                    int ballsFaced = p.ballsFaced;
+                    if (pBalls.isNotEmpty) {
+                      final runsFromBalls = pBalls.fold<int>(0, (sum, b) => (b.extraType == 'None' || b.extraType == 'No Ball') ? sum + b.run : sum);
+                      final ballsFromBalls = pBalls.where((b) => b.extraType != 'Wide').length;
+                      if (runsFromBalls > runsScored) runsScored = runsFromBalls;
+                      if (ballsFromBalls > ballsFaced) ballsFaced = ballsFromBalls;
+                    }
                     final sr = ballsFaced > 0 ? ((runsScored / ballsFaced) * 100).toStringAsFixed(1) : '0.0';
 
                     // Determine dismissal status
                     String statusText = 'Yet to bat';
                     Color statusColor = const Color(0xFF94A3B8);
-                    final dismissalBall = match.balls.reversed.firstWhere(
-                      (b) => b.isWicket && (b.strikerId == p.id || b.batsmanName == p.name),
+                    final dismissalBall = innBalls.reversed.firstWhere(
+                      (b) => b.isWicket && (b.strikerId == p.id || b.batsmanName.trim().toLowerCase() == p.name.trim().toLowerCase()),
                       orElse: () => BallRecord(run: 0, extraRun: 0, extraType: '', isWicket: false, wicketType: '', batsmanName: '', bowlerName: '', commentary: '', timestamp: DateTime.now()),
                     );
 
@@ -1475,7 +1550,8 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                 Builder(
                   builder: (context) {
                     final bowlersWhoBowled = innBowlPlayers.where((b) {
-                      return b.oversBowled > 0 || b.runsConceded > 0 || b.wicketsTaken > 0 || (b.id == match.currentBowlerId && match.status == 'Live');
+                      final bowledBalls = innBalls.where((ball) => ball.bowlerId == b.id || (ball.bowlerId == null && ball.bowlerName.trim().toLowerCase() == b.name.trim().toLowerCase())).length;
+                      return bowledBalls > 0 || b.oversBowled > 0 || b.runsConceded > 0 || b.wicketsTaken > 0 || (b.id == match.currentBowlerId && match.status == 'Live');
                     }).toList();
 
                     final displayBowlers = bowlersWhoBowled.isNotEmpty ? bowlersWhoBowled : innBowlPlayers.take(4).toList();
@@ -1488,7 +1564,31 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                       itemBuilder: (ctx, i) {
                         final b = displayBowlers[i];
                         final isLiveBowler = b.id == match.currentBowlerId && match.status == 'Live';
-                        final eco = b.oversBowled > 0 ? (b.runsConceded / b.oversBowled).toStringAsFixed(1) : '0.0';
+                        final bBalls = innBalls.where((ball) => ball.bowlerId == b.id || (ball.bowlerId == null && ball.bowlerName.trim().toLowerCase() == b.name.trim().toLowerCase())).toList();
+                        int runsConceded = b.runsConceded;
+                        int wickets = b.wicketsTaken;
+                        double oversBowled = b.oversBowled;
+                        if (bBalls.isNotEmpty) {
+                          int ballRuns = 0;
+                          int legalBalls = 0;
+                          int ballWickets = 0;
+                          for (final ball in bBalls) {
+                            if (ball.extraType == 'None' || ball.extraType == 'Wide' || ball.extraType == 'No Ball') {
+                              ballRuns += (ball.run + ball.extraRun);
+                            }
+                            if (ball.extraType != 'Wide' && ball.extraType != 'No Ball') {
+                              legalBalls += 1;
+                            }
+                            if (ball.isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].contains(ball.wicketType)) {
+                              ballWickets += 1;
+                            }
+                          }
+                          if (ballRuns > runsConceded) runsConceded = ballRuns;
+                          if (ballWickets > wickets) wickets = ballWickets;
+                          final calcOvers = (legalBalls ~/ 6) + ((legalBalls % 6) / 10.0);
+                          if (calcOvers > oversBowled) oversBowled = double.parse(calcOvers.toStringAsFixed(1));
+                        }
+                        final eco = oversBowled > 0 ? (runsConceded / oversBowled).toStringAsFixed(1) : '0.0';
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -1523,13 +1623,13 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen> with TickerProv
                                   ],
                                 ),
                               ),
-                              Expanded(flex: 1, child: Text(b.oversBowled.toStringAsFixed(1), textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
+                              Expanded(flex: 1, child: Text(oversBowled.toStringAsFixed(1), textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
                               Expanded(flex: 1, child: Text('0', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF64748B)))),
-                              Expanded(flex: 1, child: Text('${b.runsConceded}', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
+                              Expanded(flex: 1, child: Text('$runsConceded', textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
                               Expanded(
                                 flex: 1,
                                 child: Text(
-                                  '${b.wicketsTaken}',
+                                  '$wickets',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 13,

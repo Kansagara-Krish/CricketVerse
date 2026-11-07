@@ -12,6 +12,9 @@ class MilestoneTheme {
   static const Color premiumGold  = Color(0xFFD9A52A);
   static const Color accentGold   = Color(0xFFF59E0B);
   static const Color lightGold    = Color(0xFFFDE047);
+  static const Color wicketRed    = Color(0xFFDC2626);
+  static const Color deepRed      = Color(0xFF7F1D1D);
+  static const Color darkRedNight = Color(0xFF2B0B0B);
   static const Color white        = Colors.white;
 
   static const LinearGradient goldGradient = LinearGradient(
@@ -20,16 +23,16 @@ class MilestoneTheme {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient wicketGradient = LinearGradient(
+    colors: [Color(0xFFEF4444), Color(0xFFDC2626), Color(0xFF991B1B), Color(0xFF7F1D1D)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const LinearGradient emeraldGradient = LinearGradient(
     colors: [Color(0xFF064E3B), Color(0xFF022C22), Color(0xFF011A14)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-  );
-
-  static const LinearGradient managerToastGradient = LinearGradient(
-    colors: [Color(0xFF064E3B), Color(0xFF022C22)],
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
   );
 }
 
@@ -93,7 +96,7 @@ class _ConfettiPainter extends CustomPainter {
   bool shouldRepaint(covariant _ConfettiPainter oldDelegate) => true;
 }
 
-// ─── Fireworks Particle Model & Painter (Century Exclusive) ───────────────────
+// ─── Fireworks Particle Model & Painter (Century & Win) ───────────────────────
 class _FireworkParticle {
   double x;
   double y;
@@ -135,7 +138,7 @@ class _FireworksPainter extends CustomPainter {
   bool shouldRepaint(covariant _FireworksPainter oldDelegate) => true;
 }
 
-// ─── USER-SIDE CELEBRATION OVERLAY ─────────────────────────────────────────────
+// ─── USER-SIDE CELEBRATION OVERLAY (ALL 6 TYPES) ──────────────────────────────
 class MilestoneCelebrationOverlay extends StatefulWidget {
   final MilestoneCelebration milestone;
   final VoidCallback onDismiss;
@@ -156,50 +159,72 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _glowAnimation;
+  late AnimationController _stumpsAnimController;
 
   late AnimationController _particleController;
   final List<_ConfettiParticle> _confetti = [];
   final List<_FireworkParticle> _fireworks = [];
   final math.Random _random = math.Random();
 
+  late String _type;
   bool _isCentury = false;
+  bool _isMatchWon = false;
+  bool _isWicket = false;
+  bool _isSix = false;
+  bool _isFiveWicket = false;
 
   @override
   void initState() {
     super.initState();
-    _isCentury = widget.milestone.type == '100' || widget.milestone.runs >= 100;
-    final totalDurationMs = _isCentury ? 5000 : 3000;
+    _type = widget.milestone.type.trim().toUpperCase();
+    _isCentury = _type == '100' || widget.milestone.runs >= 100;
+    _isMatchWon = _type == 'MATCH_WON' || _type == 'MATCH_WIN';
+    _isWicket = _type == 'WICKET';
+    _isSix = _type == 'SIX';
+    _isFiveWicket = _type == 'FIVE_WICKET' || _type == '5W';
 
-    // Main entrance & exit controller
+    final int totalDurationMs;
+    if (_isMatchWon) {
+      totalDurationMs = 5500;
+    } else if (_isCentury) {
+      totalDurationMs = 4800;
+    } else if (_isFiveWicket) {
+      totalDurationMs = 3600;
+    } else if (_isWicket) {
+      totalDurationMs = 2800;
+    } else if (_isSix) {
+      totalDurationMs = 1800;
+    } else {
+      totalDurationMs = 2800; // 50 runs
+    }
+
     _mainAnimController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: totalDurationMs),
     );
 
-    // Dramatic entrance with overshoot
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.1, end: _isCentury ? 1.15 : 1.08)
+        tween: Tween<double>(begin: 0.1, end: (_isCentury || _isMatchWon) ? 1.15 : 1.08)
             .chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 25.0,
+        weight: 22.0,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: _isCentury ? 1.15 : 1.08, end: 1.0)
+        tween: Tween<double>(begin: (_isCentury || _isMatchWon) ? 1.15 : 1.08, end: 1.0)
             .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 15.0,
       ),
       TweenSequenceItem(
         tween: ConstantTween<double>(1.0),
-        weight: 45.0,
+        weight: 48.0,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.9)
+        tween: Tween<double>(begin: 1.0, end: 0.88)
             .chain(CurveTween(curve: Curves.easeInQuad)),
         weight: 15.0,
       ),
     ]).animate(_mainAnimController);
 
-    // Fade in and out
     _fadeAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
@@ -215,13 +240,19 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
       ),
     ]).animate(_mainAnimController);
 
-    // Continuous golden glow pulse
     _glowAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween<double>(begin: 0.4, end: 1.0), weight: 50.0),
       TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.4), weight: 50.0),
     ]).animate(CurvedAnimation(parent: _mainAnimController, curve: Curves.easeInOut));
 
-    // Particle simulation loop
+    _stumpsAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (_isWicket) {
+      _stumpsAnimController.forward();
+    }
+
     _initParticles();
     _particleController = AnimationController(
       vsync: this,
@@ -235,25 +266,33 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
   }
 
   void _initParticles() {
-    final colors = [
-      MilestoneTheme.premiumGold,
-      MilestoneTheme.lightGold,
-      MilestoneTheme.accentGold,
-      MilestoneTheme.primaryGreen,
-      Colors.white,
-    ];
+    final colors = _isWicket
+        ? [
+            MilestoneTheme.wicketRed,
+            MilestoneTheme.lightGold,
+            Colors.white,
+            const Color(0xFFEF4444),
+            MilestoneTheme.premiumGold,
+          ]
+        : [
+            MilestoneTheme.premiumGold,
+            MilestoneTheme.lightGold,
+            MilestoneTheme.accentGold,
+            MilestoneTheme.primaryGreen,
+            Colors.white,
+          ];
 
-    final count = _isCentury ? 110 : 60;
+    final count = (_isCentury || _isMatchWon) ? 100 : (_isSix ? 35 : 60);
     for (int i = 0; i < count; i++) {
       _confetti.add(_ConfettiParticle(
         x: _random.nextDouble(),
-        y: _random.nextDouble() * 0.4 - 0.4, // Staggered entry from top
-        vx: (_random.nextDouble() - 0.5) * 0.006,
-        vy: 0.004 + _random.nextDouble() * 0.008,
-        size: 6.0 + _random.nextDouble() * (_isCentury ? 8.0 : 5.0),
+        y: _random.nextDouble() * 0.4 - 0.4,
+        vx: (_random.nextDouble() - 0.5) * 0.007,
+        vy: 0.004 + _random.nextDouble() * 0.009,
+        size: 5.0 + _random.nextDouble() * (_isCentury ? 8.0 : 5.0),
         color: colors[_random.nextInt(colors.length)],
         rotation: _random.nextDouble() * math.pi * 2,
-        rotationSpeed: (_random.nextDouble() - 0.5) * 0.1,
+        rotationSpeed: (_random.nextDouble() - 0.5) * 0.12,
         wobble: _random.nextDouble() * math.pi * 2,
       ));
     }
@@ -267,16 +306,16 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
       Colors.white,
       MilestoneTheme.primaryGreen,
     ];
-    for (int i = 0; i < 35; i++) {
+    for (int i = 0; i < 30; i++) {
       final angle = _random.nextDouble() * math.pi * 2;
-      final speed = 2.0 + _random.nextDouble() * 6.0;
+      final speed = 2.0 + _random.nextDouble() * 5.5;
       _fireworks.add(_FireworkParticle(
         x: cx,
         y: cy,
         vx: math.cos(angle) * speed,
         vy: math.sin(angle) * speed,
         alpha: 1.0,
-        size: 2.5 + _random.nextDouble() * 3.0,
+        size: 2.2 + _random.nextDouble() * 2.8,
         color: colors[_random.nextInt(colors.length)],
       ));
     }
@@ -285,29 +324,26 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
   int _tickCount = 0;
   void _updateParticles() {
     _tickCount++;
-    // Confetti physics
     for (final p in _confetti) {
       p.y += p.vy;
       p.x += p.vx + math.sin(p.wobble) * 0.0015;
       p.rotation += p.rotationSpeed;
       p.wobble += 0.05;
 
-      // Wrap around top if still early in celebration
       if (p.y > 1.1 && _mainAnimController.value < 0.75) {
         p.y = -0.1;
         p.x = _random.nextDouble();
       }
     }
 
-    // Fireworks physics (Century only)
-    if (_isCentury) {
-      if (_tickCount % 22 == 0 && _mainAnimController.value < 0.7) {
+    if (_isCentury || _isMatchWon) {
+      if (_tickCount % 20 == 0 && _mainAnimController.value < 0.72) {
         final renderBox = context.findRenderObject() as RenderBox?;
         if (renderBox != null) {
           final size = renderBox.size;
           _triggerFireworkBurst(
-            size.width * (0.2 + _random.nextDouble() * 0.6),
-            size.height * (0.15 + _random.nextDouble() * 0.45),
+            size.width * (0.15 + _random.nextDouble() * 0.70),
+            size.height * (0.12 + _random.nextDouble() * 0.48),
           );
         }
       }
@@ -316,8 +352,8 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
         final f = _fireworks[i];
         f.x += f.vx;
         f.y += f.vy;
-        f.vy += 0.12; // Gravity
-        f.alpha -= 0.024;
+        f.vy += 0.11;
+        f.alpha -= 0.025;
         if (f.alpha <= 0) {
           _fireworks.removeAt(i);
         }
@@ -330,6 +366,7 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
   @override
   void dispose() {
     _particleController.dispose();
+    _stumpsAnimController.dispose();
     _mainAnimController.dispose();
     super.dispose();
   }
@@ -352,18 +389,24 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
             opacity: opacity,
             child: Stack(
               children: [
-                // 1. Dark Emerald Backdrop with Subtle Radiant Light
+                // 1. Dynamic Backdrop Gradient
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: RadialGradient(
                         center: const Alignment(0, -0.1),
-                        radius: _isCentury ? 1.3 : 1.0,
-                        colors: [
-                          MilestoneTheme.darkEmerald.withValues(alpha: _isCentury ? 0.96 : 0.92),
-                          MilestoneTheme.deepEmerald.withValues(alpha: 0.95),
-                          MilestoneTheme.darkestNight.withValues(alpha: 0.98),
-                        ],
+                        radius: 1.25,
+                        colors: _isWicket
+                            ? [
+                                MilestoneTheme.deepRed.withValues(alpha: 0.95),
+                                MilestoneTheme.darkRedNight.withValues(alpha: 0.96),
+                                Colors.black.withValues(alpha: 0.98),
+                              ]
+                            : [
+                                MilestoneTheme.darkEmerald.withValues(alpha: 0.94),
+                                MilestoneTheme.deepEmerald.withValues(alpha: 0.95),
+                                MilestoneTheme.darkestNight.withValues(alpha: 0.98),
+                              ],
                         stops: const [0.0, 0.6, 1.0],
                       ),
                     ),
@@ -377,7 +420,7 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                       painter: _ConfettiPainter(particles: _confetti),
                     ),
                   ),
-                  if (_isCentury)
+                  if (_isCentury || _isMatchWon)
                     Positioned.fill(
                       child: CustomPaint(
                         painter: _FireworksPainter(particles: _fireworks),
@@ -389,25 +432,23 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                 Center(
                   child: Transform.scale(
                     scale: scale,
-                    child: _isCentury
-                        ? _buildCenturyCelebrationCard(context)
-                        : _buildHalfCenturyCelebrationCard(context),
+                    child: _buildCelebrationCard(context),
                   ),
                 ),
 
-                // 4. Subtle Tap anywhere hint
+                // 4. Tap anywhere to skip pill
                 Positioned(
-                  bottom: media.padding.bottom + 24,
+                  bottom: media.padding.bottom + 20,
                   left: 0,
                   right: 0,
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: MilestoneTheme.premiumGold.withValues(alpha: 0.3),
+                          color: (_isWicket ? Colors.redAccent : MilestoneTheme.premiumGold).withValues(alpha: 0.4),
                           width: 1,
                         ),
                       ),
@@ -417,15 +458,15 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                           Icon(
                             Icons.touch_app_rounded,
                             size: 14,
-                            color: MilestoneTheme.lightGold.withValues(alpha: 0.8),
+                            color: MilestoneTheme.lightGold.withValues(alpha: 0.85),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
-                            'Tap anywhere to resume match',
+                            'Tap anywhere to skip',
                             style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white70,
+                              color: Colors.white,
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -441,28 +482,37 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
     );
   }
 
-  // ─── HALF-CENTURY CELEBRATION CARD (Centered Overlay) ──────────────────────
+  Widget _buildCelebrationCard(BuildContext context) {
+    if (_isMatchWon) return _buildMatchWinningCelebrationCard(context);
+    if (_isCentury) return _buildCenturyCelebrationCard(context);
+    if (_isWicket) return _buildWicketCelebrationCard(context);
+    if (_isSix) return _buildSixCelebrationCard(context);
+    if (_isFiveWicket) return _buildFiveWicketCelebrationCard(context);
+    return _buildHalfCenturyCelebrationCard(context);
+  }
+
+  // ─── A. HALF-CENTURY CARD ───────────────────────────────────────────────────
   Widget _buildHalfCenturyCelebrationCard(BuildContext context) {
     final m = widget.milestone;
 
     return Container(
       width: math.min(MediaQuery.of(context).size.width * 0.88, 380),
-      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 30),
       decoration: BoxDecoration(
         color: MilestoneTheme.deepEmerald.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: MilestoneTheme.premiumGold.withValues(alpha: 0.75),
+          color: MilestoneTheme.premiumGold.withValues(alpha: 0.85),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: MilestoneTheme.premiumGold.withValues(alpha: 0.25 * _glowAnimation.value),
+            color: MilestoneTheme.premiumGold.withValues(alpha: 0.3 * _glowAnimation.value),
             blurRadius: 36,
             spreadRadius: 6,
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
+            color: Colors.black.withValues(alpha: 0.65),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -471,19 +521,18 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Sparkle Heading Pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  MilestoneTheme.premiumGold.withValues(alpha: 0.25),
-                  MilestoneTheme.primaryGreen.withValues(alpha: 0.35),
+                  MilestoneTheme.premiumGold.withValues(alpha: 0.3),
+                  MilestoneTheme.primaryGreen.withValues(alpha: 0.4),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: MilestoneTheme.lightGold.withValues(alpha: 0.6),
+                color: MilestoneTheme.lightGold.withValues(alpha: 0.7),
                 width: 1,
               ),
             ),
@@ -506,9 +555,8 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Big Golden "50" with metallic gradient shader
           ShaderMask(
             shaderCallback: (bounds) => MilestoneTheme.goldGradient.createShader(bounds),
             child: Text(
@@ -522,9 +570,8 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Batsman Full Name
           Text(
             m.batsmanName,
             textAlign: TextAlign.center,
@@ -539,15 +586,12 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
           ),
           const SizedBox(height: 10),
 
-          // Stats Pill: Runs & Balls Faced
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -564,10 +608,7 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(
-                    color: Colors.white54,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(color: Colors.white54, shape: BoxShape.circle),
                 ),
                 Text(
                   '${m.ballsFaced} Balls',
@@ -580,68 +621,55 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Team Name & Logo/Badge
-          if (m.teamName.isNotEmpty)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _parseHexColor(m.teamColorHex).withValues(alpha: 0.3),
-                    border: Border.all(
-                      color: _parseHexColor(m.teamColorHex),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const Icon(Icons.sports_cricket_rounded, size: 14, color: Colors.white),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  m.teamName,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
+          Text(
+            'A brilliant innings!',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
+              fontStyle: FontStyle.italic,
             ),
+          ),
+          if (m.teamName.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              m.teamName,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white60,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // ─── CENTURY CELEBRATION CARD (Grand Spectacular Full-Screen) ──────────────
+  // ─── B. CENTURY CARD ────────────────────────────────────────────────────────
   Widget _buildCenturyCelebrationCard(BuildContext context) {
     final m = widget.milestone;
 
     return Container(
-      width: math.min(MediaQuery.of(context).size.width * 0.92, 440),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+      width: math.min(MediaQuery.of(context).size.width * 0.92, 420),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       decoration: BoxDecoration(
-        color: MilestoneTheme.darkestNight.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(34),
+        color: MilestoneTheme.darkestNight.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(
           color: MilestoneTheme.lightGold,
           width: 2.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: MilestoneTheme.lightGold.withValues(alpha: 0.35 * _glowAnimation.value),
+            color: MilestoneTheme.lightGold.withValues(alpha: 0.38 * _glowAnimation.value),
             blurRadius: 48,
             spreadRadius: 10,
           ),
           BoxShadow(
-            color: MilestoneTheme.primaryGreen.withValues(alpha: 0.4),
-            blurRadius: 36,
-            spreadRadius: 4,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.75),
+            color: Colors.black.withValues(alpha: 0.8),
             blurRadius: 30,
             offset: const Offset(0, 16),
           ),
@@ -650,7 +678,6 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Crown / Trophy Top Icon
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -660,7 +687,6 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                 BoxShadow(
                   color: MilestoneTheme.premiumGold.withValues(alpha: 0.6),
                   blurRadius: 18,
-                  spreadRadius: 2,
                 ),
               ],
             ),
@@ -670,9 +696,8 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
               size: 32,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // CENTURY COMPLETED! Banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
@@ -680,76 +705,47 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
                 colors: [Color(0xFFB45309), Color(0xFFD9A52A), Color(0xFFFDE047), Color(0xFFB45309)],
               ),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: MilestoneTheme.premiumGold.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                ),
-              ],
             ),
             child: Text(
               'CENTURY COMPLETED!',
               style: GoogleFonts.outfit(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2.5,
                 color: MilestoneTheme.darkestNight,
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Monumental Golden "100" with Outer Radiant Rings
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer soft gold halo
-              Container(
-                width: 170,
-                height: 170,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      MilestoneTheme.lightGold.withValues(alpha: 0.2 * _glowAnimation.value),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+          ShaderMask(
+            shaderCallback: (bounds) => MilestoneTheme.goldGradient.createShader(bounds),
+            child: Text(
+              '100',
+              style: GoogleFonts.outfit(
+                fontSize: 98,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -4,
+                height: 1.0,
+                color: Colors.white,
               ),
-              ShaderMask(
-                shaderCallback: (bounds) => MilestoneTheme.goldGradient.createShader(bounds),
-                child: Text(
-                  '100',
-                  style: GoogleFonts.outfit(
-                    fontSize: 104,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -4,
-                    height: 1.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Batsman Full Name
           Text(
             m.batsmanName,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: FontWeight.w800,
               color: Colors.white,
-              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 12),
 
-          // Century Stats Pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -796,55 +792,627 @@ class _MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverla
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Team Badge & Name
-          if (m.teamName.isNotEmpty)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _parseHexColor(m.teamColorHex).withValues(alpha: 0.35),
-                    border: Border.all(
-                      color: MilestoneTheme.lightGold,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const Icon(Icons.sports_cricket_rounded, size: 16, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  m.teamName,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              ],
+          Text(
+            'A magnificent hundred!',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+              fontStyle: FontStyle.italic,
             ),
+          ),
         ],
       ),
     );
   }
 
-  Color _parseHexColor(String hex) {
-    try {
-      final clean = hex.replaceAll('#', '').replaceAll('0x', '').replaceAll('0X', '');
-      if (clean.length == 6) {
-        return Color(int.parse('FF$clean', radix: 16));
-      } else if (clean.length == 8) {
-        return Color(int.parse(clean, radix: 16));
-      }
-    } catch (_) {}
-    return MilestoneTheme.primaryGreen;
+  // ─── C. WICKET CELEBRATION CARD ─────────────────────────────────────────────
+  Widget _buildWicketCelebrationCard(BuildContext context) {
+    final m = widget.milestone;
+
+    return Container(
+      width: math.min(MediaQuery.of(context).size.width * 0.90, 400),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+      decoration: BoxDecoration(
+        color: MilestoneTheme.darkRedNight.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: MilestoneTheme.wicketRed,
+          width: 2.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MilestoneTheme.wicketRed.withValues(alpha: 0.4 * _glowAnimation.value),
+            blurRadius: 42,
+            spreadRadius: 6,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.7),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Animated Cricket Stumps with Flying Bails
+          _buildAnimatedStumps(),
+          const SizedBox(height: 14),
+
+          // WICKET! WHAT A DELIVERY! Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+            decoration: BoxDecoration(
+              gradient: MilestoneTheme.wicketGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: MilestoneTheme.wicketRed.withValues(alpha: 0.5),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+            child: Text(
+              'WICKET! WHAT A DELIVERY!',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2.0,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Dismissed Batter Name
+          Text(
+            m.batsmanName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Dismissal Type & Bowler info
+          if (m.dismissalType.isNotEmpty || m.bowlerName.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Text(
+                m.bowlerName.isNotEmpty && !['Run Out', 'Retired Out', 'Retired Hurt'].contains(m.dismissalType)
+                    ? '${m.dismissalType} b ${m.bowlerName}'
+                    : (m.dismissalType.isNotEmpty ? m.dismissalType : 'Out'),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: MilestoneTheme.lightGold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Batter stats pill: Runs (Balls)
+          Text(
+            '${m.runs} runs (${m.ballsFaced} balls)',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+
+          if (m.teamRuns > 0 || m.teamWickets > 0) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Score: ${m.teamRuns}/${m.teamWickets}',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedStumps() {
+    return AnimatedBuilder(
+      animation: _stumpsAnimController,
+      builder: (context, child) {
+        final progress = _stumpsAnimController.value;
+        final bailOffsetLeft = Offset(-progress * 25.0, -progress * 22.0 + progress * progress * 15.0);
+        final bailOffsetRight = Offset(progress * 25.0, -progress * 24.0 + progress * progress * 16.0);
+        final bailRotLeft = -progress * 1.8;
+        final bailRotRight = progress * 2.1;
+
+        return SizedBox(
+          width: 90,
+          height: 65,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // 3 Vertical Stumps
+              Positioned(
+                bottom: 0,
+                left: 18,
+                child: _buildStump(),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 42,
+                child: _buildStump(),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 66,
+                child: _buildStump(),
+              ),
+
+              // Left Flying Bail
+              Positioned(
+                bottom: 45,
+                left: 18,
+                child: Transform.translate(
+                  offset: bailOffsetLeft,
+                  child: Transform.rotate(
+                    angle: bailRotLeft,
+                    child: _buildBail(),
+                  ),
+                ),
+              ),
+
+              // Right Flying Bail
+              Positioned(
+                bottom: 45,
+                left: 44,
+                child: Transform.translate(
+                  offset: bailOffsetRight,
+                  child: Transform.rotate(
+                    angle: bailRotRight,
+                    child: _buildBail(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStump() {
+    return Container(
+      width: 7,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDE047), Color(0xFFD97706), Color(0xFF78350F)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBail() {
+    return Container(
+      width: 26,
+      height: 5,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDE047),
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.6),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── D. SIX CELEBRATION CARD ────────────────────────────────────────────────
+  Widget _buildSixCelebrationCard(BuildContext context) {
+    final m = widget.milestone;
+
+    return Container(
+      width: math.min(MediaQuery.of(context).size.width * 0.85, 360),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
+      decoration: BoxDecoration(
+        color: MilestoneTheme.deepEmerald.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: MilestoneTheme.lightGold,
+          width: 2.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MilestoneTheme.lightGold.withValues(alpha: 0.45 * _glowAnimation.value),
+            blurRadius: 40,
+            spreadRadius: 8,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.7),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Animated cricket ball icon with glow
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFDC2626),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.redAccent.withValues(alpha: 0.6),
+                  blurRadius: 18,
+                  spreadRadius: 3,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.sports_baseball_rounded,
+              color: Colors.white,
+              size: 34,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Monumental "SIX!"
+          ShaderMask(
+            shaderCallback: (bounds) => MilestoneTheme.goldGradient.createShader(bounds),
+            child: Text(
+              'SIX!',
+              style: GoogleFonts.outfit(
+                fontSize: 76,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2,
+                height: 1.0,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            decoration: BoxDecoration(
+              color: MilestoneTheme.premiumGold.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: MilestoneTheme.lightGold.withValues(alpha: 0.6)),
+            ),
+            child: Text(
+              'OUT OF THE PARK!',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+                color: MilestoneTheme.lightGold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Text(
+            m.batsmanName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          if (m.bowlerName.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Bowler: ${m.bowlerName}',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─── E. FIVE-WICKET HAUL CARD ───────────────────────────────────────────────
+  Widget _buildFiveWicketCelebrationCard(BuildContext context) {
+    final m = widget.milestone;
+
+    return Container(
+      width: math.min(MediaQuery.of(context).size.width * 0.90, 410),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      decoration: BoxDecoration(
+        color: MilestoneTheme.darkestNight.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: MilestoneTheme.lightGold,
+          width: 2.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MilestoneTheme.premiumGold.withValues(alpha: 0.35 * _glowAnimation.value),
+            blurRadius: 44,
+            spreadRadius: 8,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.75),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Row of 5 Wickets Icons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              5,
+              (index) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  gradient: MilestoneTheme.goldGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: MilestoneTheme.premiumGold.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.sports_cricket_rounded,
+                  color: MilestoneTheme.darkestNight,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // FIVE-FOR! Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB45309), Color(0xFFD9A52A), Color(0xFFFDE047), Color(0xFFB45309)],
+              ),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Text(
+              'FIVE-FOR!',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2.5,
+                color: MilestoneTheme.darkestNight,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Bowler Name
+          Text(
+            m.bowlerName.isNotEmpty ? m.bowlerName : m.batsmanName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Bowling figures pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: MilestoneTheme.lightGold.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              m.bowlerWickets > 0
+                  ? '${m.bowlerWickets} Wickets • ${m.bowlerRunsConceded} Runs'
+                  : '5 Wickets',
+              style: GoogleFonts.outfit(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: MilestoneTheme.lightGold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          Text(
+            'A phenomenal bowling performance!',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── F. MATCH-WINNING CELEBRATION CARD ──────────────────────────────────────
+  Widget _buildMatchWinningCelebrationCard(BuildContext context) {
+    final m = widget.milestone;
+
+    return Container(
+      width: math.min(MediaQuery.of(context).size.width * 0.92, 430),
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 30),
+      decoration: BoxDecoration(
+        color: MilestoneTheme.darkestNight.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(
+          color: MilestoneTheme.lightGold,
+          width: 3.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MilestoneTheme.lightGold.withValues(alpha: 0.45 * _glowAnimation.value),
+            blurRadius: 54,
+            spreadRadius: 12,
+          ),
+          BoxShadow(
+            color: MilestoneTheme.primaryGreen.withValues(alpha: 0.4),
+            blurRadius: 36,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.85),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Grand Trophy Icon with Halo
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: MilestoneTheme.goldGradient,
+              boxShadow: [
+                BoxShadow(
+                  color: MilestoneTheme.lightGold.withValues(alpha: 0.7),
+                  blurRadius: 28,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.emoji_events_rounded,
+              color: MilestoneTheme.darkestNight,
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // CHAMPIONS! WHAT A VICTORY!
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB45309), Color(0xFFD9A52A), Color(0xFFFDE047), Color(0xFFB45309)],
+              ),
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: MilestoneTheme.premiumGold.withValues(alpha: 0.5),
+                  blurRadius: 14,
+                ),
+              ],
+            ),
+            child: Text(
+              'CHAMPIONS!',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3.0,
+                color: MilestoneTheme.darkestNight,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Winning Team Name
+          Text(
+            m.winnerTeamName.isNotEmpty ? m.winnerTeamName : (m.teamName.isNotEmpty ? m.teamName : 'Victory'),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Text(
+            'WHAT A VICTORY!',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              color: MilestoneTheme.lightGold,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Match Result Text
+          if (m.resultText.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Text(
+                m.resultText,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
-// ─── MANAGER-SIDE NON-BLOCKING TOAST / BANNER ─────────────────────────────────
+// ─── MANAGER-SIDE NON-BLOCKING TOAST (ALL 6 TYPES) ────────────────────────────
 class MilestoneManagerToast extends StatefulWidget {
   final MilestoneCelebration milestone;
   final VoidCallback onDismiss;
@@ -873,10 +1441,9 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3600),
+      duration: const Duration(milliseconds: 3200),
     );
 
-    // Slide down from top, hold, slide up
     _slideAnimation = TweenSequence<Offset>([
       TweenSequenceItem(
         tween: Tween<Offset>(begin: const Offset(0, -1.2), end: Offset.zero)
@@ -894,20 +1461,14 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
       ),
     ]).animate(_controller);
 
-    // Slight scale-up effect
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.90, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOutBack)),
+        tween: Tween<double>(begin: 0.90, end: 1.0).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 12.0,
       ),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 76.0),
       TweenSequenceItem(
-        tween: ConstantTween<double>(1.0),
-        weight: 76.0,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.95)
-            .chain(CurveTween(curve: Curves.easeInCubic)),
+        tween: Tween<double>(begin: 1.0, end: 0.95).chain(CurveTween(curve: Curves.easeInCubic)),
         weight: 12.0,
       ),
     ]).animate(_controller);
@@ -919,10 +1480,7 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
     ]).animate(_controller);
 
     _controller.forward().then((_) {
-      if (mounted) {
-        debugPrint('[MILESTONE_MANAGER_DEBUG] Toast dismissed: eventId=${widget.milestone.eventId}');
-        widget.onDismiss();
-      }
+      if (mounted) widget.onDismiss();
     });
   }
 
@@ -934,12 +1492,64 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[MILESTONE_MANAGER_DEBUG] Toast widget rendered: ${widget.milestone.type} for ${widget.milestone.batsmanName}');
     final m = widget.milestone;
-    final isCentury = m.type == '100' || m.runs >= 100;
-    final achievementTitle = isCentury ? 'CENTURY COMPLETED!' : 'HALF CENTURY!';
-    final scoreBallsText = '${m.runs} Runs • ${m.ballsFaced} Balls';
+    final type = m.type.trim().toUpperCase();
 
+    final String title;
+    final String subtitle;
+    final String detail;
+    final IconData icon;
+    final List<Color> bgColors;
+    final Color borderColor;
+
+    if (type == 'MATCH_WON' || type == 'MATCH_WIN') {
+      title = 'CHAMPIONS!';
+      subtitle = m.winnerTeamName.isNotEmpty ? m.winnerTeamName : 'Match Concluded';
+      detail = m.resultText.isNotEmpty ? m.resultText : 'Official Result Confirmed';
+      icon = Icons.emoji_events_rounded;
+      bgColors = const [Color(0xFFB45309), Color(0xFF064E3B)];
+      borderColor = const Color(0xFFFDE047);
+    } else if (type == '100') {
+      title = 'CENTURY COMPLETED!';
+      subtitle = m.batsmanName;
+      detail = '${m.runs} Runs • ${m.ballsFaced} Balls';
+      icon = Icons.emoji_events_rounded;
+      bgColors = const [Color(0xFF064E3B), Color(0xFF078B70)];
+      borderColor = const Color(0xFFD9A52A);
+    } else if (type == 'WICKET') {
+      title = 'WICKET!';
+      subtitle = m.batsmanName;
+      detail = m.bowlerName.isNotEmpty && !['Run Out', 'Retired Out'].contains(m.dismissalType)
+          ? '${m.dismissalType} b ${m.bowlerName}'
+          : (m.dismissalType.isNotEmpty ? m.dismissalType : 'Dismissed');
+      icon = Icons.sports_cricket_rounded;
+      bgColors = const [Color(0xFF7F1D1D), Color(0xFF991B1B)];
+      borderColor = const Color(0xFFEF4444);
+    } else if (type == 'SIX') {
+      title = 'MASSIVE SIX!';
+      subtitle = m.batsmanName;
+      detail = m.bowlerName.isNotEmpty ? 'vs ${m.bowlerName}' : '6 Runs Boundary';
+      icon = Icons.sports_baseball_rounded;
+      bgColors = const [Color(0xFF064E3B), Color(0xFF078B70)];
+      borderColor = const Color(0xFFFDE047);
+    } else if (type == 'FIVE_WICKET' || type == '5W') {
+      title = 'FIVE-WICKET HAUL!';
+      subtitle = m.bowlerName.isNotEmpty ? m.bowlerName : m.batsmanName;
+      detail = m.bowlerWickets > 0 ? '${m.bowlerWickets} Wickets (${m.bowlerRunsConceded} Runs)' : '5-Wicket Haul';
+      icon = Icons.star_rounded;
+      bgColors = const [Color(0xFFB45309), Color(0xFF064E3B)];
+      borderColor = const Color(0xFFD9A52A);
+    } else {
+      // 50 runs
+      title = 'HALF CENTURY!';
+      subtitle = m.batsmanName;
+      detail = '${m.runs} Runs • ${m.ballsFaced} Balls';
+      icon = Icons.emoji_events_rounded;
+      bgColors = const [Color(0xFF064E3B), Color(0xFF078B70)];
+      borderColor = const Color(0xFFD9A52A);
+    }
+
+    // Manager toast only intercepts taps on itself; underlying scoring buttons remain 100% active!
     return Positioned(
       top: widget.topOffset,
       left: 14,
@@ -956,97 +1566,81 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
               shadowColor: Colors.black.withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF064E3B), // Dark emerald
-                      Color(0xFF078B70), // Primary emerald
-                    ],
+                  gradient: LinearGradient(
+                    colors: bgColors,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFD9A52A), // Premium gold
-                    width: 2.0,
-                  ),
+                  border: Border.all(color: borderColor, width: 2.0),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD9A52A).withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 10,
+                      color: borderColor.withValues(alpha: 0.35),
+                      blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    // Trophy Icon badge in gold
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFDF00), Color(0xFFD9A52A), Color(0xFFB8860B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: MilestoneTheme.goldGradient,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD9A52A).withValues(alpha: 0.5),
-                            blurRadius: 10,
+                            color: borderColor.withValues(alpha: 0.5),
+                            blurRadius: 8,
                           ),
                         ],
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
-                          Icons.emoji_events_rounded,
-                          color: Color(0xFF064E3B),
-                          size: 26,
+                          icon,
+                          color: MilestoneTheme.darkestNight,
+                          size: 24,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
 
-                    // Batsman & Achievement Info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            achievementTitle,
+                            title,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 1.3,
-                              color: const Color(0xFFD9A52A),
+                              letterSpacing: 1.2,
+                              color: borderColor,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
-                            m.batsmanName,
+                            subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
-                            scoreBallsText,
+                            detail,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: const Color(0xFFFFF3D4),
                             ),
                           ),
@@ -1054,18 +1648,14 @@ class _MilestoneManagerToastState extends State<MilestoneManagerToast>
                       ),
                     ),
 
-                    // Dismiss close icon button
                     GestureDetector(
-                      onTap: () {
-                        debugPrint('[MILESTONE_MANAGER_DEBUG] Toast dismissed via tap: eventId=${widget.milestone.eventId}');
-                        widget.onDismiss();
-                      },
+                      onTap: widget.onDismiss,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.all(6.0),
+                        padding: const EdgeInsets.all(4.0),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Colors.black.withValues(alpha: 0.25),
                             shape: BoxShape.circle,
                           ),
                           padding: const EdgeInsets.all(4),

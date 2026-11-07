@@ -3,6 +3,7 @@ import { TeamModel } from '../models/Team';
 import { MatchModel } from '../models/Match';
 import { redis, invalidateCachedMatch } from '../config/redis';
 import { broadcastMatchUpdate, broadcastTeamUpdate, broadcastNotification } from '../sockets/socketHandler';
+import { computeMatchIsolatedPlayerStats } from './matchController';
 
 export async function getTeams(req: Request, res: Response) {
   try {
@@ -33,8 +34,10 @@ export async function getTeams(req: Request, res: Response) {
         });
       };
 
-      processPlayerList(m.playingXI_A);
-      processPlayerList(m.playingXI_B);
+      const xiA = computeMatchIsolatedPlayerStats(m.balls, m.playingXI_A);
+      const xiB = computeMatchIsolatedPlayerStats(m.balls, m.playingXI_B);
+      processPlayerList(xiA);
+      processPlayerList(xiB);
 
       matchPlayerIds.forEach((pId) => {
         if (statsMap[pId]) statsMap[pId].matchesPlayed += 1;
@@ -107,8 +110,10 @@ export async function getTeamById(req: Request, res: Response) {
           statsMap[p.id].legalBallsBowled += balls;
         });
       };
-      processPlayerList(m.playingXI_A);
-      processPlayerList(m.playingXI_B);
+      const xiA = computeMatchIsolatedPlayerStats(m.balls, m.playingXI_A);
+      const xiB = computeMatchIsolatedPlayerStats(m.balls, m.playingXI_B);
+      processPlayerList(xiA);
+      processPlayerList(xiB);
       matchPlayerIds.forEach((pId) => {
         if (statsMap[pId]) statsMap[pId].matchesPlayed += 1;
       });

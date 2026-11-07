@@ -6,6 +6,131 @@ import { broadcastNotification, broadcastMatchUpdate } from '../sockets/socketHa
 import { spawn } from 'child_process';
 import path from 'path';
 
+export function sanitizePlayerForMatch(p: any): any {
+  if (!p) return p;
+  return {
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    nationality: p.nationality || 'IND',
+    isCaptain: p.isCaptain ?? false,
+    isViceCaptain: p.isViceCaptain ?? false,
+    runsScored: 0,
+    ballsFaced: 0,
+    wicketsTaken: 0,
+    runsConceded: 0,
+    oversBowled: 0.0,
+    matchesPlayed: 1,
+    isOut: false,
+    dismissalInfo: '',
+  };
+}
+
+export function computeMatchIsolatedPlayerStats(
+  balls: any[],
+  existingXI: any[],
+  teamPlayers: any[] = []
+): any[] {
+  const baseList: any[] = Array.isArray(existingXI) && existingXI.length > 0 ? existingXI : (teamPlayers || []);
+  const playerMap = new Map<string, any>();
+  const nameMap = new Map<string, any>();
+
+  const teamMetaMap = new Map<string, any>();
+  if (Array.isArray(teamPlayers)) {
+    teamPlayers.forEach((tp: any) => {
+      if (tp && tp.id) teamMetaMap.set(tp.id, tp);
+    });
+  }
+
+  // Initialize all players with clean match-scoped 0 stats
+  baseList.forEach((p: any) => {
+    if (!p || !p.id) return;
+    const meta = teamMetaMap.get(p.id);
+    const sanitized = {
+      id: p.id,
+      name: meta?.name || p.name,
+      role: meta?.role || p.role,
+      nationality: meta?.nationality || p.nationality || 'IND',
+      isCaptain: meta?.isCaptain ?? p.isCaptain ?? false,
+      isViceCaptain: meta?.isViceCaptain ?? p.isViceCaptain ?? false,
+      runsScored: 0,
+      ballsFaced: 0,
+      wicketsTaken: 0,
+      runsConceded: 0,
+      oversBowled: 0.0,
+      matchesPlayed: 1,
+      isOut: false,
+      dismissalInfo: '',
+    };
+    playerMap.set(p.id, sanitized);
+    if (sanitized.name) nameMap.set(sanitized.name.toLowerCase().trim(), sanitized);
+  });
+
+  const legalBallsBowledMap = new Map<string, number>();
+
+  if (Array.isArray(balls) && balls.length > 0) {
+    for (const b of balls) {
+      const runsNum = Number(b.run || 0);
+      const extraRunsNum = Number(b.extraRun || 0);
+      const extraType = b.extraType || 'None';
+      const isWicket = Boolean(b.isWicket);
+      const wicketType = b.wicketType || 'None';
+
+      // 1. Batsman / Striker stats
+      let striker = b.strikerId ? playerMap.get(b.strikerId) : null;
+      if (!striker && b.batsmanName) {
+        striker = nameMap.get(b.batsmanName.toLowerCase().trim());
+      }
+      if (striker) {
+        if (extraType === 'None' || extraType === 'No Ball') {
+          striker.runsScored += runsNum;
+        }
+        if (extraType !== 'Wide') {
+          striker.ballsFaced += 1;
+        }
+      }
+
+      // 2. Bowler stats
+      let bowler = b.bowlerId ? playerMap.get(b.bowlerId) : null;
+      if (!bowler && b.bowlerName) {
+        bowler = nameMap.get(b.bowlerName.toLowerCase().trim());
+      }
+      if (bowler) {
+        if (extraType === 'None' || extraType === 'Wide' || extraType === 'No Ball') {
+          bowler.runsConceded += (runsNum + extraRunsNum);
+        }
+        const isLegal = extraType !== 'Wide' && extraType !== 'No Ball';
+        if (isLegal) {
+          legalBallsBowledMap.set(bowler.id, (legalBallsBowledMap.get(bowler.id) || 0) + 1);
+        }
+        const isBowlerCredited = isWicket && !['Run Out', 'Retired Out', 'Retired Hurt', 'Timed Out', 'Obstructing Field'].includes(wicketType);
+        if (isBowlerCredited) {
+          bowler.wicketsTaken += 1;
+        }
+      }
+
+      // 3. Dismissal status
+      if (isWicket) {
+        let dismissed = striker;
+        if (dismissed) {
+          dismissed.isOut = true;
+          dismissed.dismissalInfo = `${wicketType || 'Out'} b ${b.bowlerName || 'Bowler'}`;
+        }
+      }
+    }
+  }
+
+  // Calculate oversBowled for all bowlers from legal balls
+  playerMap.forEach((p) => {
+    const legalBalls = legalBallsBowledMap.get(p.id) || 0;
+    const completedOvers = Math.floor(legalBalls / 6);
+    const remainderBalls = legalBalls % 6;
+    p.oversBowled = parseFloat((completedOvers + remainderBalls / 10).toFixed(1));
+  });
+
+  return Array.from(playerMap.values());
+}
+
 async function getFullMatchData(matchId: string) {
   const match = await MatchModel.findOne({ id: matchId }).lean();
   if (!match) return null;
@@ -18,33 +143,14 @@ async function getFullMatchData(matchId: string) {
     teamBId ? TeamModel.findOne({ id: teamBId }).lean() : null,
   ]);
 
-  const syncPlayerList = (xi: any[], teamPlayers: any[]) => {
-    if (!Array.isArray(xi)) return [];
-    if (!Array.isArray(teamPlayers) || teamPlayers.length === 0) return xi;
-    const playerMap = new Map<string, any>(teamPlayers.map((p: any) => [p.id, p]));
-    return xi.map((p: any) => {
-      const live = playerMap.get(p.id);
-      return live
-        ? {
-            ...p,
-            name: live.name,
-            role: live.role,
-            nationality: live.nationality || p.nationality,
-            isCaptain: live.isCaptain ?? p.isCaptain,
-            isViceCaptain: live.isViceCaptain ?? p.isViceCaptain,
-          }
-        : p;
-    });
-  };
-
-  const xiA = syncPlayerList(match.playingXI_A, teamA?.players);
-  const xiB = syncPlayerList(match.playingXI_B, teamB?.players);
+  const xiA = computeMatchIsolatedPlayerStats(match.balls, match.playingXI_A, teamA?.players);
+  const xiB = computeMatchIsolatedPlayerStats(match.balls, match.playingXI_B, teamB?.players);
 
   return {
     id: match.id,
     tournamentId: match.tournamentId,
-    teamA: teamA || match.teamA,
-    teamB: teamB || match.teamB,
+    teamA: teamA ? { ...teamA, players: xiA } : (match.teamA ? { ...match.teamA, players: xiA } : null),
+    teamB: teamB ? { ...teamB, players: xiB } : (match.teamB ? { ...match.teamB, players: xiB } : null),
     matchType: match.matchType,
     venue: match.venue,
     date: match.date,
@@ -96,63 +202,48 @@ export async function getMatches(req: Request, res: Response) {
   try {
     const list = await MatchModel.find().lean();
     const teams = await TeamModel.find().lean();
-    const teamPlayerMap = new Map<string, any>();
-    teams.forEach((t: any) => {
-      (t.players || []).forEach((p: any) => {
-        teamPlayerMap.set(p.id, p);
-      });
+    const teamMap = new Map<string, any>(teams.map((t: any) => [t.id, t]));
+
+    const formatted = list.map((match: any) => {
+      const liveTeamA = teamMap.get(match.teamAId || match.teamA?.id);
+      const liveTeamB = teamMap.get(match.teamBId || match.teamB?.id);
+      const xiA = computeMatchIsolatedPlayerStats(match.balls, match.playingXI_A, liveTeamA?.players || match.teamA?.players);
+      const xiB = computeMatchIsolatedPlayerStats(match.balls, match.playingXI_B, liveTeamB?.players || match.teamB?.players);
+
+      return {
+        id: match.id,
+        tournamentId: match.tournamentId,
+        teamA: liveTeamA ? { ...liveTeamA, players: xiA } : (match.teamA ? { ...match.teamA, players: xiA } : null),
+        teamB: liveTeamB ? { ...liveTeamB, players: xiB } : (match.teamB ? { ...match.teamB, players: xiB } : null),
+        matchType: match.matchType,
+        venue: match.venue,
+        date: match.date,
+        time: match.time,
+        status: match.status,
+        tossWinner: match.tossWinner || '',
+        tossDecision: match.tossDecision || '',
+        battingTeamId: match.battingTeamId || '',
+        playingXI_A: xiA,
+        playingXI_B: xiB,
+        runsA: match.runsA || 0,
+        wicketsA: match.wicketsA || 0,
+        oversA: Number(match.oversA || 0.0),
+        runsB: match.runsB || 0,
+        wicketsB: match.wicketsB || 0,
+        oversB: Number(match.oversB || 0.0),
+        target: match.target || 0,
+        scorerUsername: match.scorerUsername,
+        scorerPassword: match.scorerPassword,
+        currentStrikerId: match.currentStrikerId || '',
+        currentNonStrikerId: match.currentNonStrikerId || '',
+        currentBowlerId: match.currentBowlerId || '',
+        balls: match.balls || [],
+        isFirstInnings: match.isFirstInnings ?? true,
+        winnerTeamId: match.winnerTeamId || '',
+        winnerName: match.winnerName || '',
+        resultText: match.resultText || '',
+      };
     });
-
-    const syncXI = (xi: any[]) => {
-      if (!Array.isArray(xi)) return [];
-      return xi.map((p: any) => {
-        const live = teamPlayerMap.get(p.id);
-        return live
-          ? {
-              ...p,
-              name: live.name,
-              role: live.role,
-              nationality: live.nationality || p.nationality,
-              isCaptain: live.isCaptain ?? p.isCaptain,
-              isViceCaptain: live.isViceCaptain ?? p.isViceCaptain,
-            }
-          : p;
-      });
-    };
-
-    const formatted = list.map((match: any) => ({
-      id: match.id,
-      tournamentId: match.tournamentId,
-      teamA: match.teamA,
-      teamB: match.teamB,
-      matchType: match.matchType,
-      venue: match.venue,
-      date: match.date,
-      time: match.time,
-      status: match.status,
-      tossWinner: match.tossWinner || '',
-      tossDecision: match.tossDecision || '',
-      battingTeamId: match.battingTeamId || '',
-      playingXI_A: syncXI(match.playingXI_A),
-      playingXI_B: syncXI(match.playingXI_B),
-      runsA: match.runsA || 0,
-      wicketsA: match.wicketsA || 0,
-      oversA: Number(match.oversA || 0.0),
-      runsB: match.runsB || 0,
-      wicketsB: match.wicketsB || 0,
-      oversB: Number(match.oversB || 0.0),
-      target: match.target || 0,
-      scorerUsername: match.scorerUsername,
-      scorerPassword: match.scorerPassword,
-      currentStrikerId: match.currentStrikerId || '',
-      currentNonStrikerId: match.currentNonStrikerId || '',
-      currentBowlerId: match.currentBowlerId || '',
-      balls: match.balls || [],
-      isFirstInnings: match.isFirstInnings ?? true,
-      winnerTeamId: match.winnerTeamId || '',
-      winnerName: match.winnerName || '',
-      resultText: match.resultText || '',
-    }));
     return res.status(200).json(formatted);
   } catch (err) {
     console.error('Error fetching matches:', err);
@@ -198,13 +289,16 @@ export async function scheduleMatch(req: Request, res: Response) {
 
     const matchId = `match_${Date.now()}`;
 
+    const sanitizedXiA = (teamA.players || []).map(sanitizePlayerForMatch);
+    const sanitizedXiB = (teamB.players || []).map(sanitizePlayerForMatch);
+
     const newMatch = await MatchModel.create({
       id: matchId,
       tournamentId: tournamentId || undefined,
       teamAId,
       teamBId,
-      teamA,
-      teamB,
+      teamA: { ...teamA, players: sanitizedXiA },
+      teamB: { ...teamB, players: sanitizedXiB },
       matchType: matchType || 'T20',
       venue,
       date,
@@ -212,8 +306,8 @@ export async function scheduleMatch(req: Request, res: Response) {
       status: 'Upcoming',
       scorerUsername: scorerUser.trim(),
       scorerPassword: scorerPass,
-      playingXI_A: teamA.players || [],
-      playingXI_B: teamB.players || [],
+      playingXI_A: sanitizedXiA,
+      playingXI_B: sanitizedXiB,
       runsA: 0,
       wicketsA: 0,
       oversA: 0.0,
@@ -363,18 +457,20 @@ export async function updateMatch(req: Request, res: Response) {
     if (teamAId && teamAId !== existing.teamAId) {
       const teamA = await TeamModel.findOne({ id: teamAId }).lean();
       if (teamA) {
+        const sanitized = (teamA.players || []).map(sanitizePlayerForMatch);
         existing.teamAId = teamAId;
-        existing.teamA = teamA;
-        existing.playingXI_A = teamA.players || [];
+        existing.teamA = { ...teamA, players: sanitized };
+        existing.playingXI_A = sanitized;
       }
     }
 
     if (teamBId && teamBId !== existing.teamBId) {
       const teamB = await TeamModel.findOne({ id: teamBId }).lean();
       if (teamB) {
+        const sanitized = (teamB.players || []).map(sanitizePlayerForMatch);
         existing.teamBId = teamBId;
-        existing.teamB = teamB;
-        existing.playingXI_B = teamB.players || [];
+        existing.teamB = { ...teamB, players: sanitized };
+        existing.playingXI_B = sanitized;
       }
     }
 

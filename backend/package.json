@@ -10,7 +10,8 @@
     "seed": "ts-node src/seed.ts",
     "test": "ts-node src/tests/integrationTest.ts",
     "test:milestone": "ts-node src/tests/milestoneTest.ts",
-    "test:commentary": "ts-node src/tests/commentaryTest.ts"
+    "test:commentary": "ts-node src/tests/commentaryTest.ts",
+    "test:isolation": "ts-node src/tests/matchIsolationTest.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.0",

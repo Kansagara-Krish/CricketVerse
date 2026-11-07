@@ -472,7 +472,7 @@ class Manager {
 class MilestoneCelebration {
   final String eventId;
   final String matchId;
-  final String type; // "50" or "100"
+  final String type; // "50", "100", "WICKET", "SIX", "FIVE_WICKET", "MATCH_WON"
   final String batsmanId;
   final String batsmanName;
   final int runs;
@@ -482,6 +482,20 @@ class MilestoneCelebration {
   final String teamColorHex;
   final int innings;
   final DateTime timestamp;
+
+  // Extended properties for all 6 celebration types
+  final String bowlerId;
+  final String bowlerName;
+  final String dismissalType;
+  final int teamRuns;
+  final int teamWickets;
+  final double teamOvers;
+  final int bowlerWickets;
+  final int bowlerRunsConceded;
+  final double bowlerOvers;
+  final String winnerTeamName;
+  final String resultText;
+  final String marginText;
 
   MilestoneCelebration({
     required this.eventId,
@@ -496,6 +510,18 @@ class MilestoneCelebration {
     this.teamColorHex = '0xFF078B70',
     this.innings = 1,
     required this.timestamp,
+    this.bowlerId = '',
+    this.bowlerName = '',
+    this.dismissalType = '',
+    this.teamRuns = 0,
+    this.teamWickets = 0,
+    this.teamOvers = 0.0,
+    this.bowlerWickets = 0,
+    this.bowlerRunsConceded = 0,
+    this.bowlerOvers = 0.0,
+    this.winnerTeamName = '',
+    this.resultText = '',
+    this.marginText = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -511,6 +537,18 @@ class MilestoneCelebration {
         'teamColorHex': teamColorHex,
         'innings': innings,
         'timestamp': timestamp.toIso8601String(),
+        'bowlerId': bowlerId,
+        'bowlerName': bowlerName,
+        'dismissalType': dismissalType,
+        'teamRuns': teamRuns,
+        'teamWickets': teamWickets,
+        'teamOvers': teamOvers,
+        'bowlerWickets': bowlerWickets,
+        'bowlerRunsConceded': bowlerRunsConceded,
+        'bowlerOvers': bowlerOvers,
+        'winnerTeamName': winnerTeamName,
+        'resultText': resultText,
+        'marginText': marginText,
       };
 
   factory MilestoneCelebration.fromJson(Map<dynamic, dynamic> json) => MilestoneCelebration(
@@ -519,7 +557,7 @@ class MilestoneCelebration {
         type: json['type']?.toString() ?? '50',
         batsmanId: json['batsmanId']?.toString() ?? '',
         batsmanName: json['batsmanName']?.toString() ?? 'Batsman',
-        runs: (json['runs'] as num?)?.toInt() ?? 50,
+        runs: (json['runs'] as num?)?.toInt() ?? 0,
         ballsFaced: (json['ballsFaced'] as num?)?.toInt() ?? 0,
         teamName: json['teamName']?.toString() ?? '',
         teamShortName: json['teamShortName']?.toString() ?? '',
@@ -530,6 +568,18 @@ class MilestoneCelebration {
                 ? json['timestamp'] as DateTime
                 : DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now())
             : DateTime.now(),
+        bowlerId: json['bowlerId']?.toString() ?? '',
+        bowlerName: json['bowlerName']?.toString() ?? '',
+        dismissalType: json['dismissalType']?.toString() ?? '',
+        teamRuns: (json['teamRuns'] as num?)?.toInt() ?? 0,
+        teamWickets: (json['teamWickets'] as num?)?.toInt() ?? 0,
+        teamOvers: (json['teamOvers'] as num?)?.toDouble() ?? 0.0,
+        bowlerWickets: (json['bowlerWickets'] as num?)?.toInt() ?? 0,
+        bowlerRunsConceded: (json['bowlerRunsConceded'] as num?)?.toInt() ?? 0,
+        bowlerOvers: (json['bowlerOvers'] as num?)?.toDouble() ?? 0.0,
+        winnerTeamName: json['winnerTeamName']?.toString() ?? '',
+        resultText: json['resultText']?.toString() ?? '',
+        marginText: json['marginText']?.toString() ?? '',
       );
 }
 
