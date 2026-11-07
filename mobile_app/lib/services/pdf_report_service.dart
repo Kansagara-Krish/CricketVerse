@@ -288,7 +288,7 @@ class PdfReportService {
                   ),
                   pw.SizedBox(height: 3),
                   pw.Text(
-                    '$title • $matchVenue • $matchDate $matchTime',
+                    '$title | $matchVenue | $matchDate $matchTime',
                     style: pw.TextStyle(color: textDark, fontSize: 9.5),
                   ),
                   pw.Divider(color: cardBorder, thickness: 1, height: 16),

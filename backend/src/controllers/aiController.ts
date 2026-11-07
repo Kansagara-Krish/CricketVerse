@@ -173,6 +173,9 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
     return res.status(400).json({ error: 'Commentary text is required.' });
   }
 
+  // Sanitize commentary text to ensure zero forbidden shot types or fielding positions are spoken
+  const cleanCommentary = sanitizeCricketCommentary(String(text));
+
   try {
     // 1. Fetch active commentary voice configuration from Database
     const dbConfig = await AiConfigModel.findOne({ id: 'global_ai_config' }).lean();
@@ -183,7 +186,7 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
       return res.status(200).json({
         provider: 'inbuilt_tts',
         message: 'Inbuilt Text-To-Speech is active. Zero API tokens used; device speaks natively.',
-        text,
+        text: cleanCommentary,
         audioBase64: null,
       });
     }
@@ -196,7 +199,7 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
     const style = dbConfig?.style ?? 0.35;
     const useSpeakerBoost = dbConfig?.useSpeakerBoost ?? true;
 
-    const cacheKey = `${selectedVoiceId}_${selectedModelId}_${text}`;
+    const cacheKey = `${selectedVoiceId}_${selectedModelId}_${cleanCommentary}`;
     if (audioCache.has(cacheKey)) {
       return res.status(200).json({
         audioBase64: audioCache.get(cacheKey),
@@ -208,7 +211,7 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
       // Graceful fallback when API key is not yet set in database/environment
       return res.status(200).json({
         message: 'TTS key not configured in database. Fallback mode active.',
-        text,
+        text: cleanCommentary,
         audioBase64: null,
       });
     }
@@ -221,7 +224,7 @@ export async function generateCommentaryVoice(req: Request, res: Response) {
         'xi-api-key': effectiveApiKey,
       },
       body: JSON.stringify({
-        text,
+        text: cleanCommentary,
         model_id: selectedModelId,
         voice_settings: {
           stability,

@@ -7,6 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'ai_commentary_generator.dart';
 
 class ElevenLabsVoicePreset {
   final String id;
@@ -344,7 +345,8 @@ class ElevenLabsService {
     VoidCallback? onComplete,
     Function(String error)? onError,
   }) async {
-    final cleanText = text.trim();
+    // Sanitize commentary text to ensure zero forbidden shot types or fielding positions are spoken
+    final cleanText = AiCommentaryGenerator.sanitize(text.trim());
     if (cleanText.isEmpty) return false;
 
     // Stop any current audio

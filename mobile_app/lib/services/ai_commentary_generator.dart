@@ -49,15 +49,52 @@ class AiCommentaryGenerator {
 
   static String _pick(List<String> list) => list[_rng.nextInt(list.length)];
 
-  /// Sanitizer to completely eliminate any unwanted fielding position or shot direction descriptions
+  /// Sanitizer to completely eliminate any unwanted fielding position or batsman shot type descriptions
   static String sanitize(String raw) {
     if (raw.isEmpty) return '';
     String text = raw;
 
     final replacements = <MapEntry<RegExp, String>>[
+      // Specific multi-word shot types
+      MapEntry(RegExp(r'\b(cover|straight|square|on|off|lofted)\s+drives?\b', caseSensitive: false), 'clean hit'),
+      MapEntry(RegExp(r'\b(pull|hook|cut|sweep|ramp|scoop)\s+shots?\b', caseSensitive: false), 'clean hit'),
+      MapEntry(RegExp(r'\b(ramp|paddle)\s+strokes?\b', caseSensitive: false), 'clean hit'),
+      MapEntry(RegExp(r'\b(late|square|upper)\s+cuts?\b', caseSensitive: false), 'boundary'),
+      MapEntry(RegExp(r'\b(reverse|paddle|slog)\s+sweeps?\b', caseSensitive: false), 'clean hit'),
+      MapEntry(RegExp(r'\b(outside|inside)\s+edges?\b', caseSensitive: false), 'delivery'),
+      MapEntry(RegExp(r'\bleg\s+glances?\b', caseSensitive: false), 'run'),
+      MapEntry(RegExp(r'\b(forward|backfoot)\s+defensive\b', caseSensitive: false), 'delivery'),
+      MapEntry(RegExp(r'\bleans?\s+into\s+the\s+half[- ]volley\b', caseSensitive: false), 'connects cleanly'),
+      MapEntry(RegExp(r'\bhalf[- ]volley\b', caseSensitive: false), 'delivery'),
+      MapEntry(RegExp(r'\b(steps?\s+out|dances?\s+down|charges?\s+down)\b', caseSensitive: false), 'shows intent'),
+      MapEntry(RegExp(r'\b(blistering|sharp)\s+cuts?\b', caseSensitive: false), 'strike'),
+      MapEntry(RegExp(r'\baudacious\s+ramp\s+stroke\b', caseSensitive: false), 'quick thinking'),
+      // Single-word shot types
+      MapEntry(RegExp(r'\b(drives?|driven|driving)\b', caseSensitive: false), 'hits'),
+      MapEntry(RegExp(r'\b(pulled|pulls?|pulling)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(hooked|hooks?|hooking)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(cuts?|cutting)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(flicks?|flicked|flicking)\b', caseSensitive: false), 'places it'),
+      MapEntry(RegExp(r'\b(sweeps?|swept|sweeping)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(ramps?|ramped|ramping)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(scoops?|scooped|scooping)\b', caseSensitive: false), 'hit'),
+      MapEntry(RegExp(r'\b(lofts?|lofted|lofting)\b', caseSensitive: false), 'hits'),
+      MapEntry(RegExp(r'\b(punches?|punched|punching)\b', caseSensitive: false), 'works it'),
+      MapEntry(RegExp(r'\b(pushes?|pushed|pushing)\b', caseSensitive: false), 'works it'),
+      MapEntry(RegExp(r'\b(glides?|glided|gliding)\b', caseSensitive: false), 'guides it'),
+      MapEntry(RegExp(r'\b(glances?|glanced|glancing)\b', caseSensitive: false), 'works it'),
+      MapEntry(RegExp(r'\b(clips?|clipped|clipping)\b', caseSensitive: false), 'works it'),
+      MapEntry(RegExp(r'\b(dabs?|dabbed|dabbing)\b', caseSensitive: false), 'plays it'),
+      MapEntry(RegExp(r'\b(slashes?|slashed|slashing)\b', caseSensitive: false), 'hits'),
+      MapEntry(RegExp(r'\b(slogs?|slogged|slogging)\b', caseSensitive: false), 'hits'),
+      MapEntry(RegExp(r'\b(steers?|steered|steering)\b', caseSensitive: false), 'directs it'),
+      MapEntry(RegExp(r'\b(defends?|defended|defending|defensive)\b', caseSensitive: false), 'plays'),
+      MapEntry(RegExp(r'\b(blocks?|blocked|blocking)\b', caseSensitive: false), 'plays'),
+      MapEntry(RegExp(r'\b(edges?|edged|edging)\b', caseSensitive: false), 'delivery'),
+      // Fielding positions
       MapEntry(RegExp(r'\b(towards|to|through|past|over|in)\s+the\s+covers\b', caseSensitive: false), 'through the gap'),
       MapEntry(RegExp(r'\bthrough\s+the\s+covers\b', caseSensitive: false), 'through the gap'),
-      MapEntry(RegExp(r'\bcover\s+drive\b', caseSensitive: false), 'timed drive'),
+      MapEntry(RegExp(r'\bcover\s+drive\b', caseSensitive: false), 'clean hit'),
       MapEntry(RegExp(r'\bextra\s+cover\b', caseSensitive: false), 'the outfield gap'),
       MapEntry(RegExp(r'\bcovers?\b', caseSensitive: false), 'the gap'),
       MapEntry(RegExp(r'\bdeep\s+mid[- ]wicket\b', caseSensitive: false), 'the boundary'),
@@ -197,7 +234,7 @@ class AiCommentaryGenerator {
         final tpls = [
           "CAUGHT! High in the air and taken safely! ${ctx.bowler} gets the breakthrough as $outBatter departs. $newBatter walks in as the new batsman. Score $scoreStr.",
           "WHAT A CATCH! Sensational grab to dismiss $outBatter off the bowling of ${ctx.bowler}! $newBatter comes to the crease.",
-          "OUT! $outBatter mistimes the stroke and is caught! Tremendous bowling from ${ctx.bowler}. $newBatter is the new batsman.",
+          "OUT! $outBatter mistimes it and is caught! Tremendous bowling from ${ctx.bowler}. $newBatter is the new batsman.",
         ];
         return _pick(tpls);
       }
@@ -254,16 +291,16 @@ class AiCommentaryGenerator {
   static String _generateSixCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, bool isCasual, String ballStr, String scoreStr) {
     if (isHype) {
       final tpls = [
-        "SIX! MASSIVE HIT! ${ctx.batsman} steps out on $ballStr and launches ${ctx.bowler} 95 meters into the top tier! Score moves to $scoreStr!",
-        "THAT IS MONSTROUS! ${ctx.batsman} reads the slower delivery and deposits ${ctx.bowler} high into the stands for a huge maximum!",
+        "SIX! MASSIVE HIT! ${ctx.batsman} connects powerfully on $ballStr and launches ${ctx.bowler} 95 meters into the top tier! Score moves to $scoreStr!",
+        "THAT IS MONSTROUS! ${ctx.batsman} reads the delivery and deposits ${ctx.bowler} high into the stands for a huge maximum!",
         "INTO THE CROWD! Pure timing and muscle from ${ctx.batsman}! Dispatches ${ctx.bowler} straight back over bowler's head for SIX!",
-        "BOOM! What a sensational stroke on $ballStr! ${ctx.batsman} connects cleanly off ${ctx.bowler} and clears the boundary rope with ease! Score $scoreStr!",
+        "BOOM! What a sensational hit on $ballStr! ${ctx.batsman} connects cleanly off ${ctx.bowler} and clears the boundary rope with ease! Score $scoreStr!",
         "MONSTROUS HIT! ${ctx.batsman} connects with ferocious power, sending the ball soaring high into the grandstand!",
       ];
       return _pick(tpls);
     } else if (isTech) {
       final tpls = [
-        "SIX! Picked up beautifully from length. ${ctx.batsman} transfers weight quickly onto the backfoot and lofts ${ctx.bowler} over the boundary.",
+        "SIX! Clean strike from length. ${ctx.batsman} connects cleanly and sends ${ctx.bowler} over the boundary.",
         "MAXIMUM! Superb bat speed from ${ctx.batsman}. Meets the ball on the rise, clearing the ropes with perfection.",
       ];
       return _pick(tpls);
@@ -279,23 +316,23 @@ class AiCommentaryGenerator {
   static String _generateFourCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, bool isCasual, String ballStr, String scoreStr) {
     if (isHype) {
       final tpls = [
-        "FOUR! GLORIOUS STROKE! ${ctx.batsman} leans into the half-volley from ${ctx.bowler} and pierces the boundary gap for four! Score $scoreStr!",
-        "CRACKING SHOT! Short and wide from ${ctx.bowler}, ${ctx.batsman} punishes it with a blistering cut to the boundary!",
-        "FOUR RUNS! Delicious wrist-work on $ballStr! ${ctx.batsman} flicks ${ctx.bowler} with supreme timing and it races to the rope!",
-        "BOUNDARY! Audacious ramp stroke! ${ctx.batsman} outfoxes ${ctx.bowler} for four valuable runs!",
-        "FOUR! Superb balance and intent from ${ctx.batsman}, drilling the ball past the infield to find the fence!",
+        "FOUR! GLORIOUS BOUNDARY! ${ctx.batsman} connects cleanly off ${ctx.bowler} and pierces the boundary gap for four! Score $scoreStr!",
+        "CRACKING BOUNDARY! Short and wide from ${ctx.bowler}, ${ctx.batsman} punishes it with blistering power to the fence! Score $scoreStr!",
+        "FOUR RUNS! Delicious timing on $ballStr! ${ctx.batsman} sends ${ctx.bowler} through the gap with supreme precision and it races to the rope!",
+        "BOUNDARY! Pure precision! ${ctx.batsman} outfoxes ${ctx.bowler} for four valuable runs! Score $scoreStr!",
+        "FOUR! Superb balance and intent from ${ctx.batsman}, beating the infield to find the fence!",
       ];
       return _pick(tpls);
     } else if (isTech) {
       final tpls = [
-        "FOUR! Textbook stroke. Head over the ball, high elbow, and ${ctx.batsman} finds the outfield gap with precision.",
-        "BOUNDARY! ${ctx.batsman} rides the bounce effectively off ${ctx.bowler}, opening the face of the bat to beat the fielders.",
+        "FOUR! Textbook timing! Head over the ball, and ${ctx.batsman} finds the outfield gap with precision.",
+        "BOUNDARY! ${ctx.batsman} rides the bounce effectively off ${ctx.bowler}, beating the fielders to the rope.",
       ];
       return _pick(tpls);
     } else {
       final tpls = [
         "FOUR! Nicely timed by ${ctx.batsman}. Beats the chasing fielder and trickles into the boundary fence. Score $scoreStr.",
-        "Four runs on $ballStr. ${ctx.batsman} drives ${ctx.bowler} smoothly into the gap for four.",
+        "Four runs on $ballStr. ${ctx.batsman} times ${ctx.bowler} smoothly into the gap for four.",
       ];
       return _pick(tpls);
     }
@@ -304,20 +341,20 @@ class AiCommentaryGenerator {
   static String _generateDotCommentary(AiCommentaryContext ctx, bool isHype, bool isTech, String ballStr) {
     if (isHype) {
       final tpls = [
-        "Dot ball! Fierce 142 km/h bouncer from ${ctx.bowler}! ${ctx.batsman} ducks under it just in time on $ballStr!",
-        "Beaten all ends up! Sharp away swing from ${ctx.bowler} whizzes past ${ctx.batsman}'s outside edge! Brilliant bowling!",
-        "No run! Pushed with soft hands. Fielder attacks the ball with great agility to prevent the single.",
+        "Dot ball! Fast delivery from ${ctx.bowler}! No run conceded on $ballStr!",
+        "Beaten! Sharp delivery from ${ctx.bowler} whizzes past the bat of ${ctx.batsman}! Brilliant bowling!",
+        "No run! Played with soft hands by ${ctx.batsman}. Fielder attacks the ball with great agility to prevent the single.",
       ];
       return _pick(tpls);
     } else if (isTech) {
       final tpls = [
-        "Dot ball. Good length delivery on the corridor of uncertainty. ${ctx.batsman} defends solidly off the front foot to ${ctx.bowler}.",
-        "No run. ${ctx.bowler} hits the seam on a good length, generating steep bounce to cramp ${ctx.batsman}.",
+        "Dot ball. Good length delivery on a tight line. Solid response from ${ctx.batsman} back to ${ctx.bowler}.",
+        "No run. ${ctx.bowler} hits the seam on a good length, generating steep bounce to challenge ${ctx.batsman}.",
       ];
       return _pick(tpls);
     } else {
       final tpls = [
-        "Dot ball on $ballStr. Defended gently back down the pitch to ${ctx.bowler}.",
+        "Dot ball on $ballStr. Played gently back down the pitch to ${ctx.bowler}. No run.",
         "No run conceded. ${ctx.bowler} keeps it tight and disciplined.",
       ];
       return _pick(tpls);
@@ -328,17 +365,17 @@ class AiCommentaryGenerator {
     final r = ctx.runs;
     if (r == 1) {
       final tpls = [
-        "Single taken on $ballStr. ${ctx.batsman} punches ${ctx.bowler} down the ground to rotate the strike. Score $scoreStr.",
+        "Single taken on $ballStr. ${ctx.batsman} works ${ctx.bowler} into the gap to rotate the strike. Score $scoreStr.",
         "One run. Worked away gently with soft hands by ${ctx.batsman}. Good running between the wickets.",
-        "Quick single! Crisp push into the gap, sharp call from ${ctx.batsman} and they scramble home comfortably. Total $scoreStr.",
-        "Smart cricket! ${ctx.batsman} glides it into the vacant space and sprints across for a single.",
+        "Quick single! Crisp placement into the gap, sharp call from ${ctx.batsman} and they scamper through safely. Total $scoreStr.",
+        "Smart cricket! ${ctx.batsman} works it into the vacant space and sprints across for a single.",
       ];
       return _pick(tpls);
     }
     if (r == 2) {
       final tpls = [
-        "Two runs! Driven firmly into the outfield gap, swift turn by ${ctx.batsman} to steal a second run! Score $scoreStr.",
-        "Couple of runs on $ballStr. Clipped off the pads into the vacant outfield area with aggressive running.",
+        "Two runs! Placed firmly into the outfield gap, swift turn by ${ctx.batsman} to take a second run! Score $scoreStr.",
+        "Couple of runs on $ballStr. Worked into the vacant outfield area with aggressive running by ${ctx.batsman}.",
       ];
       return _pick(tpls);
     }

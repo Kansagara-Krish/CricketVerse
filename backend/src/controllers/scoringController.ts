@@ -65,9 +65,51 @@ export const FORBIDDEN_FIELD_TERMS = [
   'long-off',
 ];
 
+export const FORBIDDEN_SHOT_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
+  // Multi-word shot patterns
+  { regex: /\b(cover|straight|square|on|off|lofted)\s+drives?\b/gi, replacement: 'clean hit' },
+  { regex: /\b(pull|hook|cut|sweep|ramp|scoop)\s+shots?\b/gi, replacement: 'clean hit' },
+  { regex: /\b(ramp|paddle)\s+strokes?\b/gi, replacement: 'clean hit' },
+  { regex: /\b(late|square|upper)\s+cuts?\b/gi, replacement: 'boundary' },
+  { regex: /\b(reverse|paddle|slog)\s+sweeps?\b/gi, replacement: 'clean hit' },
+  { regex: /\b(outside|inside)\s+edges?\b/gi, replacement: 'delivery' },
+  { regex: /\bleg\s+glances?\b/gi, replacement: 'run' },
+  { regex: /\b(forward|backfoot)\s+defensive\b/gi, replacement: 'delivery' },
+  { regex: /\bleans?\s+into\s+the\s+half[- ]volley\b/gi, replacement: 'connects cleanly' },
+  { regex: /\bhalf[- ]volley\b/gi, replacement: 'delivery' },
+  { regex: /\b(steps?\s+out|dances?\s+down|charges?\s+down)\b/gi, replacement: 'shows intent' },
+  { regex: /\b(blistering|sharp)\s+cuts?\b/gi, replacement: 'strike' },
+  { regex: /\baudacious\s+ramp\s+stroke\b/gi, replacement: 'quick thinking' },
+  // Single-word shot patterns
+  { regex: /\b(drives?|driven|driving)\b/gi, replacement: 'hits' },
+  { regex: /\b(pulled|pulls?|pulling)\b/gi, replacement: 'hit' },
+  { regex: /\b(hooked|hooks?|hooking)\b/gi, replacement: 'hit' },
+  { regex: /\b(cuts?|cutting)\b/gi, replacement: 'hit' },
+  { regex: /\b(flicks?|flicked|flicking)\b/gi, replacement: 'places it' },
+  { regex: /\b(sweeps?|swept|sweeping)\b/gi, replacement: 'hit' },
+  { regex: /\b(ramps?|ramped|ramping)\b/gi, replacement: 'hit' },
+  { regex: /\b(scoops?|scooped|scooping)\b/gi, replacement: 'hit' },
+  { regex: /\b(lofts?|lofted|lofting)\b/gi, replacement: 'hits' },
+  { regex: /\b(punches?|punched|punching)\b/gi, replacement: 'works it' },
+  { regex: /\b(pushes?|pushed|pushing)\b/gi, replacement: 'works it' },
+  { regex: /\b(glides?|glided|gliding)\b/gi, replacement: 'guides it' },
+  { regex: /\b(glances?|glanced|glancing)\b/gi, replacement: 'works it' },
+  { regex: /\b(clips?|clipped|clipping)\b/gi, replacement: 'works it' },
+  { regex: /\b(dabs?|dabbed|dabbing)\b/gi, replacement: 'plays it' },
+  { regex: /\b(slashes?|slashed|slashing)\b/gi, replacement: 'hits' },
+  { regex: /\b(slogs?|slogged|slogging)\b/gi, replacement: 'hits' },
+  { regex: /\b(steers?|steered|steering)\b/gi, replacement: 'directs it' },
+  { regex: /\b(defends?|defended|defending|defensive)\b/gi, replacement: 'plays' },
+  { regex: /\b(blocks?|blocked|blocking)\b/gi, replacement: 'plays' },
+  { regex: /\b(edges?|edged|edging)\b/gi, replacement: 'delivery' },
+];
+
 export function sanitizeCricketCommentary(text: string): string {
   if (!text) return '';
   let sanitized = text;
+  for (const item of FORBIDDEN_SHOT_PATTERNS) {
+    sanitized = sanitized.replace(item.regex, item.replacement);
+  }
   for (const term of FORBIDDEN_FIELD_TERMS) {
     const regex = new RegExp(`\\b${term.replace('-', '[- ]')}\\b`, 'gi');
     sanitized = sanitized.replace(regex, 'the boundary');
@@ -130,12 +172,12 @@ export function generateAICommentary(
 
     if (wicketType === 'Bowled') {
       comm = selectRandom([
-        `BOWLED HIM! Clean through the defense! ${bowler} knocks back middle stump! ${outPlayer} departs.${inPlayer}${scoreText}`,
+        `BOWLED HIM! Straight through! ${bowler} knocks back middle stump! ${outPlayer} departs.${inPlayer}${scoreText}`,
         `TIMBERRR! Absolute jaffa from ${bowler}! Shatters the stumps, sending bails flying! ${outPlayer} is out.${inPlayer}${scoreText}`,
       ]);
     } else if (wicketType === 'Caught') {
       comm = selectRandom([
-        `CAUGHT! In the air... and safely pouched! ${outPlayer} tries to clear the rope off ${bowler}, but is caught!${inPlayer}${scoreText}`,
+        `CAUGHT! In the air... and safely pouched! ${outPlayer} goes for the big hit off ${bowler}, but is caught!${inPlayer}${scoreText}`,
         `WHAT A CATCH! A stunning diving grab off ${bowler}! ${outPlayer} has to walk back!${inPlayer}${scoreText}`,
       ]);
     } else if (wicketType === 'LBW') {
@@ -155,33 +197,33 @@ export function generateAICommentary(
       ]);
     }
   } else if (extraType === 'Wide') {
-    comm = `Wide ball! ${bowler} strays too far, ${batsman} leaves it alone. Extra run added.${scoreText}`;
+    comm = `Wide ball! ${bowler} strays too far, ${batsman} lets it go. Extra run added.${scoreText}`;
   } else if (extraType === 'No Ball') {
     comm = `No Ball! ${bowler} oversteps the bowling crease. An extra run and a Free Hit for ${batsman}!${scoreText}`;
   } else if (runs === 6) {
     comm = selectRandom([
       `SIX! MASSIVE HIT! ${batsman} launches ${bowler} deep into the crowd!${scoreText}`,
       `MAXIMUM! Sweet timing from ${batsman}! Dispatched cleanly over the rope for SIX!${scoreText}`,
-      `SIX MORE! ${batsman} stands tall and smokes ${bowler} all the way!${scoreText}`,
+      `SIX MORE! ${batsman} stands tall and sends ${bowler} all the way!${scoreText}`,
       `BOOM! Pure power from ${batsman}! High, handsome and into the stands for SIX!${scoreText}`,
     ]);
   } else if (runs === 4) {
     comm = selectRandom([
-      `FOUR! Glorious stroke from ${batsman}! Pierces the infield and races to the boundary!${scoreText}`,
-      `CRACKING BOUNDARY! Fast hands from ${batsman}, drilling ${bowler} to the fence!${scoreText}`,
+      `FOUR! Glorious boundary from ${batsman}! Pierces the infield and races to the boundary!${scoreText}`,
+      `CRACKING BOUNDARY! Fast hands from ${batsman}, sending ${bowler} to the fence!${scoreText}`,
       `FOUR RUNS! Pure elegance from ${batsman}, finding the gap with perfection!${scoreText}`,
-      `DELICIOUS TIMING! ${batsman} times ${bowler} exquisitely and it flashes away to the boundary!${scoreText}`,
+      `DELICIOUS TIMING! ${batsman} connects cleanly off ${bowler} and it flashes away to the boundary!${scoreText}`,
     ]);
   } else if (runs === 0) {
     comm = selectRandom([
-      `Dot ball. Good length delivery from ${bowler}, safely defended by ${batsman}.`,
-      `Dot ball. ${batsman} plays with soft hands back towards ${bowler}.`,
-      `Well bowled! ${bowler} beats the bat of ${batsman} with a beauty!`,
-      `Fiery bouncer from ${bowler}! ${batsman} ducks under it cleanly.`,
+      `Dot ball. Good length delivery from ${bowler} to ${batsman}. No run.`,
+      `Dot ball. ${bowler} keeps it tight, giving no room to ${batsman}.`,
+      `Well bowled! ${bowler} beats ${batsman} with a beauty!`,
+      `Fast delivery from ${bowler}! Well negotiated by ${batsman}.`,
     ]);
   } else if (runs === 1) {
     comm = selectRandom([
-      `Single taken. ${batsman} pushes ${bowler} into the gap to rotate the strike.${scoreText}`,
+      `Single taken. ${batsman} works ${bowler} into the gap to rotate the strike.${scoreText}`,
       `Quick single! Sharp call from ${batsman} and they scamper through safely.${scoreText}`,
       `Worked away neatly by ${batsman} for a comfortable single.${scoreText}`,
     ]);

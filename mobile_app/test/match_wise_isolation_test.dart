@@ -4,6 +4,7 @@ import 'package:cricketverse_ai/services/storage_service.dart';
 import 'package:cricketverse_ai/services/pdf_report_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('Match-Wise Statistics Aggregation & Data Isolation Tests', () {
     late StorageService storage;
     late Team teamA;

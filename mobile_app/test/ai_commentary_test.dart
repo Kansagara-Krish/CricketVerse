@@ -20,6 +20,100 @@ void main() {
     'long-off',
   ];
 
+  const forbiddenShots = [
+    'drive',
+    'drives',
+    'driven',
+    'driving',
+    'cover drive',
+    'straight drive',
+    'pull',
+    'pulls',
+    'pulled',
+    'pulling',
+    'hook',
+    'hooks',
+    'hooked',
+    'hooking',
+    'cut',
+    'cuts',
+    'cutting',
+    'late cut',
+    'square cut',
+    'upper cut',
+    'flick',
+    'flicks',
+    'flicked',
+    'flicking',
+    'sweep',
+    'sweeps',
+    'swept',
+    'sweeping',
+    'reverse sweep',
+    'paddle sweep',
+    'slog sweep',
+    'ramp',
+    'ramps',
+    'ramped',
+    'ramp stroke',
+    'ramp shot',
+    'scoop',
+    'scoops',
+    'scooped',
+    'dilscoop',
+    'glance',
+    'glances',
+    'glanced',
+    'leg glance',
+    'clip',
+    'clips',
+    'clipped',
+    'punch',
+    'punches',
+    'punched',
+    'push',
+    'pushes',
+    'pushed',
+    'glide',
+    'glides',
+    'glided',
+    'dab',
+    'dabs',
+    'dabbed',
+    'slash',
+    'slashes',
+    'slashed',
+    'slog',
+    'slogs',
+    'slogged',
+    'steer',
+    'steers',
+    'steered',
+    'loft',
+    'lofts',
+    'lofted',
+    'defend',
+    'defends',
+    'defended',
+    'defensive',
+    'defense',
+    'block',
+    'blocks',
+    'blocked',
+    'outside edge',
+    'inside edge',
+    'half-volley',
+  ];
+
+  String? findForbiddenShot(String text) {
+    final lower = text.toLowerCase();
+    for (final term in forbiddenShots) {
+      final reg = RegExp(r'\b' + term.replaceAll('-', r'[- ]') + r'\b', caseSensitive: false);
+      if (reg.hasMatch(lower)) return term;
+    }
+    return null;
+  }
+
   bool containsForbidden(String text) {
     final lower = text.toLowerCase();
     for (final term in forbiddenTerms) {
@@ -151,6 +245,73 @@ void main() {
       expect(containsForbidden(AiCommentaryGenerator.sanitize(dirty2)), isFalse);
       expect(containsForbidden(AiCommentaryGenerator.sanitize(dirty3)), isFalse);
       expect(containsForbidden(AiCommentaryGenerator.sanitize(dirty4)), isFalse);
+    });
+
+    test('Scenario 9: AI commentary does NOT speak or generate ANY batsman shot types', () {
+      final runs = [0, 1, 2, 3, 4, 6];
+      final styles = ['Hype / Energetic', 'Technical', 'Casual'];
+
+      for (final r in runs) {
+        for (final st in styles) {
+          for (int i = 0; i < 20; i++) {
+            final comm = AiCommentaryGenerator.generate(
+              AiCommentaryContext(
+                batsman: 'Rohit Sharma',
+                bowler: 'Jasprit Bumrah',
+                runs: r,
+                totalRuns: 120,
+                totalWickets: 2,
+                style: st,
+                currentOvers: 14.2,
+              ),
+            );
+            final forbiddenShot = findForbiddenShot(comm);
+            expect(forbiddenShot, isNull, reason: 'Forbidden shot type "$forbiddenShot" found in "$comm" for run $r style $st');
+          }
+        }
+      }
+
+      // Wickets
+      final wicketTypes = ['Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped'];
+      for (final wt in wicketTypes) {
+        for (int i = 0; i < 15; i++) {
+          final comm = AiCommentaryGenerator.generate(
+            AiCommentaryContext(
+              batsman: 'Virat Kohli',
+              bowler: 'Mitchell Starc',
+              runs: 0,
+              isWicket: true,
+              wicketType: wt,
+              dismissedBatsman: 'Virat Kohli',
+              incomingBatsman: 'KL Rahul',
+              totalRuns: 145,
+              totalWickets: 3,
+            ),
+          );
+          final forbiddenShot = findForbiddenShot(comm);
+          expect(forbiddenShot, isNull, reason: 'Forbidden shot type "$forbiddenShot" found in wicket "$comm"');
+        }
+      }
+    });
+
+    test('Scenario 10: Sanitizer cleanly removes shot types from dirty commentary', () {
+      const dirty1 = 'FOUR! Rohit Sharma leans into the cover drive and pierces the boundary gap!';
+      const dirty2 = 'SIX! Virat Kohli plays a blistering pull shot over the boundary rope!';
+      const dirty3 = 'Short delivery, batsman plays a late cut past the fielder.';
+      const dirty4 = 'Defended solidly off the front foot back to the bowler.';
+      const dirty5 = 'Audacious ramp stroke! Batter outfoxes the bowler.';
+
+      final clean1 = AiCommentaryGenerator.sanitize(dirty1);
+      final clean2 = AiCommentaryGenerator.sanitize(dirty2);
+      final clean3 = AiCommentaryGenerator.sanitize(dirty3);
+      final clean4 = AiCommentaryGenerator.sanitize(dirty4);
+      final clean5 = AiCommentaryGenerator.sanitize(dirty5);
+
+      expect(findForbiddenShot(clean1), isNull, reason: 'Cleaned: $clean1');
+      expect(findForbiddenShot(clean2), isNull, reason: 'Cleaned: $clean2');
+      expect(findForbiddenShot(clean3), isNull, reason: 'Cleaned: $clean3');
+      expect(findForbiddenShot(clean4), isNull, reason: 'Cleaned: $clean4');
+      expect(findForbiddenShot(clean5), isNull, reason: 'Cleaned: $clean5');
     });
   });
 }
