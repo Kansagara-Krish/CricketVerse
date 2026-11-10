@@ -11,7 +11,8 @@
     "test": "ts-node src/tests/integrationTest.ts",
     "test:milestone": "ts-node src/tests/milestoneTest.ts",
     "test:commentary": "ts-node src/tests/commentaryTest.ts",
-    "test:isolation": "ts-node src/tests/matchIsolationTest.ts"
+    "test:isolation": "ts-node src/tests/matchIsolationTest.ts",
+    "test:forgot-password": "ts-node src/tests/resendForgotPasswordTest.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.0",
@@ -27,6 +28,7 @@
     "mongoose": "^9.10.3",
     "nodemailer": "^10.0.14",
     "pg": "^8.12.0",
+    "resend": "^6.37.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {

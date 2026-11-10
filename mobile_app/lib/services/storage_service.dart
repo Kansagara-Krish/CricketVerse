@@ -567,17 +567,8 @@ class StorageService with ChangeNotifier {
         _currentUserEmail = res['user']['email'];
         _currentRole = res['user']['role'];
         _currentUserName = res['user']['name'];
-        if (_currentRole == 'Scorer') {
-          _activeScorerMatchId = res['activeScorerMatchId'];
-          if (_activeScorerMatchId == null && res['user']['id'] != null) {
-            final String userId = res['user']['id'];
-            if (userId.startsWith('scorer_')) {
-              _activeScorerMatchId = userId.substring(7);
-            }
-          }
-        } else {
-          _activeScorerMatchId = null;
-        }
+        // Always land manager/scorer on their main dashboard (Assigned Matches list) on auth
+        _activeScorerMatchId = null;
         await loadData();
         notifyListeners();
         return true;
@@ -595,7 +586,8 @@ class StorageService with ChangeNotifier {
       _currentUserEmail = res['user']['email'];
       _currentRole = res['user']['role'];
       _currentUserName = res['user']['name'];
-      _activeScorerMatchId = res['activeScorerMatchId'];
+      // Always land manager/scorer on their main dashboard (Assigned Matches list) after login
+      _activeScorerMatchId = null;
       await loadData();
       notifyListeners();
       return true;
@@ -1418,8 +1410,12 @@ class StorageService with ChangeNotifier {
   }
 
   // --- Forgot Password Methods ---
-  Future<Map<String, dynamic>> requestForgotPasswordOtp(String email) async {
-    return await ApiService.requestForgotPasswordOtp(email);
+  Future<Map<String, dynamic>> requestForgotPasswordOtp(String email, {String? requestId}) async {
+    return await ApiService.requestForgotPasswordOtp(email, requestId: requestId);
+  }
+
+  Future<Map<String, dynamic>> resendForgotPasswordOtp(String email) async {
+    return await ApiService.resendForgotPasswordOtp(email);
   }
 
   Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
@@ -1428,14 +1424,16 @@ class StorageService with ChangeNotifier {
 
   Future<Map<String, dynamic>> resetForgotPassword({
     required String email,
-    required String otp,
     required String newPassword,
+    String? resetToken,
+    String? otp,
     String? confirmPassword,
   }) async {
     return await ApiService.resetForgotPassword(
       email: email,
-      otp: otp,
       newPassword: newPassword,
+      resetToken: resetToken,
+      otp: otp,
       confirmPassword: confirmPassword,
     );
   }

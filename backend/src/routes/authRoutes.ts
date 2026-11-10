@@ -7,6 +7,7 @@ import {
   requestPasswordOtp,
   updatePassword,
   requestForgotPasswordOtp,
+  resendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   resetForgotPassword,
   getEmailConfigEndpoint,
@@ -31,9 +32,16 @@ router.post('/password-otp', authenticateJWT, requestPasswordOtp);
 router.put('/password', authenticateJWT, updatePassword);
 
 // Public Forgot Password flow for Users & Admin
+router.post('/forgot-password', requestForgotPasswordOtp);
+router.post('/verify-reset-otp', verifyForgotPasswordOtp);
+router.post('/reset-password', resetForgotPassword);
+router.post('/resend-reset-otp', resendForgotPasswordOtp);
+
+// Backward-compatible alias paths
 router.post('/forgot-password/request-otp', requestForgotPasswordOtp);
 router.post('/forgot-password/verify-otp', verifyForgotPasswordOtp);
 router.post('/forgot-password/reset-password', resetForgotPassword);
+router.post('/forgot-password/resend-otp', resendForgotPasswordOtp);
 
 // Admin-only Email Sender & App Password Configuration
 router.get('/email-config', authenticateJWT, requireRole(['Admin']), getEmailConfigEndpoint);

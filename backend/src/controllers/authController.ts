@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { UserModel } from '../models/User';
 import { MatchModel } from '../models/Match';
 import { PasswordResetOtpModel } from '../models/PasswordResetOtp';
@@ -381,115 +383,232 @@ export async function updatePassword(req: any, res: Response) {
 }
 
 // ==========================================
-// FORGOT PASSWORD FLOW (Admin & User)
+// FORGOT PASSWORD FLOW (Resend OTP & Reset)
 // ==========================================
+
+function isValidEmailFormat(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  if (/\s/.test(trimmed)) return false;
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) return false;
+  const [localPart, domainPart] = trimmed.split('@');
+  if (!localPart || !domainPart || domainPart.startsWith('.') || domainPart.endsWith('.') || domainPart.indexOf('.') === -1) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * Request OTP for Forgot Password
- * Open to both Users and Admins.
+ * Generates secure 6-digit OTP, hashes it, stores with 5-minute expiry, and sends via Resend.
  */
 export async function requestForgotPasswordOtp(req: Request, res: Response) {
+  const requestId = (req.headers['x-request-id'] as string) || `fp_srv_${Date.now()}`;
   const { email } = req.body;
+  const dbReadyState = mongoose.connection.readyState; // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
 
-  if (!email || typeof email !== 'string' || email.trim().length === 0) {
-    return res.status(400).json({ error: 'Please enter your registered email address.' });
+  console.log(`[FP_TRACE][${requestId}] Request received: ${req.method} ${req.originalUrl} | MongoDB readyState=${dbReadyState}`);
+
+  if (dbReadyState !== 1) {
+    console.error(`[FP_TRACE][${requestId}] Aborting: MongoDB Atlas not connected (readyState=${dbReadyState})`);
+    return res.status(503).json({
+      error: 'Database service temporarily unavailable. Please retry in a few seconds.',
+    });
+  }
+
+  if (!email || typeof email !== 'string' || !isValidEmailFormat(email)) {
+    console.warn(`[FP_TRACE][${requestId}] Email validation failed -> HTTP 400`);
+    return res.status(400).json({ error: 'Please enter a valid registered email address.' });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const maskedDomain = normalizedEmail.split('@')[1] || 'unknown';
+  console.log(`[FP_TRACE][${requestId}] Email format validated (domain: ${maskedDomain})`);
 
   try {
-    // 1. Verify user exists in database
+    // 1. Check whether account exists (generic response if not found to prevent enumeration)
     const user = await UserModel.findOne({ email: normalizedEmail });
+    console.log(`[FP_TRACE][${requestId}] MongoDB user lookup completed (found: ${Boolean(user)})`);
     if (!user) {
-      return res.status(404).json({
-        error: 'No account found with this email address.',
+      console.log(`[FP_TRACE][${requestId}] Unregistered email handled safely -> HTTP 200`);
+      return res.status(200).json({
+        success: true,
+        message: 'If an account is associated with this email, a verification code has been sent.',
       });
     }
 
-    // 2. Generate 6-digit numeric OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 2. Cooldown check (60-second cooldown between requests)
+    const existingOtp = await PasswordResetOtpModel.findOne({ email: normalizedEmail }).lean();
+    if (existingOtp) {
+      const requestedTime = existingOtp.lastRequestedAt
+        ? new Date(existingOtp.lastRequestedAt).getTime()
+        : (existingOtp.createdAt ? new Date(existingOtp.createdAt).getTime() : 0);
+      if (requestedTime > 0) {
+        const elapsedMs = Date.now() - requestedTime;
+        if (elapsedMs < 60000 && elapsedMs >= 0) {
+          const remainingSeconds = Math.ceil((60000 - elapsedMs) / 1000);
+          console.log(`[FP_TRACE][${requestId}] Cooldown enforced (${remainingSeconds}s remaining) -> HTTP 429`);
+          return res.status(429).json({
+            error: `Please wait ${remainingSeconds}s before requesting a new verification code.`,
+            cooldownRemaining: remainingSeconds,
+          });
+        }
+      }
+    }
 
-    // 3. Clear existing OTPs for this email and save new one
+    // 3. Generate cryptographically secure random 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    // 4. Securely hash OTP before storing
+    const otpHash = await bcrypt.hash(otp, 10);
+
+    // 5. Invalidate previous OTPs for this email and save new record
     await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
     await PasswordResetOtpModel.create({
       email: normalizedEmail,
-      otp,
+      otpHash,
+      attempts: 0,
       verified: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      lastRequestedAt: new Date(),
+      createdAt: new Date(),
     });
+    console.log(`[FP_TRACE][${requestId}] Hashed OTP record persisted in MongoDB Atlas`);
 
-    console.log(`[FORGOT PASSWORD] Generated OTP for ${normalizedEmail}: ${otp}`);
-
-    // 4. Send Email via configured SMTP
+    // 6. Send OTP via email service (Resend + SMTP fallback)
+    console.log(`[FP_TRACE][${requestId}] Dispatching OTP via emailService...`);
     const emailResult = await sendPasswordResetOtpEmail(normalizedEmail, otp, user.name);
+    console.log(`[FP_TRACE][${requestId}] Email provider response: success=${emailResult.success}`);
 
     if (!emailResult.success) {
-      // If email fails because admin has not configured SMTP, provide clear explanation
-      return res.status(200).json({
-        message:
-          'OTP generated. (Note: Email configuration is not active on server yet. Please check server console or configure SMTP in Admin Settings).',
-        emailSent: false,
-        warning: emailResult.error,
-        // In local development/prototype, include otp for testability if SMTP is unconfigured
-        devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined,
+      console.error(`[FP_TRACE][${requestId}] Email delivery failed (${emailResult.error}) -> HTTP 502`);
+      // Invalidate the record if email delivery submission failed
+      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      return res.status(502).json({
+        error: emailResult.error || 'Failed to deliver verification code. Please check your network and retry.',
       });
     }
 
+    console.log(`[FP_TRACE][${requestId}] Completed successfully -> HTTP 200`);
     return res.status(200).json({
+      success: true,
       message: 'A 6-digit verification code has been sent to your email address.',
-      emailSent: true,
     });
-  } catch (err) {
-    console.error('Forgot password OTP error:', err);
-    return res.status(500).json({ error: 'Internal server error requesting password reset code.' });
+  } catch (err: any) {
+    console.error(`[FP_TRACE][${requestId}] Unexpected error -> HTTP 500:`, err?.message || err);
+    return res.status(500).json({ error: 'Internal server error requesting verification code.' });
   }
 }
 
 /**
+ * Resend OTP for Forgot Password
+ * Applies 60-second cooldown and reissues a fresh OTP.
+ */
+export async function resendForgotPasswordOtp(req: Request, res: Response) {
+  return requestForgotPasswordOtp(req, res);
+}
+
+/**
  * Verify OTP for Forgot Password
+ * Checks hash, 5-minute expiration, and max 5 attempts lockout.
+ * Issues single-use reset authorization token.
  */
 export async function verifyForgotPasswordOtp(req: Request, res: Response) {
   const { email, otp } = req.body;
 
-  if (!email || !otp) {
-    return res.status(400).json({ error: 'Email and OTP code are required.' });
+  if (!email || typeof email !== 'string' || !otp) {
+    return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedEmail = email.trim().toLowerCase();
   const cleanOtp = String(otp).trim();
 
+  if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+    return res.status(400).json({ error: 'Please enter a valid 6-digit numeric verification code.' });
+  }
+
   try {
-    const record = await PasswordResetOtpModel.findOne({ email: normalizedEmail, otp: cleanOtp });
+    const record = await PasswordResetOtpModel.findOne({ email: normalizedEmail });
+
     if (!record) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
+      return res.status(400).json({ error: 'Invalid or expired verification code. Please request a new code.' });
     }
 
+    if (record.verified && record.resetToken) {
+      return res.status(200).json({
+        success: true,
+        message: 'OTP already verified.',
+        resetToken: record.resetToken,
+      });
+    }
+
+    // Check 5-minute expiration
+    if (Date.now() > new Date(record.expiresAt).getTime()) {
+      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      return res.status(400).json({ error: 'Verification code has expired (5 minute limit). Please request a new code.' });
+    }
+
+    // Check maximum 5 incorrect attempts
+    if (record.attempts >= 5) {
+      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      return res.status(429).json({
+        error: 'Too many incorrect attempts. This code has been invalidated for security. Please request a new code.',
+      });
+    }
+
+    // Compare OTP hash
+    const isMatch = await bcrypt.compare(cleanOtp, record.otpHash);
+
+    if (!isMatch) {
+      record.attempts = (record.attempts || 0) + 1;
+      await record.save();
+
+      const remainingAttempts = 5 - record.attempts;
+      if (remainingAttempts <= 0) {
+        await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+        return res.status(400).json({
+          error: 'Too many incorrect attempts. Verification code invalidated. Please request a new code.',
+        });
+      }
+
+      return res.status(400).json({
+        error: `Incorrect verification code. ${remainingAttempts} attempt${remainingAttempts === 1 ? '' : 's'} remaining.`,
+      });
+    }
+
+    // On successful verification, issue a short-lived reset authorization token (15 mins)
+    const resetToken = crypto.randomBytes(32).toString('hex');
     record.verified = true;
+    record.resetToken = resetToken;
+    record.resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    record.otpHash = 'VERIFIED_AND_CONSUMED'; // OTP cannot be verified again
     await record.save();
 
     return res.status(200).json({
-      valid: true,
+      success: true,
       message: 'OTP verified successfully.',
+      resetToken,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Verify OTP error:', err);
     return res.status(500).json({ error: 'Internal server error verifying OTP.' });
   }
 }
 
 /**
- * Reset Password using OTP
+ * Reset Password using verified OTP or Reset Authorization Token
  */
 export async function resetForgotPassword(req: Request, res: Response) {
-  const { email, otp, newPassword, confirmPassword } = req.body;
+  const { email, resetToken, otp, newPassword, confirmPassword } = req.body;
 
-  if (!email || !otp || !newPassword) {
-    return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+  if (!email || !newPassword) {
+    return res.status(400).json({ error: 'Email and new password are required.' });
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
-  const cleanOtp = String(otp).trim();
 
-  // Validate new password rules
+  // Validate new password rules & confirmation
   const validation = validateRegistrationInput(normalizedEmail, newPassword, confirmPassword);
   if (!validation.isValid) {
     return res.status(400).json({
@@ -499,13 +618,40 @@ export async function resetForgotPassword(req: Request, res: Response) {
   }
 
   try {
-    const otpRecord = await PasswordResetOtpModel.findOne({ email: normalizedEmail, otp: cleanOtp });
-    if (!otpRecord) {
-      return res.status(400).json({ error: 'Invalid or expired OTP code. Please request a new code.' });
+    // 1. Look up verification record
+    let record: any = null;
+    if (resetToken && typeof resetToken === 'string') {
+      record = await PasswordResetOtpModel.findOne({
+        email: normalizedEmail,
+        resetToken: resetToken.trim(),
+        verified: true,
+      });
+    } else if (otp) {
+      // Backward compatibility fallback if client sent OTP directly
+      record = await PasswordResetOtpModel.findOne({
+        email: normalizedEmail,
+        verified: true,
+      });
     }
 
-    // Find and update the user's password
+    if (!record) {
+      return res.status(400).json({
+        error: 'Password reset authorization is invalid or expired. Please restart the recovery process.',
+      });
+    }
+
+    // Check expiration of reset authorization
+    if (record.resetTokenExpiresAt && Date.now() > new Date(record.resetTokenExpiresAt).getTime()) {
+      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      return res.status(400).json({
+        error: 'Password reset session has expired. Please request a new verification code.',
+      });
+    }
+
+    // 2. Hash new password securely using bcrypt
     const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // 3. Atomically update existing user password
     const updatedUser = await UserModel.findOneAndUpdate(
       { email: normalizedEmail },
       { $set: { passwordHash } },
@@ -516,15 +662,16 @@ export async function resetForgotPassword(req: Request, res: Response) {
       return res.status(404).json({ error: 'User account not found.' });
     }
 
-    // Clean up OTP record
+    // 4. Invalidate reset authorization & OTP completely (prevent reuse)
     await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
 
     console.log(`✅ Password successfully reset for account: ${normalizedEmail} (Role: ${updatedUser.role})`);
 
     return res.status(200).json({
+      success: true,
       message: 'Password reset successfully! You can now log in with your new password.',
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Reset password error:', err);
     return res.status(500).json({ error: 'Internal server error resetting password.' });
   }

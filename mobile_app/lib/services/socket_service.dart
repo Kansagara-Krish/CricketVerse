@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'api_service.dart';
+import '../core/config/app_config.dart';
 
 class SocketService {
   static io.Socket? _socket;
@@ -12,15 +12,20 @@ class SocketService {
   static final Set<String> _processedMilestoneEventIds = {};
 
   static String get socketUrl {
-    // Strips '/api/v1' from ApiService.baseUrl to get the server root
-    return ApiService.baseUrl.replaceFirst('/api/v1', '');
+    return AppConfig.socketBaseUrl;
   }
 
   static final Set<String> _joinedMatches = {};
   static final List<VoidCallback> _reconnectListeners = [];
 
   static void connect() {
-    if (_socket != null && _socket!.connected) return;
+    if (_socket != null) {
+      if (!_socket!.connected) {
+        // Singleton socket already initialized and connecting/reconnecting
+        _socket!.connect();
+      }
+      return;
+    }
 
     try {
       _socket = io.io(
@@ -29,8 +34,9 @@ class SocketService {
             .setTransports(['websocket', 'polling']) // Support WebSocket with Polling fallback
             .enableAutoConnect()
             .enableReconnection()
-            .setReconnectionDelay(1000)
+            .setReconnectionDelay(2000)
             .setReconnectionAttempts(9999)
+            .setTimeout(25000)
             .build(),
       );
 
@@ -221,6 +227,7 @@ class SocketService {
   static void disconnect() {
     if (_socket != null) {
       _socket!.disconnect();
+      _socket!.dispose();
       _socket = null;
       debugPrint('Socket.IO disconnected manually.');
     }

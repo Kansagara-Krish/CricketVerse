@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../core/config/app_config.dart';
 import '../models/models.dart';
 import 'auth_storage_service.dart';
 
@@ -22,51 +23,29 @@ class RegisterResponse {
 }
 
 class ApiService {
-  static const Duration defaultTimeout = Duration(seconds: 15);
-  static String? _customBaseUrl;
+  static const Duration defaultTimeout = Duration(seconds: 35);
 
-  static String get defaultHostIp => '10.201.145.231';
+  /// Primary centralized API Base URL (defaults globally to public cloud backend)
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
-  static String get baseUrl {
-    if (_customBaseUrl != null && _customBaseUrl!.trim().isNotEmpty) {
-      return _customBaseUrl!.trim();
-    }
-    if (kIsWeb) {
-      return 'http://localhost:3000/api/v1';
-    }
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return 'http://127.0.0.1:3000/api/v1';
-    }
-    // Render live backend - accessible anywhere across all devices
-    return 'https://cricketverse-n103.onrender.com/api/v1';
-  }
+  /// Candidate URLs for multi-host fallback and verification
+  static List<String> get candidateBaseUrls => AppConfig.candidateApiBaseUrls;
 
+  /// Configure runtime custom base URL (persisted in user settings)
   static Future<void> setCustomBaseUrl(String url) async {
-    _customBaseUrl = url.trim();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cricketverse_api_base_url', _customBaseUrl!);
-    } catch (_) {}
+    await AppConfig.setCustomBaseUrl(url);
   }
 
   static String? _token;
 
   static Future<void> init() async {
+    await AppConfig.init();
+
     try {
       _token = await AuthStorageService.getAccessToken();
     } catch (e) {
       debugPrint('ApiService.init token error: $e');
     }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUrl = prefs.getString('cricketverse_api_base_url');
-      if (savedUrl != null && savedUrl.trim().isNotEmpty) {
-        _customBaseUrl = savedUrl.trim();
-      }
-    } catch (_) {}
   }
 
   static Map<String, String> get _headers {
@@ -880,71 +859,190 @@ class ApiService {
   }
 
   // --- Forgot Password API ---
-  static Future<Map<String, dynamic>> requestForgotPasswordOtp(String email) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/forgot-password/request-otp'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: jsonEncode({'email': email.trim().toLowerCase()}),
-      ).timeout(defaultTimeout);
+  static Future<Map<String, dynamic>> requestForgotPasswordOtp(
+    String email, {
+    String? requestId,
+  }) async {
+    final reqId = requestId ?? 'fp_${DateTime.now().millisecondsSinceEpoch}';
+    final cleanEmail = email.trim().toLowerCase();
+    final payload = {'email': cleanEmail};
+    String lastError = 'Unable to send verification code. Please check your network and try again.';
 
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        return {'success': true, 'message': data['message'] ?? 'OTP sent to your email.', 'devOtp': data['devOtp']};
+    for (final host in candidateBaseUrls) {
+      for (final endpoint in ['/auth/forgot-password', '/auth/forgot-password/request-otp']) {
+        final fullUrl = '$host$endpoint';
+        debugPrint('[FP_TRACE][$reqId] Request started: POST $fullUrl');
+        debugPrint('[FP_TRACE][$reqId] Body keys: ${payload.keys.toList()}');
+
+        try {
+          final res = await http.post(
+            Uri.parse(fullUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Request-Id': reqId,
+            },
+            body: jsonEncode(payload),
+          ).timeout(const Duration(seconds: 35));
+
+          debugPrint('[FP_TRACE][$reqId] Response status: ${res.statusCode}');
+          // Redact tokens/OTP if any ever appeared
+          final safeBody = res.body.replaceAll(RegExp(r'"resetToken"\s*:\s*"[^"]+"'), '"resetToken":"[REDACTED]"');
+          debugPrint('[FP_TRACE][$reqId] Response body: $safeBody');
+
+          if (res.statusCode == 404) {
+            debugPrint('[FP_TRACE][$reqId] 404 on $endpoint, trying fallback route...');
+            continue;
+          }
+
+          final data = jsonDecode(res.body);
+          if (res.statusCode == 200) {
+            if (data['emailSent'] == false || data['success'] == false) {
+              return {
+                'success': false,
+                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'Email delivery failed on server.',
+              };
+            }
+            return {
+              'success': true,
+              'message': data['message'] ?? 'A 6-digit verification code has been sent to your email.',
+            };
+          }
+          if (data['error'] != null) {
+            return {'success': false, 'error': data['error']};
+          }
+          return {'success': false, 'error': 'Server error (${res.statusCode}). Please try again.'};
+        } catch (e, stack) {
+          final timedOut = e is TimeoutException || e.toString().contains('TimeoutException');
+          debugPrint('[FP_TRACE][$reqId] Exception type: ${e.runtimeType}, timedOut=$timedOut, error=$e');
+          debugPrint('[FP_TRACE][$reqId] StackTrace: $stack');
+          if (timedOut) {
+            lastError = 'Server is waking up or taking too long to respond. Please tap Send Verification Code again.';
+          } else {
+            lastError = 'Connection error. Please ensure you have an active internet connection.';
+          }
+        }
       }
-      return {'success': false, 'error': data['error'] ?? 'Failed to request OTP.'};
-    } catch (e) {
-      debugPrint('ApiService requestForgotPasswordOtp error: $e');
-      return {'success': false, 'error': 'Network error. Please try again.'};
     }
+    return {'success': false, 'error': lastError};
+  }
+
+  static Future<Map<String, dynamic>> resendForgotPasswordOtp(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    String lastError = 'Unable to resend verification code. Please try again.';
+
+    for (final host in candidateBaseUrls) {
+      for (final endpoint in ['/auth/resend-reset-otp', '/auth/forgot-password/resend-otp', '/auth/forgot-password']) {
+        try {
+          final res = await http.post(
+            Uri.parse('$host$endpoint'),
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: jsonEncode({'email': cleanEmail}),
+          ).timeout(const Duration(seconds: 30));
+
+          if (res.statusCode == 404) continue;
+
+          final data = jsonDecode(res.body);
+          if (res.statusCode == 200) {
+            if (data['emailSent'] == false || data['success'] == false) {
+              return {
+                'success': false,
+                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'Email delivery failed on server.',
+              };
+            }
+            return {'success': true, 'message': data['message'] ?? 'A fresh 6-digit code has been sent to your email.'};
+          }
+          if (data['error'] != null) {
+            return {'success': false, 'error': data['error']};
+          }
+          return {'success': false, 'error': 'Server error (${res.statusCode}). Please try again.'};
+        } catch (e) {
+          if (e.toString().contains('TimeoutException')) {
+            lastError = 'Request timed out while waiting for server. Please retry.';
+          } else {
+            lastError = 'Connection error. Please check your internet connection.';
+          }
+        }
+      }
+    }
+    return {'success': false, 'error': lastError};
   }
 
   static Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/forgot-password/verify-otp'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: jsonEncode({'email': email.trim().toLowerCase(), 'otp': otp.trim()}),
-      ).timeout(defaultTimeout);
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanOtp = otp.trim();
+    String lastError = 'Invalid or expired verification code.';
 
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        return {'success': true, 'message': data['message'] ?? 'OTP verified.'};
+    for (final host in candidateBaseUrls) {
+      for (final endpoint in ['/auth/verify-reset-otp', '/auth/forgot-password/verify-otp']) {
+        try {
+          final res = await http.post(
+            Uri.parse('$host$endpoint'),
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: jsonEncode({'email': cleanEmail, 'otp': cleanOtp}),
+          ).timeout(const Duration(seconds: 25));
+
+          if (res.statusCode == 404) continue;
+
+          final data = jsonDecode(res.body);
+          if (res.statusCode == 200) {
+            return {
+              'success': true,
+              'message': data['message'] ?? 'OTP verified successfully.',
+              'resetToken': data['resetToken'],
+            };
+          }
+          if (data['error'] != null) {
+            return {'success': false, 'error': data['error']};
+          }
+        } catch (e) {
+          lastError = 'Connection error verifying code. Please retry.';
+        }
       }
-      return {'success': false, 'error': data['error'] ?? 'Invalid OTP code.'};
-    } catch (e) {
-      debugPrint('ApiService verifyForgotPasswordOtp error: $e');
-      return {'success': false, 'error': 'Network error. Please try again.'};
     }
+    return {'success': false, 'error': lastError};
   }
 
   static Future<Map<String, dynamic>> resetForgotPassword({
     required String email,
-    required String otp,
     required String newPassword,
+    String? resetToken,
+    String? otp,
     String? confirmPassword,
   }) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/forgot-password/reset-password'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: jsonEncode({
-          'email': email.trim().toLowerCase(),
-          'otp': otp.trim(),
-          'newPassword': newPassword,
-          'confirmPassword': confirmPassword ?? newPassword,
-        }),
-      ).timeout(defaultTimeout);
+    final cleanEmail = email.trim().toLowerCase();
+    String lastError = 'Failed to reset password. Please try again.';
 
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        return {'success': true, 'message': data['message'] ?? 'Password reset successfully.'};
+    for (final host in candidateBaseUrls) {
+      for (final endpoint in ['/auth/reset-password', '/auth/forgot-password/reset-password']) {
+        try {
+          final res = await http.post(
+            Uri.parse('$host$endpoint'),
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: jsonEncode({
+              'email': cleanEmail,
+              'newPassword': newPassword,
+              'confirmPassword': confirmPassword ?? newPassword,
+              if (resetToken != null && resetToken.isNotEmpty) 'resetToken': resetToken,
+              if (otp != null && otp.isNotEmpty) 'otp': otp.trim(),
+            }),
+          ).timeout(const Duration(seconds: 25));
+
+          if (res.statusCode == 404) continue;
+
+          final data = jsonDecode(res.body);
+          if (res.statusCode == 200) {
+            return {'success': true, 'message': data['message'] ?? 'Password reset successfully.'};
+          }
+          if (data['error'] != null) {
+            return {'success': false, 'error': data['error']};
+          }
+        } catch (e) {
+          lastError = 'Connection error updating password. Please retry.';
+        }
       }
-      return {'success': false, 'error': data['error'] ?? 'Failed to reset password.'};
-    } catch (e) {
-      debugPrint('ApiService resetForgotPassword error: $e');
-      return {'success': false, 'error': 'Network error. Please try again.'};
     }
+    return {'success': false, 'error': lastError};
   }
 
   // --- Admin Email Sender & App Password Configuration API ---

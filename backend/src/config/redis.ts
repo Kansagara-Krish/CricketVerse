@@ -9,14 +9,23 @@ let redis: Redis | null = null;
 
 if (redisUrl) {
   try {
-    redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
+    let cleanUrl = redisUrl.trim();
+    if (cleanUrl.startsWith('"') && cleanUrl.endsWith('"')) {
+      cleanUrl = cleanUrl.slice(1, -1);
+    }
+    if (cleanUrl.startsWith('redis://') && cleanUrl.includes('upstash.io')) {
+      cleanUrl = cleanUrl.replace('redis://', 'rediss://');
+    }
+
+    redis = new Redis(cleanUrl, {
+      maxRetriesPerRequest: null,
+      connectTimeout: 10000,
       retryStrategy(times) {
-        console.warn(`Redis connection retry attempt ${times}`);
-        if (times > 3) {
+        if (times > 5) {
+          console.warn('Redis disconnected or timed out. Operating with memory cache.');
           return null; // Stop retrying and fallback
         }
-        return Math.min(times * 100, 2000);
+        return Math.min(times * 1000, 3000);
       }
     });
 
@@ -25,10 +34,11 @@ if (redisUrl) {
     });
 
     redis.on('error', (err) => {
-      console.error('Redis error occurred:', err);
+      console.warn('Redis notice:', err.message);
     });
   } catch (err) {
-    console.error('Failed to create Redis client:', err);
+    console.warn('Failed to create Redis client:', err);
+    redis = null;
   }
 } else {
   console.log('REDIS_URL environment variable is not set. Gracefully running without Redis caching / scaling.');

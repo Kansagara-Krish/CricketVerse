@@ -4,8 +4,9 @@ import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-// Use reliable public DNS for Atlas SRV record resolution across all local ISPs
+// Use reliable public DNS & IPv4-first resolution across cloud containers and ISPs
 try {
+  dns.setDefaultResultOrder('ipv4first');
   dns.setServers(['8.8.8.8', '1.1.1.1']);
 } catch (_) {}
 
@@ -43,6 +44,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Base API Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/auth', authRoutes); // Root alias
 app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/matches', matchRoutes);
 app.use('/api/v1/scoring', scoringRoutes);

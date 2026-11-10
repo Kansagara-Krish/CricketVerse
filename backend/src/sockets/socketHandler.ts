@@ -14,13 +14,17 @@ export function initSocketIO(server: any) {
 
   // If redis is available, hook up the redis adapter for Socket.IO scaling
   if (redis) {
-    const pubClient = redis;
-    const subClient = redis.duplicate();
-    subClient.on('error', (err) => {
-      console.error('Redis Socket.IO subClient error:', err);
-    });
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log('Socket.IO Redis adapter enabled.');
+    try {
+      const pubClient = redis;
+      const subClient = redis.duplicate();
+      subClient.on('error', (err) => {
+        console.warn('Redis Socket.IO subClient notice:', err.message);
+      });
+      io.adapter(createAdapter(pubClient, subClient));
+      console.log('Socket.IO Redis adapter enabled.');
+    } catch (err: any) {
+      console.warn('Socket.IO Redis adapter skipped:', err.message);
+    }
   }
 
   io.on('connection', (socket: Socket) => {

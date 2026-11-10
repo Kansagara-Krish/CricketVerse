@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -430,7 +431,22 @@ class PdfReportService {
             ),
             pw.SizedBox(height: 14),
 
-            // --- 6. AI INSIGHTS & VERIFICATION FOOTER ---
+            // --- 6. MATCH SCORE PROGRESSION (RUNS / OVERS) ---
+            ..._buildScoreProgressionSection(
+              match: match,
+              teamAName: teamAName,
+              teamBName: teamBName,
+              scoreA: scoreA,
+              oversA: oversA,
+              scoreB: scoreB,
+              oversB: oversB,
+              emeraldGreen: emeraldGreen,
+              cardBorder: cardBorder,
+              textDark: textDark,
+              textMuted: textMuted,
+            ),
+
+            // --- 7. AI INSIGHTS & VERIFICATION FOOTER ---
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
@@ -498,6 +514,421 @@ class PdfReportService {
     );
   }
 
+  /// Computes cumulative (over, runs) data points matching Match Summary graph logic.
+  static List<_PdfProgressionPoint> _buildProgressionPoints(CricketMatch? match, bool forTeamA) {
+    if (match == null) return const [_PdfProgressionPoint(0, 0)];
+
+    final teamId = forTeamA ? match.teamA.id : match.teamB.id;
+    final totalRuns = forTeamA ? match.runsA : match.runsB;
+    final totalOvers = forTeamA ? match.oversA : match.oversB;
+
+    if (totalOvers <= 0 && totalRuns <= 0) {
+      return const [_PdfProgressionPoint(0, 0)];
+    }
+
+    final teamBalls = match.balls.where((b) {
+      if (b.battingTeamId != null && b.battingTeamId!.isNotEmpty) {
+        return b.battingTeamId == teamId;
+      }
+      final isTeamAInnings1 = (match.tossDecision.toLowerCase() == 'bat' &&
+              (match.tossWinner == match.teamA.name ||
+                  match.tossWinner == 'Team A' ||
+                  match.tossWinner == match.teamA.shortName)) ||
+          (match.tossDecision.toLowerCase() == 'bowl' &&
+              (match.tossWinner == match.teamB.name ||
+                  match.tossWinner == 'Team B' ||
+                  match.tossWinner == match.teamB.shortName));
+      final teamAInnings = isTeamAInnings1 ? 1 : 2;
+      return forTeamA ? (b.innings == teamAInnings) : (b.innings != teamAInnings);
+    }).toList();
+
+    if (teamBalls.isNotEmpty) {
+      final List<_PdfProgressionPoint> points = [const _PdfProgressionPoint(0, 0)];
+      int cumulative = 0;
+      final Map<int, int> overEndRuns = {};
+
+      for (final b in teamBalls) {
+        cumulative += (b.run + b.extraRun);
+        final ov = b.over ?? 0.0;
+        overEndRuns[ov.floor()] = cumulative;
+      }
+
+      final int completedOvers = totalOvers.floor();
+      for (int ov = 1; ov <= completedOvers; ov++) {
+        if (overEndRuns.containsKey(ov)) {
+          points.add(_PdfProgressionPoint(ov.toDouble(), overEndRuns[ov]!.toDouble()));
+        } else if (overEndRuns.containsKey(ov - 1)) {
+          points.add(_PdfProgressionPoint(ov.toDouble(), overEndRuns[ov - 1]!.toDouble()));
+        }
+      }
+
+      if (points.isEmpty || (points.last.over - totalOvers).abs() > 0.05) {
+        points.add(_PdfProgressionPoint(totalOvers, totalRuns.toDouble()));
+      } else {
+        points[points.length - 1] = _PdfProgressionPoint(totalOvers, totalRuns.toDouble());
+      }
+
+      points.sort((a, b) => a.over.compareTo(b.over));
+      final List<_PdfProgressionPoint> uniquePoints = [];
+      for (final p in points) {
+        if (uniquePoints.isEmpty || (p.over - uniquePoints.last.over).abs() > 0.05) {
+          uniquePoints.add(p);
+        } else {
+          uniquePoints[uniquePoints.length - 1] = p;
+        }
+      }
+
+      return uniquePoints.length < 2
+          ? [const _PdfProgressionPoint(0, 0), _PdfProgressionPoint(totalOvers > 0 ? totalOvers : 1, totalRuns.toDouble())]
+          : uniquePoints;
+    }
+
+    // Fallback when aggregate score exists without ball-by-ball timeline
+    final List<_PdfProgressionPoint> fallback = [const _PdfProgressionPoint(0, 0)];
+    if (totalOvers > 0) {
+      final int wholeOvers = totalOvers.floor();
+      final int step = wholeOvers > 20 ? 5 : (wholeOvers > 10 ? 3 : 2);
+      for (int ov = step; ov < wholeOvers; ov += step) {
+        final ratio = ov / totalOvers;
+        fallback.add(_PdfProgressionPoint(ov.toDouble(), (totalRuns * ratio).roundToDouble()));
+      }
+      fallback.add(_PdfProgressionPoint(totalOvers, totalRuns.toDouble()));
+    } else {
+      fallback.add(_PdfProgressionPoint(1, totalRuns.toDouble()));
+    }
+    return fallback;
+  }
+
+  static List<pw.Widget> _buildScoreProgressionSection({
+    required CricketMatch? match,
+    required String teamAName,
+    required String teamBName,
+    required String scoreA,
+    required String oversA,
+    required String scoreB,
+    required String oversB,
+    required PdfColor emeraldGreen,
+    required PdfColor cardBorder,
+    required PdfColor textDark,
+    required PdfColor textMuted,
+  }) {
+    final pointsA = _buildProgressionPoints(match, true);
+    final pointsB = _buildProgressionPoints(match, false);
+
+    final bool hasInnings1Data = match == null
+        ? false
+        : (match.oversA > 0 || match.runsA > 0 || pointsA.length > 1);
+    final bool hasInnings2Data = match == null
+        ? false
+        : (match.oversB > 0 || match.runsB > 0 || pointsB.length > 1);
+
+    final double formatDefaultOvers =
+        (match != null && match.matchType.toUpperCase() == 'ODI') ? 50.0 : 20.0;
+
+    return [
+      pw.Container(
+        margin: const pw.EdgeInsets.only(bottom: 12),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'MATCH SCORE PROGRESSION (RUNS / OVERS)',
+              style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+                color: textDark,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            _buildInningsProgressionCard(
+              inningsLabel: 'INNINGS 1 - $teamAName',
+              scoreSummary: '$scoreA ($oversA)',
+              points: pointsA,
+              hasData: hasInnings1Data,
+              formatMaxOvers: formatDefaultOvers,
+              emeraldGreen: emeraldGreen,
+              cardBorder: cardBorder,
+              textDark: textDark,
+              textMuted: textMuted,
+            ),
+          ],
+        ),
+      ),
+      pw.Container(
+        margin: const pw.EdgeInsets.only(bottom: 14),
+        child: _buildInningsProgressionCard(
+          inningsLabel: 'INNINGS 2 - $teamBName',
+          scoreSummary: '$scoreB ($oversB)',
+          points: pointsB,
+          hasData: hasInnings2Data,
+          formatMaxOvers: formatDefaultOvers,
+          emeraldGreen: emeraldGreen,
+          cardBorder: cardBorder,
+          textDark: textDark,
+          textMuted: textMuted,
+        ),
+      ),
+    ];
+  }
+
+  static pw.Widget _buildInningsProgressionCard({
+    required String inningsLabel,
+    required String scoreSummary,
+    required List<_PdfProgressionPoint> points,
+    required bool hasData,
+    required double formatMaxOvers,
+    required PdfColor emeraldGreen,
+    required PdfColor cardBorder,
+    required PdfColor textDark,
+    required PdfColor textMuted,
+  }) {
+    final lightGreenFill = PdfColor.fromHex('#D1FAE5');
+    final gridColor = PdfColor.fromHex('#E2E8F0');
+    final bgSurface = PdfColor.fromHex('#FFFFFF');
+
+    final double highestOver = points.fold(0.0, (prev, p) => math.max(prev, p.over));
+    final double maxRuns = points.fold(0.0, (prev, p) => math.max(prev, p.runs));
+
+    final double maxX;
+    final double xInterval;
+    if (highestOver <= 5.0) {
+      maxX = 5.0;
+      xInterval = 1.0;
+    } else if (highestOver <= 10.0) {
+      maxX = 10.0;
+      xInterval = 2.0;
+    } else if (highestOver <= 20.0 && formatMaxOvers <= 20.0) {
+      maxX = 20.0;
+      xInterval = 5.0;
+    } else if (highestOver <= 50.0) {
+      maxX = math.max(formatMaxOvers, (highestOver / 10).ceil() * 10.0);
+      xInterval = maxX <= 20.0 ? 5.0 : 10.0;
+    } else {
+      maxX = (highestOver / 10).ceil() * 10.0;
+      xInterval = 10.0;
+    }
+
+    final double maxY = maxRuns <= 0 ? 50.0 : math.max(25.0, ((maxRuns * 1.15) / 25).ceil() * 25.0);
+    final List<double> yTicks = [
+      maxY,
+      maxY * 0.75,
+      maxY * 0.50,
+      maxY * 0.25,
+      0,
+    ];
+    final List<double> xTicks = [];
+    for (double x = 0; x <= maxX + 0.001; x += xInterval) {
+      xTicks.add(x);
+    }
+
+    const double chartHeight = 128.0;
+    const double chartWidth = 468.0;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: bgSurface,
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: cardBorder),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Row(
+                children: [
+                  pw.Container(
+                    width: 8,
+                    height: 8,
+                    decoration: pw.BoxDecoration(
+                      color: emeraldGreen,
+                      shape: pw.BoxShape.circle,
+                    ),
+                  ),
+                  pw.SizedBox(width: 6),
+                  pw.Text(
+                    inningsLabel,
+                    style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: textDark),
+                  ),
+                ],
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#ECFDF5'),
+                  borderRadius: pw.BorderRadius.circular(6),
+                  border: pw.Border.all(color: PdfColor.fromHex('#A7F3D0')),
+                ),
+                child: pw.Text(
+                  scoreSummary,
+                  style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: emeraldGreen),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+
+          if (!hasData)
+            pw.Container(
+              height: 54,
+              alignment: pw.Alignment.center,
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                borderRadius: pw.BorderRadius.circular(6),
+                border: pw.Border.all(color: cardBorder),
+              ),
+              child: pw.Text(
+                'Innings has not started or no scoring events recorded yet.',
+                style: pw.TextStyle(fontSize: 8.5, color: textMuted, fontStyle: pw.FontStyle.italic),
+              ),
+            )
+          else ...[
+            // Chart Area with Y-axis labels + Vector CustomPaint Canvas
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Y-Axis Labels
+                pw.SizedBox(
+                  width: 30,
+                  height: chartHeight,
+                  child: pw.Column(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: yTicks
+                        .map(
+                          (val) => pw.Text(
+                            '${val.round()}',
+                            style: pw.TextStyle(fontSize: 7.5, color: textMuted),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                // Vector Chart Canvas
+                pw.Expanded(
+                  child: pw.Container(
+                    height: chartHeight,
+                    child: pw.CustomPaint(
+                      size: const PdfPoint(chartWidth, chartHeight),
+                      painter: (PdfGraphics canvas, PdfPoint size) {
+                        final w = size.x;
+                        final h = size.y;
+                        const double pad = 4.0;
+                        final plotW = w - pad * 2;
+                        final plotH = h - pad * 2;
+
+                        double mapX(double over) => pad + (over.clamp(0.0, maxX) / maxX) * plotW;
+                        double mapY(double runs) => pad + (runs.clamp(0.0, maxY) / maxY) * plotH;
+
+                        // 1. Light green shaded area below progression line
+                        if (points.length >= 2) {
+                          canvas
+                            ..saveContext()
+                            ..setFillColor(lightGreenFill)
+                            ..moveTo(mapX(points.first.over), mapY(0));
+                          for (final pt in points) {
+                            canvas.lineTo(mapX(pt.over), mapY(pt.runs));
+                          }
+                          canvas
+                            ..lineTo(mapX(points.last.over), mapY(0))
+                            ..closePath()
+                            ..fillPath()
+                            ..restoreContext();
+                        }
+
+                        // 2. Horizontal Grid Lines + Axis Frame
+                        canvas
+                          ..saveContext()
+                          ..setStrokeColor(gridColor)
+                          ..setLineWidth(0.6);
+                        for (int i = 0; i <= 4; i++) {
+                          final gy = pad + (plotH * i / 4.0);
+                          canvas
+                            ..moveTo(pad, gy)
+                            ..lineTo(w - pad, gy)
+                            ..strokePath();
+                        }
+                        // Left Y-axis & Bottom X-axis baseline
+                        canvas
+                          ..setStrokeColor(PdfColor.fromHex('#CBD5E1'))
+                          ..setLineWidth(0.8)
+                          ..moveTo(pad, pad)
+                          ..lineTo(pad, h - pad)
+                          ..moveTo(pad, pad)
+                          ..lineTo(w - pad, pad)
+                          ..strokePath()
+                          ..restoreContext();
+
+                        // 3. Green Progression Line
+                        if (points.length >= 2) {
+                          canvas
+                            ..saveContext()
+                            ..setStrokeColor(emeraldGreen)
+                            ..setLineWidth(2.0)
+                            ..setLineCap(PdfLineCap.round)
+                            ..setLineJoin(PdfLineJoin.round)
+                            ..moveTo(mapX(points.first.over), mapY(points.first.runs));
+                          for (int i = 1; i < points.length; i++) {
+                            canvas.lineTo(mapX(points[i].over), mapY(points[i].runs));
+                          }
+                          canvas
+                            ..strokePath()
+                            ..restoreContext();
+                        }
+
+                        // 4. Circular Markers at Data Points
+                        for (final pt in points) {
+                          final cx = mapX(pt.over);
+                          final cy = mapY(pt.runs);
+                          canvas
+                            ..saveContext()
+                            ..setFillColor(PdfColors.white)
+                            ..drawEllipse(cx, cy, 3.3, 3.3)
+                            ..fillPath()
+                            ..setFillColor(emeraldGreen)
+                            ..drawEllipse(cx, cy, 2.2, 2.2)
+                            ..fillPath()
+                            ..restoreContext();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 4),
+            // X-Axis Labels
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 36),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: xTicks
+                    .map(
+                      (ov) => pw.Text(
+                        '${ov.toInt()}ov',
+                        style: pw.TextStyle(fontSize: 7.5, color: textMuted),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Center(
+              child: pw.Text(
+                'Overs Progression  |  Y-Axis: Cumulative Runs',
+                style: pw.TextStyle(fontSize: 7, color: textMuted),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   static Widget _buildPdfFallbackDialog(BuildContext context, Map<String, dynamic> matchDetails, Uint8List pdfBytes) {
     final title = matchDetails['title'] ?? 'Match Summary';
 
@@ -554,4 +985,11 @@ class PdfReportService {
       ],
     );
   }
+}
+
+class _PdfProgressionPoint {
+  final double over;
+  final double runs;
+
+  const _PdfProgressionPoint(this.over, this.runs);
 }
