@@ -1,21 +1,23 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPasswordResetOtp extends Document {
-  email: string;
-  otpHash: string;
+  phone: string;
+  email?: string;
+  otpHash?: string;
   attempts: number;
   verified: boolean;
   resetToken?: string | null;
   resetTokenExpiresAt?: Date | null;
   expiresAt: Date;
-  lastRequestedAt: Date;
+  lastRequestedAt?: Date;
   createdAt: Date;
 }
 
 const PasswordResetOtpSchema = new Schema<IPasswordResetOtp>(
   {
-    email: { type: String, required: true, lowercase: true, trim: true, index: true },
-    otpHash: { type: String, required: true },
+    phone: { type: String, required: true, trim: true, index: true },
+    email: { type: String, lowercase: true, trim: true, index: true },
+    otpHash: { type: String },
     attempts: { type: Number, default: 0 },
     verified: { type: Boolean, default: false },
     resetToken: { type: String, default: null, index: true },

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -26,12 +27,15 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   String? _emailServerError;
+  String? _phoneServerError;
 
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  Country _selectedCountry = CountryParser.parseCountryCode('IN');
 
   // Background Video Controller
   late VideoPlayerController _videoController;
@@ -92,9 +96,55 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     _fadeController.dispose();
     _emailController.dispose();
     _nameController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _openCountryPicker() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: true,
+      countryListTheme: CountryListThemeData(
+        backgroundColor: const Color(0xFF0E1726),
+        bottomSheetHeight: MediaQuery.of(context).size.height * 0.65,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        textStyle: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+        searchTextStyle: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+        inputDecoration: InputDecoration(
+          hintText: 'Search country or dialing code...',
+          hintStyle: GoogleFonts.plusJakartaSans(
+            color: Colors.white.withValues(alpha: 0.45),
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Colors.white60),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.06),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+          ),
+        ),
+      ),
+      onSelect: (Country country) {
+        if (mounted) {
+          setState(() {
+            _selectedCountry = country;
+            _phoneServerError = null;
+          });
+        }
+      },
+    );
   }
 
   Future<void> _submit() async {
@@ -102,6 +152,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
     setState(() {
       _emailServerError = null;
+      _phoneServerError = null;
     });
 
     if (!_formKey.currentState!.validate()) return;
@@ -120,6 +171,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       if (_isSignUp) {
         final email = rawInput.toLowerCase();
         final confirmPass = _confirmPasswordController.text;
+        final rawPhoneDigits = _phoneController.text.trim();
+        final fullPhoneE164 = '+${_selectedCountry.phoneCode}$rawPhoneDigits';
+
+        if (rawPhoneDigits.length != 10) {
+          AppNotification.error(
+            context,
+            title: 'Validation Error',
+            message: 'Phone number must be exactly 10 digits.',
+          );
+          return;
+        }
+
         if (pass != confirmPass) {
           AppNotification.error(
             context,
@@ -133,6 +196,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           name: name,
           email: email,
           password: pass,
+          phone: fullPhoneE164,
           confirmPassword: confirmPass,
         );
 
@@ -147,7 +211,12 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           _navigateByUserRole();
         } else {
           final errorMsg = storage.lastAuthError ?? 'Registration failed. Please try again.';
-          if (storage.lastAuthErrorField == 'email' || errorMsg.toLowerCase().contains('email')) {
+          if (storage.lastAuthErrorField == 'phone' || errorMsg.toLowerCase().contains('phone')) {
+            setState(() {
+              _phoneServerError = errorMsg;
+            });
+            _formKey.currentState?.validate();
+          } else if (storage.lastAuthErrorField == 'email' || errorMsg.toLowerCase().contains('email')) {
             setState(() {
               _emailServerError = errorMsg;
             });
@@ -608,8 +677,130 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         return null;
                                       },
                                     ),
-                                    const SizedBox(height: 14),
-              
+                                    SizedBox(height: _isSignUp ? 12 : 14),
+
+                                    // Phone Number Field (only for Sign Up)
+                                    if (_isSignUp) ...[
+                                      Text(
+                                        'Phone Number',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Searchable Country Code Dropdown
+                                          InkWell(
+                                            onTap: _openCountryPicker,
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Container(
+                                              height: 46,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.06),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    _selectedCountry.flagEmoji,
+                                                    style: const TextStyle(fontSize: 16),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    '+${_selectedCountry.phoneCode}',
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      color: Colors.white,
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  const Icon(
+                                                    Icons.keyboard_arrow_down_rounded,
+                                                    size: 16,
+                                                    color: Colors.white60,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // 10-Digit Phone Number Input
+                                          Expanded(
+                                            child: TextFormField(
+                                              controller: _phoneController,
+                                              keyboardType: TextInputType.number,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter.digitsOnly,
+                                                LengthLimitingTextInputFormatter(10),
+                                              ],
+                                              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+                                              onChanged: (_) {
+                                                if (_phoneServerError != null) {
+                                                  setState(() {
+                                                    _phoneServerError = null;
+                                                  });
+                                                }
+                                              },
+                                              decoration: InputDecoration(
+                                                hintText: 'Enter your phone number',
+                                                hintStyle: GoogleFonts.plusJakartaSans(
+                                                  color: Colors.white.withValues(alpha: 0.4),
+                                                  fontSize: 12.5,
+                                                ),
+                                                fillColor: Colors.white.withValues(alpha: 0.06),
+                                                filled: true,
+                                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                prefixIcon: const Icon(Icons.phone_outlined, size: 16, color: Colors.white60),
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                                ),
+                                                enabledBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                                ),
+                                                focusedBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                                                ),
+                                                errorBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.2),
+                                                ),
+                                                focusedErrorBorder: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(color: AppTheme.accentRed, width: 1.5),
+                                                ),
+                                              ),
+                                              validator: (value) {
+                                                if (!_isSignUp) return null;
+                                                if (_phoneServerError != null) {
+                                                  return _phoneServerError;
+                                                }
+                                                final digits = (value ?? '').trim();
+                                                if (digits.isEmpty) {
+                                                  return 'Phone number is required.';
+                                                }
+                                                if (digits.length != 10) {
+                                                  return 'Enter exactly 10 numeric digits.';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+
                                     // Password Field
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -627,10 +818,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                             onTap: () {
                                               ForgotPasswordSheet.show(
                                                 context,
-                                                initialEmail: _emailController.text.trim(),
-                                                onSuccess: (resetEmail, newPassword) {
+                                                onSuccess: (_, newPassword) {
                                                   setState(() {
-                                                    _emailController.text = resetEmail;
                                                     _passwordController.text = newPassword;
                                                   });
                                                 },

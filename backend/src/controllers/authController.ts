@@ -10,9 +10,14 @@ import { broadcastNotification } from '../sockets/socketHandler';
 import {
   getPublicEmailConfig,
   saveEmailConfig,
-  sendPasswordResetOtpEmail,
   sendTestEmail,
 } from '../services/emailService';
+import {
+  checkVerificationSms,
+  isValidE164Phone,
+  normalizePhoneNumber,
+  sendVerificationSms,
+} from '../services/twilioService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cricketverse_super_secret_key_123!';
 
@@ -180,7 +185,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function register(req: Request, res: Response) {
-  const { email, password, confirmPassword, name } = req.body;
+  const { email, password, confirmPassword, name, phone } = req.body;
 
   const validation = validateRegistrationInput(email, password, confirmPassword, name);
   if (!validation.isValid) {
@@ -188,6 +193,18 @@ export async function register(req: Request, res: Response) {
       error: validation.error,
       field: validation.field,
     });
+  }
+
+  let normalizedPhone: string | undefined;
+  if (phone !== undefined && phone !== null && String(phone).trim().length > 0) {
+    const candidate = normalizePhoneNumber(String(phone));
+    if (!isValidE164Phone(candidate)) {
+      return res.status(400).json({
+        error: 'Please enter a valid international phone number (e.g. +919876543210).',
+        field: 'phone',
+      });
+    }
+    normalizedPhone = candidate;
   }
 
   const normalizedEmail = (email as string).trim().toLowerCase();
@@ -203,6 +220,16 @@ export async function register(req: Request, res: Response) {
       });
     }
 
+    if (normalizedPhone) {
+      const existingPhoneUser = await UserModel.findOne({ phone: normalizedPhone });
+      if (existingPhoneUser) {
+        return res.status(409).json({
+          error: 'An account with this phone number already exists.',
+          field: 'phone',
+        });
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = `user_${Date.now()}`;
     const role = 'User';
@@ -210,6 +237,7 @@ export async function register(req: Request, res: Response) {
     const newUser = await UserModel.create({
       id: userId,
       email: normalizedEmail,
+      ...(normalizedPhone ? { phone: normalizedPhone } : {}),
       passwordHash,
       role,
       name: finalName,
@@ -218,13 +246,22 @@ export async function register(req: Request, res: Response) {
     const token = jwt.sign({ id: userId, email: normalizedEmail, role }, JWT_SECRET, { expiresIn: '7d' });
     return res.status(201).json({
       token,
-      user: { id: userId, email: normalizedEmail, role, name: finalName }
+      user: {
+        id: userId,
+        email: normalizedEmail,
+        phone: newUser.phone,
+        role,
+        name: finalName,
+      },
     });
   } catch (err: any) {
     if (err && (err.code === 11000 || err.message?.includes('duplicate key'))) {
+      const isPhoneDup = err.message?.includes('phone');
       return res.status(409).json({
-        error: 'An account with this email already exists.',
-        field: 'email',
+        error: isPhoneDup
+          ? 'An account with this phone number already exists.'
+          : 'An account with this email already exists.',
+        field: isPhoneDup ? 'phone' : 'email',
       });
     }
 
@@ -324,14 +361,7 @@ export async function requestPasswordOtp(req: any, res: Response) {
   const expiresAt = Date.now() + 10 * 60 * 1000;
 
   passwordOtpMap.set(req.user.id, { otp, expiresAt });
-  console.log(`Generated OTP for user ${req.user.id}: ${otp}`);
-
-  // Send real email if user email is present
-  if (req.user.email) {
-    sendPasswordResetOtpEmail(req.user.email, otp, req.user.name).catch((err) => {
-      console.warn('Could not send password change OTP via email:', err);
-    });
-  }
+  console.log(`[PROFILE_OTP] Generated password change verification code for user ${req.user.id}`);
 
   return res.status(200).json({
     message: 'OTP generated successfully.',
@@ -383,30 +413,17 @@ export async function updatePassword(req: any, res: Response) {
 }
 
 // ==========================================
-// FORGOT PASSWORD FLOW (Resend OTP & Reset)
+// FORGOT PASSWORD FLOW (Twilio SMS Verify & Reset)
 // ==========================================
 
-function isValidEmailFormat(email: string): boolean {
-  if (!email || typeof email !== 'string') return false;
-  const trimmed = email.trim();
-  if (/\s/.test(trimmed)) return false;
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(trimmed)) return false;
-  const [localPart, domainPart] = trimmed.split('@');
-  if (!localPart || !domainPart || domainPart.startsWith('.') || domainPart.endsWith('.') || domainPart.indexOf('.') === -1) {
-    return false;
-  }
-  return true;
-}
-
 /**
- * Request OTP for Forgot Password
- * Generates secure 6-digit OTP, hashes it, stores with 5-minute expiry, and sends via Resend.
+ * Request SMS OTP for Forgot Password via Twilio Verify
+ * Validates E.164 phone number, enforces 60s cooldown, and dispatches SMS OTP.
  */
 export async function requestForgotPasswordOtp(req: Request, res: Response) {
   const requestId = (req.headers['x-request-id'] as string) || `fp_srv_${Date.now()}`;
-  const { email } = req.body;
-  const dbReadyState = mongoose.connection.readyState; // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  const rawPhone = req.body?.phone;
+  const dbReadyState = mongoose.connection.readyState;
 
   console.log(`[FP_TRACE][${requestId}] Request received: ${req.method} ${req.originalUrl} | MongoDB readyState=${dbReadyState}`);
 
@@ -417,29 +434,36 @@ export async function requestForgotPasswordOtp(req: Request, res: Response) {
     });
   }
 
-  if (!email || typeof email !== 'string' || !isValidEmailFormat(email)) {
-    console.warn(`[FP_TRACE][${requestId}] Email validation failed -> HTTP 400`);
-    return res.status(400).json({ error: 'Please enter a valid registered email address.' });
+  if (!rawPhone || typeof rawPhone !== 'string') {
+    return res.status(400).json({ error: 'Please enter a valid registered phone number with country code.' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  const maskedDomain = normalizedEmail.split('@')[1] || 'unknown';
-  console.log(`[FP_TRACE][${requestId}] Email format validated (domain: ${maskedDomain})`);
+  const normalizedPhone = normalizePhoneNumber(rawPhone);
+  if (!isValidE164Phone(normalizedPhone)) {
+    console.warn(`[FP_TRACE][${requestId}] Phone validation failed -> HTTP 400`);
+    return res.status(400).json({
+      error: 'Please enter a valid international phone number (e.g. +919876543210).',
+    });
+  }
+
+  const maskedSuffix = normalizedPhone.slice(-4);
+  console.log(`[FP_TRACE][${requestId}] Phone validated (ending: ***${maskedSuffix})`);
 
   try {
-    // 1. Check whether account exists (generic response if not found to prevent enumeration)
-    const user = await UserModel.findOne({ email: normalizedEmail });
+    // 1. Check whether registered account exists with this phone
+    const user = await UserModel.findOne({ phone: normalizedPhone });
     console.log(`[FP_TRACE][${requestId}] MongoDB user lookup completed (found: ${Boolean(user)})`);
     if (!user) {
-      console.log(`[FP_TRACE][${requestId}] Unregistered email handled safely -> HTTP 200`);
+      console.log(`[FP_TRACE][${requestId}] Unregistered phone handled safely -> HTTP 200`);
       return res.status(200).json({
         success: true,
-        message: 'If an account is associated with this email, a verification code has been sent.',
+        otpSent: true,
+        message: 'If an account is associated with this phone number, an SMS verification code has been sent.',
       });
     }
 
     // 2. Cooldown check (60-second cooldown between requests)
-    const existingOtp = await PasswordResetOtpModel.findOne({ email: normalizedEmail }).lean();
+    const existingOtp = await PasswordResetOtpModel.findOne({ phone: normalizedPhone }).lean();
     if (existingOtp) {
       const requestedTime = existingOtp.lastRequestedAt
         ? new Date(existingOtp.lastRequestedAt).getTime()
@@ -457,43 +481,37 @@ export async function requestForgotPasswordOtp(req: Request, res: Response) {
       }
     }
 
-    // 3. Generate cryptographically secure random 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    // 3. Dispatch SMS OTP via Twilio Verify
+    console.log(`[FP_TRACE][${requestId}] Dispatching SMS OTP via Twilio Verify...`);
+    const smsResult = await sendVerificationSms(normalizedPhone);
+    console.log(`[FP_TRACE][${requestId}] Twilio response: success=${smsResult.success}`);
 
-    // 4. Securely hash OTP before storing
-    const otpHash = await bcrypt.hash(otp, 10);
-
-    // 5. Invalidate previous OTPs for this email and save new record
-    await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
-    await PasswordResetOtpModel.create({
-      email: normalizedEmail,
-      otpHash,
-      attempts: 0,
-      verified: false,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      lastRequestedAt: new Date(),
-      createdAt: new Date(),
-    });
-    console.log(`[FP_TRACE][${requestId}] Hashed OTP record persisted in MongoDB Atlas`);
-
-    // 6. Send OTP via email service (Resend + SMTP fallback)
-    console.log(`[FP_TRACE][${requestId}] Dispatching OTP via emailService...`);
-    const emailResult = await sendPasswordResetOtpEmail(normalizedEmail, otp, user.name);
-    console.log(`[FP_TRACE][${requestId}] Email provider response: success=${emailResult.success}`);
-
-    if (!emailResult.success) {
-      console.error(`[FP_TRACE][${requestId}] Email delivery failed (${emailResult.error}) -> HTTP 502`);
-      // Invalidate the record if email delivery submission failed
-      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+    if (!smsResult.success) {
+      console.error(`[FP_TRACE][${requestId}] Twilio SMS delivery failed (${smsResult.error}) -> HTTP 502`);
       return res.status(502).json({
-        error: emailResult.error || 'Failed to deliver verification code. Please check your network and retry.',
+        success: false,
+        otpSent: false,
+        error: smsResult.error || 'Failed to deliver SMS verification code. Please check your phone number and retry.',
       });
     }
 
-    console.log(`[FP_TRACE][${requestId}] Completed successfully -> HTTP 200`);
+    // 4. Persist cooldown & session tracking record in MongoDB Atlas (5-minute expiry)
+    await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
+    await PasswordResetOtpModel.create({
+      phone: normalizedPhone,
+      email: user.email,
+      attempts: 0,
+      verified: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      lastRequestedAt: new Date(),
+      createdAt: new Date(),
+    });
+    console.log(`[FP_TRACE][${requestId}] OTP session saved in MongoDB Atlas -> HTTP 200`);
+
     return res.status(200).json({
       success: true,
-      message: 'A 6-digit verification code has been sent to your email address.',
+      otpSent: true,
+      message: 'A 6-digit verification code has been sent via SMS.',
     });
   } catch (err: any) {
     console.error(`[FP_TRACE][${requestId}] Unexpected error -> HTTP 500:`, err?.message || err);
@@ -502,37 +520,42 @@ export async function requestForgotPasswordOtp(req: Request, res: Response) {
 }
 
 /**
- * Resend OTP for Forgot Password
- * Applies 60-second cooldown and reissues a fresh OTP.
+ * Resend SMS OTP for Forgot Password
+ * Applies 60-second cooldown and dispatches a fresh Twilio Verify SMS.
  */
 export async function resendForgotPasswordOtp(req: Request, res: Response) {
   return requestForgotPasswordOtp(req, res);
 }
 
 /**
- * Verify OTP for Forgot Password
- * Checks hash, 5-minute expiration, and max 5 attempts lockout.
+ * Verify SMS OTP for Forgot Password using Twilio Verify
+ * Enforces 5-minute expiration and max 5 attempts lockout.
  * Issues single-use reset authorization token.
  */
 export async function verifyForgotPasswordOtp(req: Request, res: Response) {
-  const { email, otp } = req.body;
+  const requestId = (req.headers['x-request-id'] as string) || `fp_verify_${Date.now()}`;
+  const rawPhone = req.body?.phone;
+  const otp = req.body?.otp;
 
-  if (!email || typeof email !== 'string' || !otp) {
-    return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+  if (!rawPhone || typeof rawPhone !== 'string' || !otp) {
+    return res.status(400).json({ error: 'Phone number and 6-digit verification code are required.' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  const cleanOtp = String(otp).trim();
+  const normalizedPhone = normalizePhoneNumber(rawPhone);
+  if (!isValidE164Phone(normalizedPhone)) {
+    return res.status(400).json({ error: 'Please enter a valid international phone number.' });
+  }
 
+  const cleanOtp = String(otp).trim();
   if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
     return res.status(400).json({ error: 'Please enter a valid 6-digit numeric verification code.' });
   }
 
   try {
-    const record = await PasswordResetOtpModel.findOne({ email: normalizedEmail });
+    const record = await PasswordResetOtpModel.findOne({ phone: normalizedPhone });
 
     if (!record) {
-      return res.status(400).json({ error: 'Invalid or expired verification code. Please request a new code.' });
+      return res.status(400).json({ error: 'Invalid or expired verification session. Please request a new code.' });
     }
 
     if (record.verified && record.resetToken) {
@@ -545,28 +568,34 @@ export async function verifyForgotPasswordOtp(req: Request, res: Response) {
 
     // Check 5-minute expiration
     if (Date.now() > new Date(record.expiresAt).getTime()) {
-      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
       return res.status(400).json({ error: 'Verification code has expired (5 minute limit). Please request a new code.' });
     }
 
     // Check maximum 5 incorrect attempts
     if (record.attempts >= 5) {
-      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
       return res.status(429).json({
         error: 'Too many incorrect attempts. This code has been invalidated for security. Please request a new code.',
       });
     }
 
-    // Compare OTP hash
-    const isMatch = await bcrypt.compare(cleanOtp, record.otpHash);
+    // Verify OTP via Twilio Verify API
+    const checkResult = await checkVerificationSms(normalizedPhone, cleanOtp);
+    if (!checkResult.success) {
+      console.error(`[FP_TRACE][${requestId}] Twilio check error: ${checkResult.error}`);
+      return res.status(502).json({
+        error: checkResult.error || 'Could not verify code with SMS provider. Please try again.',
+      });
+    }
 
-    if (!isMatch) {
+    if (!checkResult.valid) {
       record.attempts = (record.attempts || 0) + 1;
       await record.save();
 
       const remainingAttempts = 5 - record.attempts;
       if (remainingAttempts <= 0) {
-        await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+        await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
         return res.status(400).json({
           error: 'Too many incorrect attempts. Verification code invalidated. Please request a new code.',
         });
@@ -577,39 +606,42 @@ export async function verifyForgotPasswordOtp(req: Request, res: Response) {
       });
     }
 
-    // On successful verification, issue a short-lived reset authorization token (15 mins)
+    // Issue single-use reset authorization token (15 mins)
     const resetToken = crypto.randomBytes(32).toString('hex');
     record.verified = true;
     record.resetToken = resetToken;
     record.resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    record.otpHash = 'VERIFIED_AND_CONSUMED'; // OTP cannot be verified again
     await record.save();
 
+    console.log(`[FP_TRACE][${requestId}] Twilio OTP verified and resetToken issued.`);
     return res.status(200).json({
       success: true,
       message: 'OTP verified successfully.',
       resetToken,
     });
   } catch (err: any) {
-    console.error('Verify OTP error:', err);
+    console.error(`[FP_TRACE][${requestId}] Verify OTP error:`, err?.message || err);
     return res.status(500).json({ error: 'Internal server error verifying OTP.' });
   }
 }
 
 /**
- * Reset Password using verified OTP or Reset Authorization Token
+ * Reset Password using verified Twilio SMS OTP Reset Authorization Token
  */
 export async function resetForgotPassword(req: Request, res: Response) {
-  const { email, resetToken, otp, newPassword, confirmPassword } = req.body;
+  const { phone, resetToken, newPassword, confirmPassword } = req.body;
 
-  if (!email || !newPassword) {
-    return res.status(400).json({ error: 'Email and new password are required.' });
+  if (!phone || !newPassword) {
+    return res.status(400).json({ error: 'Phone number and new password are required.' });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedPhone = normalizePhoneNumber(String(phone));
+  if (!isValidE164Phone(normalizedPhone)) {
+    return res.status(400).json({ error: 'Please enter a valid international phone number.' });
+  }
 
   // Validate new password rules & confirmation
-  const validation = validateRegistrationInput(normalizedEmail, newPassword, confirmPassword);
+  const validation = validateRegistrationInput('valid@cricketverse.ai', newPassword, confirmPassword);
   if (!validation.isValid) {
     return res.status(400).json({
       error: validation.error,
@@ -618,21 +650,17 @@ export async function resetForgotPassword(req: Request, res: Response) {
   }
 
   try {
-    // 1. Look up verification record
-    let record: any = null;
-    if (resetToken && typeof resetToken === 'string') {
-      record = await PasswordResetOtpModel.findOne({
-        email: normalizedEmail,
-        resetToken: resetToken.trim(),
-        verified: true,
-      });
-    } else if (otp) {
-      // Backward compatibility fallback if client sent OTP directly
-      record = await PasswordResetOtpModel.findOne({
-        email: normalizedEmail,
-        verified: true,
-      });
-    }
+    // 1. Look up verified reset authorization record
+    const record = resetToken && typeof resetToken === 'string'
+      ? await PasswordResetOtpModel.findOne({
+          phone: normalizedPhone,
+          resetToken: resetToken.trim(),
+          verified: true,
+        })
+      : await PasswordResetOtpModel.findOne({
+          phone: normalizedPhone,
+          verified: true,
+        });
 
     if (!record) {
       return res.status(400).json({
@@ -640,9 +668,8 @@ export async function resetForgotPassword(req: Request, res: Response) {
       });
     }
 
-    // Check expiration of reset authorization
     if (record.resetTokenExpiresAt && Date.now() > new Date(record.resetTokenExpiresAt).getTime()) {
-      await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+      await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
       return res.status(400).json({
         error: 'Password reset session has expired. Please request a new verification code.',
       });
@@ -653,7 +680,7 @@ export async function resetForgotPassword(req: Request, res: Response) {
 
     // 3. Atomically update existing user password
     const updatedUser = await UserModel.findOneAndUpdate(
-      { email: normalizedEmail },
+      { phone: normalizedPhone },
       { $set: { passwordHash } },
       { new: true }
     );
@@ -662,10 +689,10 @@ export async function resetForgotPassword(req: Request, res: Response) {
       return res.status(404).json({ error: 'User account not found.' });
     }
 
-    // 4. Invalidate reset authorization & OTP completely (prevent reuse)
-    await PasswordResetOtpModel.deleteMany({ email: normalizedEmail });
+    // 4. Invalidate reset authorization completely
+    await PasswordResetOtpModel.deleteMany({ phone: normalizedPhone });
 
-    console.log(`✅ Password successfully reset for account: ${normalizedEmail} (Role: ${updatedUser.role})`);
+    console.log(`✅ Password successfully reset for phone ending ***${normalizedPhone.slice(-4)} (Role: ${updatedUser.role})`);
 
     return res.status(200).json({
       success: true,

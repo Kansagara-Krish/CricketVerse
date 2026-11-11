@@ -132,6 +132,7 @@ class ApiService {
     required String email,
     required String password,
     required String name,
+    String? phone,
     String? confirmPassword,
   }) async {
     try {
@@ -141,6 +142,9 @@ class ApiService {
         'password': password,
         'name': name.trim(),
       };
+      if (phone != null && phone.trim().isNotEmpty) {
+        body['phone'] = phone.trim();
+      }
       if (confirmPassword != null) {
         body['confirmPassword'] = confirmPassword;
       }
@@ -858,15 +862,15 @@ class ApiService {
     }
   }
 
-  // --- Forgot Password API ---
+  // --- Forgot Password API (Twilio SMS Verify) ---
   static Future<Map<String, dynamic>> requestForgotPasswordOtp(
-    String email, {
+    String phone, {
     String? requestId,
   }) async {
     final reqId = requestId ?? 'fp_${DateTime.now().millisecondsSinceEpoch}';
-    final cleanEmail = email.trim().toLowerCase();
-    final payload = {'email': cleanEmail};
-    String lastError = 'Unable to send verification code. Please check your network and try again.';
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
+    final payload = {'phone': cleanPhone};
+    String lastError = 'Unable to send SMS verification code. Please check your network and try again.';
 
     for (final host in candidateBaseUrls) {
       for (final endpoint in ['/auth/forgot-password', '/auth/forgot-password/request-otp']) {
@@ -886,7 +890,6 @@ class ApiService {
           ).timeout(const Duration(seconds: 35));
 
           debugPrint('[FP_TRACE][$reqId] Response status: ${res.statusCode}');
-          // Redact tokens/OTP if any ever appeared
           final safeBody = res.body.replaceAll(RegExp(r'"resetToken"\s*:\s*"[^"]+"'), '"resetToken":"[REDACTED]"');
           debugPrint('[FP_TRACE][$reqId] Response body: $safeBody');
 
@@ -897,15 +900,15 @@ class ApiService {
 
           final data = jsonDecode(res.body);
           if (res.statusCode == 200) {
-            if (data['emailSent'] == false || data['success'] == false) {
+            if (data['otpSent'] == false || data['success'] == false) {
               return {
                 'success': false,
-                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'Email delivery failed on server.',
+                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'SMS delivery failed on server.',
               };
             }
             return {
               'success': true,
-              'message': data['message'] ?? 'A 6-digit verification code has been sent to your email.',
+              'message': data['message'] ?? 'A 6-digit verification code has been sent via SMS.',
             };
           }
           if (data['error'] != null) {
@@ -927,8 +930,8 @@ class ApiService {
     return {'success': false, 'error': lastError};
   }
 
-  static Future<Map<String, dynamic>> resendForgotPasswordOtp(String email) async {
-    final cleanEmail = email.trim().toLowerCase();
+  static Future<Map<String, dynamic>> resendForgotPasswordOtp(String phone) async {
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
     String lastError = 'Unable to resend verification code. Please try again.';
 
     for (final host in candidateBaseUrls) {
@@ -937,20 +940,20 @@ class ApiService {
           final res = await http.post(
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: jsonEncode({'email': cleanEmail}),
+            body: jsonEncode({'phone': cleanPhone}),
           ).timeout(const Duration(seconds: 30));
 
           if (res.statusCode == 404) continue;
 
           final data = jsonDecode(res.body);
           if (res.statusCode == 200) {
-            if (data['emailSent'] == false || data['success'] == false) {
+            if (data['otpSent'] == false || data['success'] == false) {
               return {
                 'success': false,
-                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'Email delivery failed on server.',
+                'error': data['warning'] ?? data['error'] ?? data['message'] ?? 'SMS delivery failed on server.',
               };
             }
-            return {'success': true, 'message': data['message'] ?? 'A fresh 6-digit code has been sent to your email.'};
+            return {'success': true, 'message': data['message'] ?? 'A fresh 6-digit SMS code has been sent.'};
           }
           if (data['error'] != null) {
             return {'success': false, 'error': data['error']};
@@ -968,8 +971,8 @@ class ApiService {
     return {'success': false, 'error': lastError};
   }
 
-  static Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
-    final cleanEmail = email.trim().toLowerCase();
+  static Future<Map<String, dynamic>> verifyForgotPasswordOtp(String phone, String otp) async {
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
     final cleanOtp = otp.trim();
     String lastError = 'Invalid or expired verification code.';
 
@@ -979,7 +982,7 @@ class ApiService {
           final res = await http.post(
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: jsonEncode({'email': cleanEmail, 'otp': cleanOtp}),
+            body: jsonEncode({'phone': cleanPhone, 'otp': cleanOtp}),
           ).timeout(const Duration(seconds: 25));
 
           if (res.statusCode == 404) continue;
@@ -1004,13 +1007,13 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> resetForgotPassword({
-    required String email,
+    required String phone,
     required String newPassword,
     String? resetToken,
     String? otp,
     String? confirmPassword,
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
     String lastError = 'Failed to reset password. Please try again.';
 
     for (final host in candidateBaseUrls) {
@@ -1020,7 +1023,7 @@ class ApiService {
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
             body: jsonEncode({
-              'email': cleanEmail,
+              'phone': cleanPhone,
               'newPassword': newPassword,
               'confirmPassword': confirmPassword ?? newPassword,
               if (resetToken != null && resetToken.isNotEmpty) 'resetToken': resetToken,

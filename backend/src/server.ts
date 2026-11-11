@@ -12,6 +12,7 @@ try {
 
 import { initDatabase } from './config/db';
 import { initSocketIO } from './sockets/socketHandler';
+import { logTwilioStartupDiagnostics } from './services/twilioService';
 
 import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';
@@ -89,6 +90,7 @@ async function startServer() {
     server.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`🚀 CricketVerse Backend running on http://0.0.0.0:${PORT}`);
       console.log(`📡 Socket.IO initialized and listening for real-time events.`);
+      logTwilioStartupDiagnostics();
     });
   } catch (err) {
     console.error('Failed to start server:', err);

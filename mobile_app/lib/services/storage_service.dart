@@ -599,6 +599,7 @@ class StorageService with ChangeNotifier {
     required String name,
     required String email,
     required String password,
+    String? phone,
     String? confirmPassword,
   }) async {
     _lastAuthError = null;
@@ -611,6 +612,7 @@ class StorageService with ChangeNotifier {
       email: normalizedEmail,
       password: password,
       name: trimmedName,
+      phone: phone,
       confirmPassword: confirmPassword,
     );
 
@@ -1409,28 +1411,28 @@ class StorageService with ChangeNotifier {
     return await ApiService.updatePassword(otp, newPassword);
   }
 
-  // --- Forgot Password Methods ---
-  Future<Map<String, dynamic>> requestForgotPasswordOtp(String email, {String? requestId}) async {
-    return await ApiService.requestForgotPasswordOtp(email, requestId: requestId);
+  // --- Forgot Password Methods (Twilio SMS OTP) ---
+  Future<Map<String, dynamic>> requestForgotPasswordOtp(String phone, {String? requestId}) async {
+    return await ApiService.requestForgotPasswordOtp(phone, requestId: requestId);
   }
 
-  Future<Map<String, dynamic>> resendForgotPasswordOtp(String email) async {
-    return await ApiService.resendForgotPasswordOtp(email);
+  Future<Map<String, dynamic>> resendForgotPasswordOtp(String phone) async {
+    return await ApiService.resendForgotPasswordOtp(phone);
   }
 
-  Future<Map<String, dynamic>> verifyForgotPasswordOtp(String email, String otp) async {
-    return await ApiService.verifyForgotPasswordOtp(email, otp);
+  Future<Map<String, dynamic>> verifyForgotPasswordOtp(String phone, String otp) async {
+    return await ApiService.verifyForgotPasswordOtp(phone, otp);
   }
 
   Future<Map<String, dynamic>> resetForgotPassword({
-    required String email,
+    required String phone,
     required String newPassword,
     String? resetToken,
     String? otp,
     String? confirmPassword,
   }) async {
     return await ApiService.resetForgotPassword(
-      email: email,
+      phone: phone,
       newPassword: newPassword,
       resetToken: resetToken,
       otp: otp,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,26 +9,26 @@ import '../theme/app_theme.dart';
 import 'app_notification.dart';
 
 class ForgotPasswordSheet extends StatefulWidget {
-  final String initialEmail;
-  final Function(String email, String newPassword)? onSuccess;
+  final String initialPhone;
+  final Function(String phone, String newPassword)? onSuccess;
 
   const ForgotPasswordSheet({
     super.key,
-    this.initialEmail = '',
+    this.initialPhone = '',
     this.onSuccess,
   });
 
   static Future<void> show(
     BuildContext context, {
-    String initialEmail = '',
-    Function(String email, String newPassword)? onSuccess,
+    String initialPhone = '',
+    Function(String phone, String newPassword)? onSuccess,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => ForgotPasswordSheet(
-        initialEmail: initialEmail,
+        initialPhone: initialPhone,
         onSuccess: onSuccess,
       ),
     );
@@ -40,16 +41,19 @@ class ForgotPasswordSheet extends StatefulWidget {
 class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     with SingleTickerProviderStateMixin {
   // Steps:
-  // 1: Enter Email
-  // 2: OTP Verification Screen
+  // 1: Enter Phone Number
+  // 2: SMS OTP Verification Screen
   // 3: Create New Password Screen
   // 4: Password Reset Success Screen
   int _currentStep = 1;
   bool _isLoading = false;
 
-  // Step 1: Email
-  late TextEditingController _emailController;
+  // Step 1: International Phone Input
+  late TextEditingController _phoneController;
+  Country _selectedCountry = CountryParser.parseCountryCode('IN');
   final _step1FormKey = GlobalKey<FormState>();
+
+  String get _fullPhoneE164 => '+${_selectedCountry.phoneCode}${_phoneController.text.trim()}';
 
   // Step 2: 6 individual OTP boxes
   final List<TextEditingController> _otpControllers =
@@ -79,7 +83,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: widget.initialEmail);
+    _phoneController = TextEditingController(text: widget.initialPhone);
     _successAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -95,7 +99,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     _expiryTimer?.cancel();
     _cooldownTimer?.cancel();
     _successAnimController.dispose();
-    _emailController.dispose();
+    _phoneController.dispose();
     for (final c in _otpControllers) {
       c.dispose();
     }
@@ -107,19 +111,57 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     super.dispose();
   }
 
-  // Masking format matching: ch****ti@gmail.com
-  String _maskEmail(String email) {
-    final trimmed = email.trim();
-    if (!trimmed.contains('@')) return trimmed;
-    final parts = trimmed.split('@');
-    final username = parts[0];
-    final domain = parts[1];
-    if (username.length <= 4) {
-      return '${username[0]}****@$domain';
-    }
-    final prefix = username.substring(0, 2);
-    final suffix = username.substring(username.length - 2);
-    return '$prefix****$suffix@$domain';
+  // Masking format matching: +91 ******3210
+  String _maskPhone(String phone) {
+    final trimmed = phone.trim();
+    if (trimmed.length <= 4) return trimmed;
+    final prefix = '+${_selectedCountry.phoneCode}';
+    final last4 = trimmed.substring(trimmed.length - 4);
+    return '$prefix ******$last4';
+  }
+
+  void _openCountryPicker() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: true,
+      countryListTheme: CountryListThemeData(
+        backgroundColor: const Color(0xFF0E1726),
+        bottomSheetHeight: MediaQuery.of(context).size.height * 0.65,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        textStyle: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+        searchTextStyle: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
+        inputDecoration: InputDecoration(
+          hintText: 'Search country or dialing code...',
+          hintStyle: GoogleFonts.plusJakartaSans(
+            color: Colors.white.withValues(alpha: 0.45),
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Colors.white60),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.06),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+          ),
+        ),
+      ),
+      onSelect: (Country country) {
+        if (mounted) {
+          setState(() {
+            _selectedCountry = country;
+          });
+        }
+      },
+    );
   }
 
   // --- Timers ---
@@ -181,13 +223,13 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     return _otpControllers.map((c) => c.text.trim()).join();
   }
 
-  // --- Step 1: Request OTP ---
+  // --- Step 1: Request SMS OTP ---
   Future<void> _requestOtp() async {
     final requestId = 'fp_${DateTime.now().millisecondsSinceEpoch}';
     debugPrint('[FP_TRACE][$requestId] Send Verification Code button tapped (isLoading=$_isLoading)');
     if (_isLoading) return;
     if (!_step1FormKey.currentState!.validate()) {
-      debugPrint('[FP_TRACE][$requestId] Email form validation failed');
+      debugPrint('[FP_TRACE][$requestId] Phone form validation failed');
       return;
     }
 
@@ -197,10 +239,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final email = _emailController.text.trim().toLowerCase();
-      final domain = email.contains('@') ? email.split('@').last : 'unknown';
-      debugPrint('[FP_TRACE][$requestId] Email validated (domain=$domain). Calling storage.requestForgotPasswordOtp');
-      final result = await storage.requestForgotPasswordOtp(email, requestId: requestId);
+      final phone = _fullPhoneE164;
+      final suffix = phone.length >= 4 ? phone.substring(phone.length - 4) : 'xxxx';
+      debugPrint('[FP_TRACE][$requestId] Phone validated (ending=***$suffix). Calling storage.requestForgotPasswordOtp');
+      final result = await storage.requestForgotPasswordOtp(phone, requestId: requestId);
       debugPrint('[FP_TRACE][$requestId] Result received: success=${result['success']}');
 
       if (!mounted) return;
@@ -208,9 +250,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
       if (result['success'] == true) {
         AppNotification.success(
           context,
-          title: 'Verification Code Sent',
+          title: 'SMS Code Sent',
           message: result['message'] ??
-              'A 6-digit verification code has been sent to your email.',
+              'A 6-digit verification code has been sent via SMS.',
         );
 
         _clearOtpBoxes();
@@ -230,7 +272,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
         AppNotification.error(
           context,
           title: 'Request Failed',
-          message: result['error'] ?? 'Could not send verification code.',
+          message: result['error'] ?? 'Could not send verification SMS.',
         );
       }
     } finally {
@@ -242,7 +284,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     }
   }
 
-  // --- Step 2: Resend OTP ---
+  // --- Step 2: Resend SMS OTP ---
   Future<void> _resendOtp() async {
     if (_isLoading || _cooldownRemainingSeconds > 0) return;
 
@@ -252,8 +294,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final email = _emailController.text.trim().toLowerCase();
-      final result = await storage.resendForgotPasswordOtp(email);
+      final result = await storage.resendForgotPasswordOtp(_fullPhoneE164);
 
       if (!mounted) return;
 
@@ -262,7 +303,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
           context,
           title: 'New Code Sent',
           message: result['message'] ??
-              'A fresh 6-digit verification code has been sent to your email.',
+              'A fresh 6-digit verification code has been sent via SMS.',
         );
 
         _clearOtpBoxes();
@@ -276,7 +317,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
         AppNotification.error(
           context,
           title: 'Resend Failed',
-          message: result['error'] ?? 'Failed to resend verification code.',
+          message: result['error'] ?? 'Failed to resend verification SMS.',
         );
       }
     } finally {
@@ -317,8 +358,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final email = _emailController.text.trim().toLowerCase();
-      final result = await storage.verifyForgotPasswordOtp(email, otp);
+      final result = await storage.verifyForgotPasswordOtp(_fullPhoneE164, otp);
 
       if (!mounted) return;
 
@@ -329,7 +369,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
         AppNotification.success(
           context,
-          title: 'Email Verified',
+          title: 'Phone Verified',
           message: 'Code verified successfully. Please create a new password.',
         );
 
@@ -363,12 +403,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final email = _emailController.text.trim().toLowerCase();
       final newPass = _newPasswordController.text;
       final confirmPass = _confirmPasswordController.text;
 
       final result = await storage.resetForgotPassword(
-        email: email,
+        phone: _fullPhoneE164,
         resetToken: _resetToken,
         otp: _getEnteredOtp(),
         newPassword: newPass,
@@ -568,15 +607,15 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     if (_currentStep == 1) {
       headerTitle = 'Forgot Password';
-      headerSubtitle = 'Enter your registered email to receive an OTP';
+      headerSubtitle = 'Enter your registered phone number to receive an SMS OTP';
       headerIcon = Icons.lock_reset_rounded;
     } else if (_currentStep == 2) {
-      headerTitle = 'Verify Your Email';
-      headerSubtitle = "We've sent a 6-digit verification code to your registered email address.";
-      headerIcon = Icons.mark_email_read_outlined;
+      headerTitle = 'Verify Your Phone';
+      headerSubtitle = "We've sent a 6-digit SMS verification code to your phone number.";
+      headerIcon = Icons.sms_outlined;
     } else if (_currentStep == 3) {
       headerTitle = 'Create New Password';
-      headerSubtitle = 'Your email has been verified. Create a new password for your account.';
+      headerSubtitle = 'Your phone has been verified. Create a new password for your account.';
       headerIcon = Icons.security_rounded;
     } else {
       headerTitle = 'Password Reset Successful!';
@@ -684,7 +723,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
   Widget _buildCurrentStepContent() {
     switch (_currentStep) {
       case 1:
-        return _buildStep1Email();
+        return _buildStep1Phone();
       case 2:
         return _buildStep2Otp();
       case 3:
@@ -696,8 +735,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     }
   }
 
-  // --- Step 1 View: Email Address Input ---
-  Widget _buildStep1Email() {
+  // --- Step 1 View: International Phone Number Input ---
+  Widget _buildStep1Phone() {
     return Form(
       key: _step1FormKey,
       child: Column(
@@ -705,7 +744,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Registered Email Address',
+            'Registered Phone Number',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -713,43 +752,92 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
             ),
           ),
           const SizedBox(height: 6),
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'e.g. user@gmail.com or admin@gmail.com',
-              hintStyle: GoogleFonts.plusJakartaSans(
-                color: Colors.white.withValues(alpha: 0.35),
-                fontSize: 13,
-              ),
-              fillColor: Colors.white.withValues(alpha: 0.06),
-              filled: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Colors.white60),
-              border: OutlineInputBorder(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: _openCountryPicker,
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _selectedCountry.flagEmoji,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '+${_selectedCountry.phoneCode}',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: Colors.white60,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Enter 10-digit phone number',
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      fontSize: 13,
+                    ),
+                    fillColor: Colors.white.withValues(alpha: 0.06),
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    prefixIcon: const Icon(Icons.phone_outlined, size: 18, color: Colors.white60),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                    ),
+                  ),
+                  validator: (value) {
+                    final digits = (value ?? '').trim();
+                    if (digits.isEmpty) {
+                      return 'Please enter your registered phone number.';
+                    }
+                    if (digits.length != 10) {
+                      return 'Phone number must be exactly 10 digits.';
+                    }
+                    return null;
+                  },
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter your registered email.';
-              }
-              final trimmed = value.trim();
-              if (trimmed.contains(' ') || !trimmed.contains('@') || !trimmed.contains('.')) {
-                return 'Please enter a valid email address.';
-              }
-              return null;
-            },
+            ],
           ),
           const SizedBox(height: 22),
 
@@ -787,9 +875,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     );
   }
 
-  // --- Step 2 View: 6-Digit OTP Verification Screen ---
+  // --- Step 2 View: 6-Digit SMS OTP Verification Screen ---
   Widget _buildStep2Otp() {
-    final email = _emailController.text.trim().toLowerCase();
     final isExpired = _expiryRemainingSeconds <= 0;
     final canResend = _cooldownRemainingSeconds == 0 && !_isLoading;
     final enteredOtp = _getEnteredOtp();
@@ -799,7 +886,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
       key: const ValueKey('step2'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Masked email pill with option to edit
+        // Masked phone pill with option to edit
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -809,11 +896,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
           ),
           child: Row(
             children: [
-              const Icon(Icons.mark_email_read_outlined, size: 16, color: AppTheme.primaryGreen),
+              const Icon(Icons.sms_outlined, size: 16, color: AppTheme.primaryGreen),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Sent to: ${_maskEmail(email)}',
+                  'Sent via SMS to: ${_maskPhone(_phoneController.text)}',
                   style: GoogleFonts.plusJakartaSans(
                     color: Colors.white,
                     fontSize: 12.5,
@@ -1232,7 +1319,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
               Navigator.pop(context);
               if (widget.onSuccess != null) {
                 widget.onSuccess!(
-                  _emailController.text.trim().toLowerCase(),
+                  _fullPhoneE164,
                   _newPasswordController.text,
                 );
               }
