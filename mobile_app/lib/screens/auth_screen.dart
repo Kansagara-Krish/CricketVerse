@@ -26,7 +26,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _isForgotSheetOpen = false;
   String? _emailServerError;
+  String? _forgotPasswordEmailError;
   String? _phoneServerError;
 
   final _emailController = TextEditingController();
@@ -35,6 +37,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _emailFieldKey = GlobalKey<FormFieldState<String>>();
+  final _emailFocusNode = FocusNode();
   Country _selectedCountry = CountryParser.parseCountryCode('IN');
 
   // Background Video Controller
@@ -94,6 +98,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     }
     _videoController.dispose();
     _fadeController.dispose();
+    _emailFocusNode.dispose();
     _emailController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
@@ -147,11 +152,83 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     );
   }
 
+  bool _isValidEmailFormat(String trimmed) {
+    if (trimmed.isEmpty || trimmed.contains(' ')) return false;
+    if ('@'.allMatches(trimmed).length != 1) return false;
+    final emailRegex =
+        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(trimmed)) return false;
+    final parts = trimmed.split('@');
+    return parts.length == 2 &&
+        parts[0].isNotEmpty &&
+        parts[1].isNotEmpty &&
+        !parts[1].startsWith('.') &&
+        !parts[1].endsWith('.') &&
+        !parts[1].contains('..') &&
+        parts[1].contains('.');
+  }
+
+  String? _validateForgotPasswordEmail(String? rawValue) {
+    final trimmed = (rawValue ?? '').trim();
+    if (trimmed.isEmpty) {
+      return 'Please enter your registered email first.';
+    }
+    if (!_isValidEmailFormat(trimmed)) {
+      return 'Please enter a valid email address.';
+    }
+    return null;
+  }
+
+  Future<void> _handleForgotPasswordTap() async {
+    if (_isForgotSheetOpen || _isLoading) return;
+
+    final trimmedEmail = _emailController.text.trim();
+    final validationError = _validateForgotPasswordEmail(trimmedEmail);
+    if (validationError != null) {
+      setState(() {
+        _emailServerError = null;
+        _forgotPasswordEmailError = validationError;
+      });
+      _emailFieldKey.currentState?.validate();
+      _emailFocusNode.requestFocus();
+      return;
+    }
+
+    setState(() {
+      _forgotPasswordEmailError = null;
+      _isForgotSheetOpen = true;
+    });
+    _emailFieldKey.currentState?.validate();
+
+    try {
+      await ForgotPasswordSheet.show(
+        context,
+        initialEmail: trimmedEmail,
+        onSuccess: (_, newPassword) {
+          if (mounted) {
+            setState(() {
+              _passwordController.text = newPassword;
+            });
+          }
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isForgotSheetOpen = false;
+        });
+      } else {
+        _isForgotSheetOpen = false;
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_isLoading) return; // Prevent multiple requests
 
     setState(() {
       _emailServerError = null;
+      _forgotPasswordEmailError = null;
       _phoneServerError = null;
     });
 
@@ -589,14 +666,27 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     ),
                                     const SizedBox(height: 6),
                                     TextFormField(
+                                      key: _emailFieldKey,
+                                      focusNode: _emailFocusNode,
                                       controller: _emailController,
                                       keyboardType: _isSignUp ? TextInputType.emailAddress : TextInputType.text,
                                       style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 13.5),
                                       onChanged: (val) {
+                                        var shouldRevalidate = false;
                                         if (_emailServerError != null) {
                                           setState(() {
                                             _emailServerError = null;
                                           });
+                                        }
+                                        if (_forgotPasswordEmailError != null &&
+                                            _validateForgotPasswordEmail(val) == null) {
+                                          setState(() {
+                                            _forgotPasswordEmailError = null;
+                                          });
+                                          shouldRevalidate = true;
+                                        }
+                                        if (shouldRevalidate) {
+                                          _emailFieldKey.currentState?.validate();
                                         }
                                       },
                                       decoration: InputDecoration(
@@ -628,6 +718,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         ),
                                       ),
                                       validator: (value) {
+                                        if (_forgotPasswordEmailError != null) {
+                                          return _forgotPasswordEmailError;
+                                        }
                                         if (_emailServerError != null) {
                                           return _emailServerError;
                                         }
@@ -640,32 +733,13 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         }
 
                                         if (_isSignUp) {
-                                          final atMatches = '@'.allMatches(trimmed);
-                                          if (atMatches.length != 1) {
-                                            return 'Please enter a valid email address.';
-                                          }
-                                          final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                                          if (!emailRegex.hasMatch(trimmed)) {
-                                            return 'Please enter a valid email address.';
-                                          }
-                                          final parts = trimmed.split('@');
-                                          if (parts.length != 2 ||
-                                              parts[0].isEmpty ||
-                                              parts[1].isEmpty ||
-                                              parts[1].startsWith('.') ||
-                                              parts[1].endsWith('.') ||
-                                              !parts[1].contains('.')) {
+                                          if (!_isValidEmailFormat(trimmed)) {
                                             return 'Please enter a valid email address.';
                                           }
                                         } else {
                                           // Login Mode: Allow both valid email AND manager/scorer username
                                           if (trimmed.contains('@')) {
-                                            final atMatches = '@'.allMatches(trimmed);
-                                            if (atMatches.length != 1) {
-                                              return 'Please enter a valid email address.';
-                                            }
-                                            final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                                            if (!emailRegex.hasMatch(trimmed)) {
+                                            if (!_isValidEmailFormat(trimmed)) {
                                               return 'Please enter a valid email address.';
                                             }
                                           } else {
@@ -815,17 +889,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         ),
                                         if (!_isSignUp)
                                           GestureDetector(
-                                            onTap: () {
-                                              ForgotPasswordSheet.show(
-                                                context,
-                                                initialEmail: _emailController.text.trim(),
-                                                onSuccess: (_, newPassword) {
-                                                  setState(() {
-                                                    _passwordController.text = newPassword;
-                                                  });
-                                                },
-                                              );
-                                            },
+                                            onTap: _isForgotSheetOpen ? null : _handleForgotPasswordTap,
                                             child: Text(
                                               'Forgot?',
                                               style: GoogleFonts.plusJakartaSans(
@@ -1034,6 +1098,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         onTap: () {
                                           setState(() {
                                             _isSignUp = !_isSignUp;
+                                            _emailServerError = null;
+                                            _forgotPasswordEmailError = null;
+                                            _phoneServerError = null;
                                           });
                                         },
                                         child: RichText(

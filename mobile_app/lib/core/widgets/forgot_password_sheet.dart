@@ -128,6 +128,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
   }
 
   Future<void> _autoFetchPhoneForEmail(String email) async {
+    if (_isLookingUpPhone) return;
     setState(() {
       _isLookingUpPhone = true;
       _lookupError = null;
@@ -856,42 +857,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
         key: const ValueKey('step1_email_flow'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Email',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.email_outlined, size: 18, color: Colors.white60),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.initialEmail.trim(),
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
           Text(
             'Registered mobile number:',
             style: GoogleFonts.plusJakartaSans(
