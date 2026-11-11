@@ -818,6 +818,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                             onTap: () {
                                               ForgotPasswordSheet.show(
                                                 context,
+                                                initialEmail: _emailController.text.trim(),
                                                 onSuccess: (_, newPassword) {
                                                   setState(() {
                                                     _passwordController.text = newPassword;

@@ -18,6 +18,7 @@ class AuthStorageService {
   static const String _keyUserEmail = 'auth_user_email';
   static const String _keyUserRole = 'auth_user_role';
   static const String _keyUserName = 'auth_user_name';
+  static const String _keyUserPhone = 'auth_user_phone';
 
   /// Save session credentials securely
   static Future<void> saveAuthData({
@@ -27,6 +28,7 @@ class AuthStorageService {
     required String userEmail,
     required String userRole,
     required String userName,
+    String? userPhone,
   }) async {
     try {
       await _storage.write(key: _keyAccessToken, value: accessToken);
@@ -37,6 +39,9 @@ class AuthStorageService {
       await _storage.write(key: _keyUserEmail, value: userEmail);
       await _storage.write(key: _keyUserRole, value: userRole);
       await _storage.write(key: _keyUserName, value: userName);
+      if (userPhone != null && userPhone.isNotEmpty) {
+        await _storage.write(key: _keyUserPhone, value: userPhone);
+      }
     } catch (e) {
       debugPrint('AuthStorageService saveAuthData error: $e');
     }
@@ -69,11 +74,13 @@ class AuthStorageService {
       final role = await _storage.read(key: _keyUserRole);
       final name = await _storage.read(key: _keyUserName);
       final id = await _storage.read(key: _keyUserId);
+      final phone = await _storage.read(key: _keyUserPhone);
       return {
         'id': id,
         'email': email,
         'role': role,
         'name': name,
+        'phone': phone,
       };
     } catch (e) {
       debugPrint('AuthStorageService getUserData error: $e');
@@ -87,6 +94,31 @@ class AuthStorageService {
     return token != null && token.isNotEmpty;
   }
 
+  /// Update cached profile fields cleanly without disturbing active tokens
+  static Future<void> updateCachedProfile({
+    String? userEmail,
+    String? userName,
+    String? userPhone,
+  }) async {
+    try {
+      if (userEmail != null) {
+        await _storage.write(key: _keyUserEmail, value: userEmail);
+      }
+      if (userName != null) {
+        await _storage.write(key: _keyUserName, value: userName);
+      }
+      if (userPhone != null) {
+        if (userPhone.trim().isNotEmpty) {
+          await _storage.write(key: _keyUserPhone, value: userPhone.trim());
+        } else {
+          await _storage.delete(key: _keyUserPhone);
+        }
+      }
+    } catch (e) {
+      debugPrint('AuthStorageService updateCachedProfile error: $e');
+    }
+  }
+
   /// Securely clear all stored credentials on logout
   static Future<void> clearAuthData() async {
     try {
@@ -96,6 +128,7 @@ class AuthStorageService {
       await _storage.delete(key: _keyUserEmail);
       await _storage.delete(key: _keyUserRole);
       await _storage.delete(key: _keyUserName);
+      await _storage.delete(key: _keyUserPhone);
     } catch (e) {
       debugPrint('AuthStorageService clearAuthData error: $e');
     }

@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,9 +18,86 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final storage = Provider.of<StorageService>(context, listen: false);
+      storage.refreshCurrentProfile();
+    });
+  }
+
+  ({Country country, String digits}) _parseStoredPhone(String? rawPhone) {
+    final defaultCountry = CountryParser.parseCountryCode('IN');
+    if (rawPhone == null || rawPhone.trim().isEmpty) {
+      return (country: defaultCountry, digits: '');
+    }
+    final cleaned = rawPhone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
+    if (!cleaned.startsWith('+')) {
+      return (country: defaultCountry, digits: cleaned);
+    }
+    final digitsOnly = cleaned.substring(1);
+    final countries = CountryService().getAll()
+      ..sort((a, b) => b.phoneCode.length.compareTo(a.phoneCode.length));
+    for (final c in countries) {
+      if (digitsOnly.startsWith(c.phoneCode)) {
+        return (country: c, digits: digitsOnly.substring(c.phoneCode.length));
+      }
+    }
+    return (country: defaultCountry, digits: digitsOnly);
+  }
+
+  String _formatPhoneForDisplay(String? rawPhone) {
+    final trimmed = rawPhone?.trim() ?? '';
+    if (trimmed.isEmpty) return '';
+    final parsed = _parseStoredPhone(trimmed);
+    if (parsed.digits.isEmpty) return trimmed;
+    return '+${parsed.country.phoneCode} ${parsed.digits}';
+  }
+
   void _editProfile(StorageService storage) {
-    final nameCtrl = TextEditingController(text: storage.currentUserName);
-    final emailCtrl = TextEditingController(text: storage.currentUserEmail);
+    final nameCtrl = TextEditingController(text: storage.currentUserName ?? '');
+    final emailCtrl = TextEditingController(text: storage.currentUserEmail ?? '');
+    final parsedInitial = _parseStoredPhone(storage.currentUserPhone);
+    Country selectedCountry = parsedInitial.country;
+    final phoneCtrl = TextEditingController(text: parsedInitial.digits);
+    final otpCtrl = TextEditingController();
+
+    String originalPhoneE164 = parsedInitial.digits.isNotEmpty
+        ? '+${parsedInitial.country.phoneCode}${parsedInitial.digits}'
+        : '';
+
+    bool didStartFetch = false;
+    bool isFetchingProfile = true;
+    bool isSaving = false;
+    bool userEditedName = false;
+    bool userEditedEmail = false;
+    bool userEditedPhone = false;
+
+    bool requiresOtpStep = false;
+    String? phoneChangeToken;
+    String? pendingPhone;
+    String? inlineError;
+    int cooldownSeconds = 0;
+    Timer? cooldownTimer;
+
+    void startCooldown(StateSetter setModalState, BuildContext modalCtx) {
+      cooldownTimer?.cancel();
+      cooldownSeconds = 60;
+      cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!modalCtx.mounted) {
+          timer.cancel();
+          return;
+        }
+        if (cooldownSeconds <= 1) {
+          timer.cancel();
+          setModalState(() => cooldownSeconds = 0);
+        } else {
+          setModalState(() => cooldownSeconds--);
+        }
+      });
+    }
 
     showModalBottomSheet(
       context: context,
@@ -26,68 +106,460 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
-            ),
-            const SizedBox(height: 20),
-            Text('Edit Profile', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: nameCtrl, 
-              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
-                labelText: 'Full Name', 
-                prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: emailCtrl, 
-              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
-                labelText: 'Email Address', 
-                prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final name = nameCtrl.text.trim();
-                  final email = emailCtrl.text.trim();
-                  if (name.isEmpty || email.isEmpty) {
-                    CustomNotification.show(context, 'Fields cannot be empty', type: NotificationType.error);
-                    return;
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          if (!didStartFetch) {
+            didStartFetch = true;
+            storage.refreshCurrentProfile().then((fresh) {
+              if (!modalCtx.mounted) return;
+              setModalState(() {
+                isFetchingProfile = false;
+                if (fresh['success'] == true) {
+                  final freshName = fresh['name']?.toString() ?? '';
+                  final freshEmail = fresh['email']?.toString() ?? '';
+                  final freshPhone = fresh['phone']?.toString() ?? '';
+                  final freshParsed = _parseStoredPhone(freshPhone);
+
+                  originalPhoneE164 = freshParsed.digits.isNotEmpty
+                      ? '+${freshParsed.country.phoneCode}${freshParsed.digits}'
+                      : '';
+
+                  if (!userEditedName && freshName.isNotEmpty) {
+                    nameCtrl.text = freshName;
                   }
-                  final ok = await storage.updateProfile(name: name, email: email);
-                  if (ok) {
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (mounted) {
-                      CustomNotification.show(context, 'Profile updated successfully!', type: NotificationType.success);
-                      setState(() {});
-                    }
-                  } else {
-                    if (mounted) {
-                      CustomNotification.show(context, 'Update failed. Email may already be taken.', type: NotificationType.error);
-                    }
+                  if (!userEditedEmail && freshEmail.isNotEmpty) {
+                    emailCtrl.text = freshEmail;
                   }
-                },
-                child: const Text('Save Changes'),
-              ),
+                  if (!userEditedPhone) {
+                    selectedCountry = freshParsed.country;
+                    phoneCtrl.text = freshParsed.digits;
+                  }
+                }
+              });
+            });
+          }
+
+          Future<void> handleSaveTap() async {
+            if (isSaving || isFetchingProfile) return;
+
+            final name = nameCtrl.text.trim();
+            final email = emailCtrl.text.trim();
+            final phoneDigits = phoneCtrl.text.trim();
+            final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
+            if (name.isEmpty || email.isEmpty) {
+              setModalState(() => inlineError = 'Name and email cannot be empty.');
+              return;
+            }
+            if (!emailRegex.hasMatch(email)) {
+              setModalState(() => inlineError = 'Please enter a valid email address.');
+              return;
+            }
+            if (originalPhoneE164.isNotEmpty && phoneDigits.isEmpty) {
+              setModalState(() => inlineError = 'Please enter a valid 10-digit mobile number.');
+              return;
+            }
+            if (phoneDigits.isNotEmpty && phoneDigits.length != 10) {
+              setModalState(() => inlineError = 'Phone number must be exactly 10 digits.');
+              return;
+            }
+
+            final fullPhone = phoneDigits.isNotEmpty
+                ? '+${selectedCountry.phoneCode}$phoneDigits'
+                : '';
+
+            setModalState(() {
+              isSaving = true;
+              inlineError = null;
+            });
+
+            final res = await storage.saveProfileChanges(
+              name: name,
+              email: email,
+              phone: fullPhone,
+            );
+
+            if (!modalCtx.mounted) return;
+
+            if (res['requiresPhoneVerification'] == true) {
+              otpCtrl.clear();
+              startCooldown(setModalState, modalCtx);
+              setModalState(() {
+                isSaving = false;
+                requiresOtpStep = true;
+                phoneChangeToken = res['phoneChangeToken']?.toString();
+                pendingPhone = res['pendingPhone']?.toString() ?? fullPhone;
+                inlineError = null;
+              });
+              return;
+            }
+
+            if (res['success'] == true) {
+              setModalState(() => isSaving = false);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                CustomNotification.show(
+                  context,
+                  'Profile updated successfully!',
+                  type: NotificationType.success,
+                );
+                setState(() {});
+              }
+            } else {
+              setModalState(() {
+                isSaving = false;
+                inlineError = res['error']?.toString() ??
+                    'Update failed. Email or phone may already be taken.';
+              });
+            }
+          }
+
+          Future<void> handleVerifyOtpTap() async {
+            if (isSaving) return;
+            final otp = otpCtrl.text.trim();
+            if (otp.length != 6) {
+              setModalState(() => inlineError = 'Please enter the 6-digit verification code.');
+              return;
+            }
+
+            setModalState(() {
+              isSaving = true;
+              inlineError = null;
+            });
+
+            final res = await storage.saveProfileChanges(
+              name: nameCtrl.text.trim(),
+              email: emailCtrl.text.trim(),
+              phone: pendingPhone,
+              phoneOtp: otp,
+              phoneChangeToken: phoneChangeToken,
+            );
+
+            if (!modalCtx.mounted) return;
+
+            if (res['success'] == true && res['requiresPhoneVerification'] != true) {
+              cooldownTimer?.cancel();
+              setModalState(() => isSaving = false);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                CustomNotification.show(
+                  context,
+                  'Profile and verified mobile number updated!',
+                  type: NotificationType.success,
+                );
+                setState(() {});
+              }
+            } else {
+              setModalState(() {
+                isSaving = false;
+                inlineError = res['error']?.toString() ?? 'Invalid or expired verification code.';
+              });
+            }
+          }
+
+          Future<void> handleResendOtpTap() async {
+            if (isSaving || cooldownSeconds > 0 || pendingPhone == null) return;
+            setModalState(() {
+              isSaving = true;
+              inlineError = null;
+            });
+
+            final res = await storage.saveProfileChanges(
+              name: nameCtrl.text.trim(),
+              email: emailCtrl.text.trim(),
+              phone: pendingPhone,
+            );
+
+            if (!modalCtx.mounted) return;
+
+            if (res['requiresPhoneVerification'] == true) {
+              otpCtrl.clear();
+              startCooldown(setModalState, modalCtx);
+              setModalState(() {
+                isSaving = false;
+                phoneChangeToken = res['phoneChangeToken']?.toString();
+              });
+              if (mounted) {
+                CustomNotification.show(
+                  context,
+                  'New verification code sent via SMS.',
+                  type: NotificationType.success,
+                );
+              }
+            } else {
+              setModalState(() {
+                isSaving = false;
+                inlineError = res['error']?.toString() ?? 'Failed to resend verification code.';
+              });
+            }
+          }
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
             ),
-          ],
-        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      requiresOtpStep ? 'Verify Mobile Number' : 'Edit Profile',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (isFetchingProfile && !requiresOtpStep)
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Loading...',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (!requiresOtpStep) ...[
+                  TextField(
+                    controller: nameCtrl,
+                    onChanged: (_) => userEditedName = true,
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: emailCtrl,
+                    onChanged: (_) => userEditedEmail = true,
+                    keyboardType: TextInputType.emailAddress,
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Email Address',
+                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          showCountryPicker(
+                            context: modalCtx,
+                            showPhoneCode: true,
+                            onSelect: (Country c) {
+                              userEditedPhone = true;
+                              setModalState(() => selectedCountry = c);
+                            },
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 52,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgSurface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.black12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(selectedCountry.flagEmoji, style: const TextStyle(fontSize: 16)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '+${selectedCountry.phoneCode}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppTheme.textMuted),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: phoneCtrl,
+                          onChanged: (_) => userEditedPhone = true,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
+                          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+                          decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            hintText: '10-digit number',
+                            prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.textMuted),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sms_outlined, color: AppTheme.primaryGreen, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Enter the 6-digit SMS code sent to ${_formatPhoneForDisplay(pendingPhone)}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: otpCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    autofocus: true,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 6,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: '6-Digit Verification Code',
+                      hintText: '000000',
+                      counterText: '',
+                      prefixIcon: Icon(Icons.verified_user_outlined, color: AppTheme.textMuted),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: isSaving
+                            ? null
+                            : () {
+                                setModalState(() {
+                                  requiresOtpStep = false;
+                                  inlineError = null;
+                                });
+                              },
+                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                        label: const Text('Change Number'),
+                      ),
+                      TextButton(
+                        onPressed: (isSaving || cooldownSeconds > 0)
+                            ? null
+                            : handleResendOtpTap,
+                        child: Text(
+                          cooldownSeconds > 0
+                              ? 'Resend in ${cooldownSeconds}s'
+                              : 'Resend Code',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (inlineError != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Text(
+                      inlineError!,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFFB91C1C),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: (isSaving || isFetchingProfile)
+                        ? null
+                        : (requiresOtpStep ? handleVerifyOtpTap : handleSaveTap),
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(requiresOtpStep ? 'Verify & Save' : 'Save Changes'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-    );
+    ).whenComplete(() {
+      cooldownTimer?.cancel();
+      nameCtrl.dispose();
+      emailCtrl.dispose();
+      phoneCtrl.dispose();
+      otpCtrl.dispose();
+    });
   }
 
   void _changePassword(StorageService storage) async {
@@ -224,7 +696,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           _buildProfileTile(
             icon: Icons.edit_rounded,
             title: 'Edit Profile',
-            subtitle: 'Change name or email',
+            subtitle: 'Change name, email or phone',
             onTap: () => _editProfile(storage),
           ),
           _buildProfileTile(
@@ -309,6 +781,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             storage.currentUserEmail ?? 'Guest User',
             style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
           ),
+          if (storage.currentUserPhone != null && storage.currentUserPhone!.trim().isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              _formatPhoneForDisplay(storage.currentUserPhone),
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryGreen, fontWeight: FontWeight.w700),
+            ),
+          ],
         ],
       ),
     );

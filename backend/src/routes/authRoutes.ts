@@ -10,6 +10,7 @@ import {
   resendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   resetForgotPassword,
+  lookupPhoneByEmail,
   getEmailConfigEndpoint,
   updateEmailConfigEndpoint,
   testEmailConfigEndpoint,
@@ -38,6 +39,7 @@ router.post('/reset-password', resetForgotPassword);
 router.post('/resend-reset-otp', resendForgotPasswordOtp);
 
 // Backward-compatible alias paths
+router.post('/forgot-password/lookup-phone', lookupPhoneByEmail);
 router.post('/forgot-password/request-otp', requestForgotPasswordOtp);
 router.post('/forgot-password/verify-otp', verifyForgotPasswordOtp);
 router.post('/forgot-password/reset-password', resetForgotPassword);

@@ -19,6 +19,8 @@ class StorageService with ChangeNotifier {
 
   // App Session State
   String? _currentUserEmail;
+  String? _currentUserPhone;
+  bool _currentUserPhoneVerified = false;
   String? _currentRole; // "Admin", "Scorer", "User"
   String? _activeScorerMatchId; // Active match ID currently being scored
   String? _currentUserName;
@@ -29,6 +31,8 @@ class StorageService with ChangeNotifier {
   List<Manager> get managers => _managers;
   String? get currentRole => _currentRole;
   String? get currentUserEmail => _currentUserEmail;
+  String? get currentUserPhone => _currentUserPhone;
+  bool get currentUserPhoneVerified => _currentUserPhoneVerified;
   String? get currentUserName => _currentUserName;
   String? get activeScorerMatchId => _activeScorerMatchId;
   bool get isOnlineMode => true;
@@ -565,6 +569,9 @@ class StorageService with ChangeNotifier {
       final res = await ApiService.getMe();
       if (res != null && res['user'] != null) {
         _currentUserEmail = res['user']['email'];
+        _currentUserPhone = res['user']['phone']?.toString();
+        _currentUserPhoneVerified = res['user']['phoneVerified'] == true ||
+            (_currentUserPhone != null && _currentUserPhone!.trim().isNotEmpty && res['user']['phoneVerified'] != false);
         _currentRole = res['user']['role'];
         _currentUserName = res['user']['name'];
         // Always land manager/scorer on their main dashboard (Assigned Matches list) on auth
@@ -584,6 +591,9 @@ class StorageService with ChangeNotifier {
     final res = await ApiService.login(usernameOrEmail, password);
     if (res != null && res['user'] != null) {
       _currentUserEmail = res['user']['email'];
+      _currentUserPhone = res['user']['phone']?.toString();
+      _currentUserPhoneVerified = res['user']['phoneVerified'] == true ||
+          (_currentUserPhone != null && _currentUserPhone!.trim().isNotEmpty && res['user']['phoneVerified'] != false);
       _currentRole = res['user']['role'];
       _currentUserName = res['user']['name'];
       // Always land manager/scorer on their main dashboard (Assigned Matches list) after login
@@ -618,6 +628,9 @@ class StorageService with ChangeNotifier {
 
     if (res.isSuccess && res.data != null) {
       _currentUserEmail = res.data!['user']?['email'] ?? normalizedEmail;
+      _currentUserPhone = res.data!['user']?['phone']?.toString() ?? phone;
+      _currentUserPhoneVerified = res.data!['user']?['phoneVerified'] == true ||
+          (_currentUserPhone != null && _currentUserPhone!.trim().isNotEmpty);
       _currentRole = res.data!['user']?['role'] ?? 'User';
       _currentUserName = res.data!['user']?['name'] ?? trimmedName;
       await loadData();
@@ -640,6 +653,8 @@ class StorageService with ChangeNotifier {
     SocketService.disconnect();
 
     _currentUserEmail = null;
+    _currentUserPhone = null;
+    _currentUserPhoneVerified = false;
     _currentRole = null;
     _currentUserName = null;
     _activeScorerMatchId = null;
@@ -1388,15 +1403,115 @@ class StorageService with ChangeNotifier {
   }
 
   // --- Profile, Password and Settings persistence helper methods ---
-  Future<bool> updateProfile({String? name, String? email}) async {
-    final res = await ApiService.updateProfile(name: name, email: email);
-    if (res != null && res['user'] != null) {
-      _currentUserEmail = res['user']['email'];
-      _currentUserName = res['user']['name'];
-      notifyListeners();
-      return true;
+  Future<Map<String, dynamic>> refreshCurrentProfile() async {
+    try {
+      final me = await ApiService.getMe();
+      final user = me?['user'];
+      if (user is Map) {
+        final meName = user['name']?.toString();
+        final meEmail = user['email']?.toString();
+        final mePhone = user['phone']?.toString().trim() ?? '';
+        final meVerified = user['phoneVerified'] == true ||
+            (mePhone.isNotEmpty && user['phoneVerified'] != false);
+
+        if (meName != null && meName.isNotEmpty) _currentUserName = meName;
+        if (meEmail != null && meEmail.isNotEmpty) _currentUserEmail = meEmail;
+        _currentUserPhone = mePhone;
+        _currentUserPhoneVerified = meVerified;
+
+        await AuthStorageService.updateCachedProfile(
+          userEmail: _currentUserEmail,
+          userName: _currentUserName,
+          userPhone: mePhone,
+        );
+        notifyListeners();
+        return {
+          'success': true,
+          'name': _currentUserName ?? '',
+          'email': _currentUserEmail ?? '',
+          'phone': mePhone,
+          'phoneVerified': meVerified,
+        };
+      }
+    } catch (e) {
+      debugPrint('refreshCurrentProfile error: $e');
     }
-    return false;
+    return {
+      'success': false,
+      'name': _currentUserName ?? '',
+      'email': _currentUserEmail ?? '',
+      'phone': _currentUserPhone ?? '',
+      'phoneVerified': _currentUserPhoneVerified,
+    };
+  }
+
+  Future<String?> refreshCurrentUserPhone() async {
+    final fresh = await refreshCurrentProfile();
+    if (fresh['success'] == true) {
+      return _currentUserPhone;
+    }
+
+    try {
+      final cached = await AuthStorageService.getUserData();
+      final cachedPhone = cached['phone']?.toString();
+      if (cachedPhone != null && cachedPhone.trim().isNotEmpty) {
+        _currentUserPhone = cachedPhone.trim();
+        notifyListeners();
+        return _currentUserPhone;
+      }
+    } catch (e) {
+      debugPrint('refreshCurrentUserPhone error: $e');
+    }
+    return _currentUserPhone;
+  }
+
+  Future<Map<String, dynamic>> saveProfileChanges({
+    String? name,
+    String? email,
+    String? phone,
+    String? phoneOtp,
+    String? phoneChangeToken,
+  }) async {
+    final res = await ApiService.updateProfile(
+      name: name,
+      email: email,
+      phone: phone,
+      phoneOtp: phoneOtp,
+      phoneChangeToken: phoneChangeToken,
+    );
+
+    if (res['requiresPhoneVerification'] == true) {
+      return res;
+    }
+
+    if (res['success'] == true && res['user'] != null) {
+      final user = res['user'];
+      _currentUserEmail = user['email']?.toString();
+      _currentUserPhone = user['phone']?.toString() ?? '';
+      _currentUserPhoneVerified = user['phoneVerified'] == true ||
+          (_currentUserPhone != null &&
+              _currentUserPhone!.trim().isNotEmpty &&
+              user['phoneVerified'] != false);
+      _currentUserName = user['name']?.toString();
+
+      await AuthStorageService.updateCachedProfile(
+        userEmail: _currentUserEmail,
+        userName: _currentUserName,
+        userPhone: _currentUserPhone,
+      );
+      notifyListeners();
+      return {'success': true, 'user': user, 'verified': res['verified'] == true};
+    }
+
+    return {
+      'success': false,
+      'error': res['error']?.toString() ?? 'Failed to update profile.',
+    };
+  }
+
+  Future<bool> updateProfile({String? name, String? email, String? phone}) async {
+    final res = await saveProfileChanges(name: name, email: email, phone: phone);
+    return res['success'] == true && res['requiresPhoneVerification'] != true;
   }
 
   Future<String?> requestPasswordOtp() async {
@@ -1412,20 +1527,44 @@ class StorageService with ChangeNotifier {
   }
 
   // --- Forgot Password Methods (Twilio SMS OTP) ---
-  Future<Map<String, dynamic>> requestForgotPasswordOtp(String phone, {String? requestId}) async {
-    return await ApiService.requestForgotPasswordOtp(phone, requestId: requestId);
+  Future<Map<String, dynamic>> lookupForgotPasswordPhone(String email) async {
+    return await ApiService.lookupForgotPasswordPhone(email);
   }
 
-  Future<Map<String, dynamic>> resendForgotPasswordOtp(String phone) async {
-    return await ApiService.resendForgotPasswordOtp(phone);
+  Future<String?> lookupPhoneByEmail(String email) async {
+    return await ApiService.lookupPhoneByEmail(email);
   }
 
-  Future<Map<String, dynamic>> verifyForgotPasswordOtp(String phone, String otp) async {
-    return await ApiService.verifyForgotPasswordOtp(phone, otp);
+  Future<Map<String, dynamic>> requestForgotPasswordOtp(
+    String phone, {
+    String? flowRef,
+    String? requestId,
+  }) async {
+    return await ApiService.requestForgotPasswordOtp(
+      phone,
+      flowRef: flowRef,
+      requestId: requestId,
+    );
+  }
+
+  Future<Map<String, dynamic>> resendForgotPasswordOtp(
+    String phone, {
+    String? flowRef,
+  }) async {
+    return await ApiService.resendForgotPasswordOtp(phone, flowRef: flowRef);
+  }
+
+  Future<Map<String, dynamic>> verifyForgotPasswordOtp(
+    String phone,
+    String otp, {
+    String? flowRef,
+  }) async {
+    return await ApiService.verifyForgotPasswordOtp(phone, otp, flowRef: flowRef);
   }
 
   Future<Map<String, dynamic>> resetForgotPassword({
     required String phone,
+    String? flowRef,
     required String newPassword,
     String? resetToken,
     String? otp,
@@ -1433,6 +1572,7 @@ class StorageService with ChangeNotifier {
   }) async {
     return await ApiService.resetForgotPassword(
       phone: phone,
+      flowRef: flowRef,
       newPassword: newPassword,
       resetToken: resetToken,
       otp: otp,

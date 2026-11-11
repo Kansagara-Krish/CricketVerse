@@ -70,6 +70,7 @@ class ApiService {
         userEmail: user['email']?.toString() ?? '',
         userRole: user['role']?.toString() ?? 'User',
         userName: user['name']?.toString() ?? '',
+        userPhone: user['phone']?.toString(),
       );
     } else {
       await AuthStorageService.saveAuthData(
@@ -209,11 +210,22 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> updateProfile({String? name, String? email}) async {
+  static Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    String? phoneOtp,
+    String? phoneChangeToken,
+  }) async {
     try {
       final body = <String, dynamic>{};
       if (name != null) body['name'] = name;
       if (email != null) body['email'] = email;
+      if (phone != null) body['phone'] = phone;
+      if (phoneOtp != null && phoneOtp.isNotEmpty) body['phoneOtp'] = phoneOtp;
+      if (phoneChangeToken != null && phoneChangeToken.isNotEmpty) {
+        body['phoneChangeToken'] = phoneChangeToken;
+      }
 
       final res = await http.put(
         Uri.parse('$baseUrl/auth/profile'),
@@ -221,17 +233,42 @@ class ApiService {
         body: jsonEncode(body),
       ).timeout(defaultTimeout);
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+      if (res.statusCode == 200 && data is Map<String, dynamic>) {
+        if (data['requiresPhoneVerification'] == true) {
+          return {
+            'success': true,
+            'requiresPhoneVerification': true,
+            'otpSent': data['otpSent'] == true,
+            'pendingPhone': data['pendingPhone']?.toString(),
+            'phoneChangeToken': data['phoneChangeToken']?.toString(),
+            'message': data['message']?.toString() ?? 'Verification OTP sent.',
+          };
+        }
         if (data['token'] != null) {
           await _saveToken(data['token']);
         }
-        return data;
+        return {
+          'success': true,
+          'requiresPhoneVerification': false,
+          'verified': data['verified'] == true,
+          'user': data['user'],
+          'token': data['token'],
+        };
       }
-      return null;
+      final serverError = (data is Map ? data['error']?.toString() : null) ??
+          'Failed to update profile (status ${res.statusCode}).';
+      return {
+        'success': false,
+        'statusCode': res.statusCode,
+        'error': serverError,
+      };
     } catch (e) {
       debugPrint('ApiService updateProfile error: $e');
-      return null;
+      return {
+        'success': false,
+        'error': 'Connection error while updating profile. Please try again.',
+      };
     }
   }
 
@@ -863,13 +900,126 @@ class ApiService {
   }
 
   // --- Forgot Password API (Twilio SMS Verify) ---
+  static Future<Map<String, dynamic>> lookupForgotPasswordPhone(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    if (!emailRegex.hasMatch(cleanEmail)) {
+      return {
+        'success': false,
+        'found': false,
+        'error': 'Please enter a valid registered email address.',
+      };
+    }
+
+    String lastError = 'Unable to look up registered mobile number. Please check your internet connection.';
+    for (final host in candidateBaseUrls) {
+      final url = '$host/auth/forgot-password/lookup-phone';
+      try {
+        debugPrint('[FP_LOOKUP] POST $url');
+        final res = await http.post(
+          Uri.parse(url),
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: jsonEncode({'email': cleanEmail}),
+        ).timeout(const Duration(seconds: 15));
+
+        Map<String, dynamic>? data;
+        try {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map<String, dynamic>) {
+            data = decoded;
+          }
+        } catch (parseErr) {
+          debugPrint('[FP_LOOKUP] Non-JSON response from $url (${res.statusCode}): $parseErr');
+        }
+
+        if (res.statusCode == 200 && data != null) {
+          final inner = data['data'] is Map ? Map<String, dynamic>.from(data['data'] as Map) : data;
+          final maskedPhone = inner['maskedPhone']?.toString() ?? data['maskedPhone']?.toString();
+          final hasVerified = inner['hasVerifiedPhone'] == true;
+          final flowRef = inner['flowRef']?.toString() ?? data['flowRef']?.toString();
+
+          if (data['success'] == true &&
+              maskedPhone != null &&
+              maskedPhone.isNotEmpty &&
+              hasVerified &&
+              flowRef != null &&
+              flowRef.isNotEmpty) {
+            return {
+              'success': true,
+              'found': true,
+              'maskedPhone': maskedPhone,
+              'hasVerifiedPhone': true,
+              'flowRef': flowRef,
+              'message': data['message']?.toString() ?? 'Registered phone number found',
+            };
+          }
+
+          return {
+            'success': false,
+            'found': false,
+            'hasVerifiedPhone': hasVerified,
+            'error': data['error']?.toString() ??
+                data['message']?.toString() ??
+                'No verified mobile number found for this email.',
+          };
+        }
+
+        final rawServerError = data?['error']?.toString() ?? data?['message']?.toString() ?? '';
+        debugPrint('[FP_LOOKUP] Error response ${res.statusCode} from $url: $rawServerError');
+
+        // Never surface raw Express 404 route errors ("Cannot POST ...") to users
+        if (res.statusCode == 404 && rawServerError.startsWith('Cannot ')) {
+          lastError = 'Phone lookup service is unavailable on the current server. Please enter your mobile number instead.';
+          continue;
+        }
+
+        if (rawServerError.isNotEmpty && !rawServerError.startsWith('Cannot ')) {
+          return {
+            'success': false,
+            'found': false,
+            'error': rawServerError,
+          };
+        }
+
+        if (res.statusCode >= 500) {
+          lastError = 'Server is temporarily unavailable. Please try again in a moment.';
+          continue;
+        }
+
+        return {
+          'success': false,
+          'found': false,
+          'error': 'Unable to verify this email right now. Please try again.',
+        };
+      } catch (e) {
+        debugPrint('[FP_LOOKUP] Network exception for $url: $e');
+        if (e.toString().contains('TimeoutException')) {
+          lastError = 'Server is taking too long to respond. Please try again.';
+        }
+      }
+    }
+    return {'success': false, 'found': false, 'error': lastError};
+  }
+
+  static Future<String?> lookupPhoneByEmail(String email) async {
+    final res = await lookupForgotPasswordPhone(email);
+    if (res['found'] == true && res['maskedPhone'] != null) {
+      return res['maskedPhone'].toString();
+    }
+    return null;
+  }
+
   static Future<Map<String, dynamic>> requestForgotPasswordOtp(
     String phone, {
+    String? flowRef,
     String? requestId,
   }) async {
     final reqId = requestId ?? 'fp_${DateTime.now().millisecondsSinceEpoch}';
     final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
-    final payload = {'phone': cleanPhone};
+    final hasFlowRef = flowRef != null && flowRef.trim().isNotEmpty;
+    final payload = hasFlowRef
+        ? <String, dynamic>{'flowRef': flowRef.trim()}
+        : <String, dynamic>{'phone': cleanPhone};
     String lastError = 'Unable to send SMS verification code. Please check your network and try again.';
 
     for (final host in candidateBaseUrls) {
@@ -930,8 +1080,15 @@ class ApiService {
     return {'success': false, 'error': lastError};
   }
 
-  static Future<Map<String, dynamic>> resendForgotPasswordOtp(String phone) async {
+  static Future<Map<String, dynamic>> resendForgotPasswordOtp(
+    String phone, {
+    String? flowRef,
+  }) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
+    final hasFlowRef = flowRef != null && flowRef.trim().isNotEmpty;
+    final payload = hasFlowRef
+        ? <String, dynamic>{'flowRef': flowRef.trim()}
+        : <String, dynamic>{'phone': cleanPhone};
     String lastError = 'Unable to resend verification code. Please try again.';
 
     for (final host in candidateBaseUrls) {
@@ -940,7 +1097,7 @@ class ApiService {
           final res = await http.post(
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: jsonEncode({'phone': cleanPhone}),
+            body: jsonEncode(payload),
           ).timeout(const Duration(seconds: 30));
 
           if (res.statusCode == 404) continue;
@@ -971,9 +1128,18 @@ class ApiService {
     return {'success': false, 'error': lastError};
   }
 
-  static Future<Map<String, dynamic>> verifyForgotPasswordOtp(String phone, String otp) async {
+  static Future<Map<String, dynamic>> verifyForgotPasswordOtp(
+    String phone,
+    String otp, {
+    String? flowRef,
+  }) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
     final cleanOtp = otp.trim();
+    final hasFlowRef = flowRef != null && flowRef.trim().isNotEmpty;
+    final payload = <String, dynamic>{
+      if (hasFlowRef) 'flowRef': flowRef.trim() else 'phone': cleanPhone,
+      'otp': cleanOtp,
+    };
     String lastError = 'Invalid or expired verification code.';
 
     for (final host in candidateBaseUrls) {
@@ -982,7 +1148,7 @@ class ApiService {
           final res = await http.post(
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: jsonEncode({'phone': cleanPhone, 'otp': cleanOtp}),
+            body: jsonEncode(payload),
           ).timeout(const Duration(seconds: 25));
 
           if (res.statusCode == 404) continue;
@@ -1008,12 +1174,14 @@ class ApiService {
 
   static Future<Map<String, dynamic>> resetForgotPassword({
     required String phone,
+    String? flowRef,
     required String newPassword,
     String? resetToken,
     String? otp,
     String? confirmPassword,
   }) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '').trim();
+    final hasFlowRef = flowRef != null && flowRef.trim().isNotEmpty;
     String lastError = 'Failed to reset password. Please try again.';
 
     for (final host in candidateBaseUrls) {
@@ -1023,7 +1191,7 @@ class ApiService {
             Uri.parse('$host$endpoint'),
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
             body: jsonEncode({
-              'phone': cleanPhone,
+              if (hasFlowRef) 'flowRef': flowRef.trim() else 'phone': cleanPhone,
               'newPassword': newPassword,
               'confirmPassword': confirmPassword ?? newPassword,
               if (resetToken != null && resetToken.isNotEmpty) 'resetToken': resetToken,

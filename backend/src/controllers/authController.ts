@@ -147,6 +147,8 @@ export async function login(req: Request, res: Response) {
           user: {
             id: user.id,
             email: user.email,
+            phone: user.phone || '',
+            phoneVerified: Boolean(user.phone) && user.phoneVerified !== false,
             role: user.role,
             name: user.name || (user.role === 'Admin' ? 'Rajesh Kumar' : user.email.split('@')[0]),
           },
@@ -237,7 +239,7 @@ export async function register(req: Request, res: Response) {
     const newUser = await UserModel.create({
       id: userId,
       email: normalizedEmail,
-      ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+      ...(normalizedPhone ? { phone: normalizedPhone, phoneVerified: true } : { phoneVerified: false }),
       passwordHash,
       role,
       name: finalName,
@@ -250,6 +252,7 @@ export async function register(req: Request, res: Response) {
         id: userId,
         email: normalizedEmail,
         phone: newUser.phone,
+        phoneVerified: Boolean(normalizedPhone),
         role,
         name: finalName,
       },
@@ -281,6 +284,9 @@ export async function getMe(req: any, res: Response) {
     const dbUser = await UserModel.findOne({ id: req.user.id });
     if (dbUser) {
       userDetails.name = dbUser.name || dbUser.email.split('@')[0];
+      userDetails.email = dbUser.email;
+      userDetails.phone = dbUser.phone || '';
+      userDetails.phoneVerified = Boolean(dbUser.phone) && dbUser.phoneVerified !== false;
       userDetails.favoriteTeams = dbUser.favoriteTeams || [];
       userDetails.notificationSettings = dbUser.notificationSettings || {};
     }
@@ -295,7 +301,7 @@ export async function getMe(req: any, res: Response) {
 }
 
 export async function updateProfile(req: any, res: Response) {
-  const { name, email, favoriteTeams, notificationSettings } = req.body;
+  const { name, email, phone, phoneOtp, phoneChangeToken, favoriteTeams, notificationSettings } = req.body;
   if (!req.user || !req.user.id) {
     return res.status(401).json({ error: 'Unauthorized.' });
   }
@@ -305,8 +311,17 @@ export async function updateProfile(req: any, res: Response) {
   }
 
   try {
-    if (email) {
-      const normalizedEmail = email.trim().toLowerCase();
+    const currentUser = await UserModel.findOne({ id: req.user.id });
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    if (email !== undefined) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
       const existingUser = await UserModel.findOne({
         email: normalizedEmail,
         id: { $ne: req.user.id }
@@ -317,10 +332,116 @@ export async function updateProfile(req: any, res: Response) {
     }
 
     const updateFields: any = {};
-    if (name !== undefined) updateFields.name = name.trim();
-    if (email !== undefined) updateFields.email = email.trim().toLowerCase();
+    if (name !== undefined) {
+      const trimmedName = String(name).trim();
+      if (!trimmedName) {
+        return res.status(400).json({ error: 'Full name cannot be empty.' });
+      }
+      updateFields.name = trimmedName;
+    }
+    if (email !== undefined) updateFields.email = String(email).trim().toLowerCase();
     if (favoriteTeams !== undefined) updateFields.favoriteTeams = favoriteTeams;
     if (notificationSettings !== undefined) updateFields.notificationSettings = notificationSettings;
+
+    let phoneVerifiedChanged = false;
+
+    if (phone !== undefined) {
+      const rawPhone = String(phone).trim();
+      const currentPhoneNormalized = currentUser.phone ? normalizePhoneNumber(currentUser.phone) : '';
+
+      if (rawPhone.length === 0) {
+        // Prevent silently clearing an existing registered mobile number with an empty/incomplete input
+        if (currentPhoneNormalized.length > 0) {
+          return res.status(400).json({ error: 'Please enter a valid phone number with country code (e.g. +919876543210).' });
+        }
+      } else {
+        const normalizedPhone = normalizePhoneNumber(rawPhone);
+        if (!isValidE164Phone(normalizedPhone)) {
+          return res.status(400).json({ error: 'Please enter a valid international phone number (e.g. +919876543210).' });
+        }
+
+        const isPhoneChanged = normalizedPhone !== currentPhoneNormalized;
+        const needsVerification = isPhoneChanged || currentUser.phoneVerified === false;
+
+        if (needsVerification) {
+          // Ensure another user does not already own this mobile number
+          const existingPhoneUser = await UserModel.findOne({
+            phone: normalizedPhone,
+            id: { $ne: req.user.id },
+          });
+          if (existingPhoneUser) {
+            return res.status(409).json({ error: 'Phone number is already linked to another account.' });
+          }
+
+          const cleanOtp = typeof phoneOtp === 'string' ? phoneOtp.trim() : '';
+          if (!cleanOtp) {
+            // Preserve the old verified phone number in MongoDB until OTP verification completes
+            const smsRes = await sendVerificationSms(normalizedPhone);
+            if (!smsRes.success) {
+              return res.status(503).json({
+                error: smsRes.error || 'Failed to send verification OTP to the new mobile number.',
+              });
+            }
+
+            const signedChangeToken = jwt.sign(
+              {
+                purpose: 'profile_phone_change',
+                userId: req.user.id,
+                newPhone: normalizedPhone,
+              },
+              JWT_SECRET,
+              { expiresIn: '10m' }
+            );
+
+            return res.status(200).json({
+              requiresPhoneVerification: true,
+              otpSent: true,
+              pendingPhone: normalizedPhone,
+              phoneChangeToken: signedChangeToken,
+              message: `A 6-digit verification code has been sent via SMS to ${normalizedPhone}.`,
+            });
+          }
+
+          // Step 2: Verify Twilio OTP + signed phoneChangeToken before modifying MongoDB
+          if (!phoneChangeToken || typeof phoneChangeToken !== 'string') {
+            return res.status(400).json({ error: 'Verification session expired. Please request a new code.' });
+          }
+
+          let decodedToken: any;
+          try {
+            decodedToken = jwt.verify(phoneChangeToken.trim(), JWT_SECRET);
+          } catch (_) {
+            return res.status(400).json({ error: 'Verification session expired. Please request a new code.' });
+          }
+
+          if (
+            !decodedToken ||
+            decodedToken.purpose !== 'profile_phone_change' ||
+            decodedToken.userId !== req.user.id ||
+            decodedToken.newPhone !== normalizedPhone
+          ) {
+            return res.status(400).json({ error: 'Phone verification mismatch. Please request a new code.' });
+          }
+
+          if (!/^\d{6}$/.test(cleanOtp)) {
+            return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
+          }
+
+          const verifyRes = await checkVerificationSms(normalizedPhone, cleanOtp);
+          if (!verifyRes.success || !verifyRes.valid) {
+            return res.status(400).json({
+              error: verifyRes.error || 'Invalid or expired verification code.',
+            });
+          }
+
+          updateFields.phone = normalizedPhone;
+          updateFields.phoneVerified = true;
+          phoneVerifiedChanged = true;
+        } else if (currentUser.phoneVerified === undefined) {
+          updateFields.phoneVerified = true;
+        }
+      }
+    }
 
     const updatedUser = await UserModel.findOneAndUpdate(
       { id: req.user.id },
@@ -336,16 +457,27 @@ export async function updateProfile(req: any, res: Response) {
 
     return res.status(200).json({
       token,
+      verified: phoneVerifiedChanged,
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
+        phone: updatedUser.phone || '',
+        phoneVerified: Boolean(updatedUser.phone) && updatedUser.phoneVerified !== false,
         role: updatedUser.role,
         name: updatedUser.name,
         favoriteTeams: updatedUser.favoriteTeams,
         notificationSettings: updatedUser.notificationSettings,
       }
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.code === 11000 || err.message?.includes('duplicate key'))) {
+      const isPhoneDup = err.message?.includes('phone');
+      return res.status(409).json({
+        error: isPhoneDup
+          ? 'Phone number is already linked to another account.'
+          : 'Email is already taken by another user.',
+      });
+    }
     console.error('Update profile error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
@@ -416,13 +548,137 @@ export async function updatePassword(req: any, res: Response) {
 // FORGOT PASSWORD FLOW (Twilio SMS Verify & Reset)
 // ==========================================
 
+function maskPhoneNumber(rawPhone: string): string {
+  const cleaned = normalizePhoneNumber(rawPhone);
+  if (cleaned.length <= 4) return '****';
+  const last4 = cleaned.slice(-4);
+  if (cleaned.startsWith('+') && cleaned.length > 10) {
+    const countryCode = cleaned.slice(0, cleaned.length - 10);
+    return `${countryCode} ******${last4}`;
+  }
+  const prefix = cleaned.slice(0, Math.min(3, cleaned.length - 4));
+  return `${prefix} ******${last4}`;
+}
+
+/**
+ * Looks up the registered phone number associated with an email address
+ * and returns a masked phone number plus a short-lived signed flowRef
+ * so OTP requests resolve the full number strictly server-side.
+ */
+export async function lookupPhoneByEmail(req: Request, res: Response) {
+  const rawEmail = req.body?.email;
+  const trimmedEmail = typeof rawEmail === 'string' ? rawEmail.trim() : '';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please enter a valid registered email address.',
+      error: 'Please enter a valid registered email address.',
+    });
+  }
+
+  const normalizedEmail = trimmedEmail.toLowerCase();
+  try {
+    let user = await UserModel.findOne({ email: normalizedEmail }).lean();
+    if (!user && trimmedEmail !== normalizedEmail) {
+      user = await UserModel.findOne({ email: trimmedEmail }).lean();
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address.',
+        error: 'No account found with this email address.',
+      });
+    }
+
+    if (!user.phone || user.phone.trim().length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No mobile number is registered with this account.',
+        error: 'No mobile number is registered with this account.',
+        data: { hasVerifiedPhone: false },
+      });
+    }
+
+    if (user.phoneVerified === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'The mobile number for this account is not verified yet.',
+        error: 'The mobile number for this account is not verified yet.',
+        data: { hasVerifiedPhone: false },
+      });
+    }
+
+    const maskedPhone = maskPhoneNumber(user.phone);
+    const flowRef = jwt.sign(
+      { purpose: 'fp_flow', userId: user.id },
+      JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Registered phone number found',
+      data: {
+        maskedPhone,
+        hasVerifiedPhone: true,
+        flowRef,
+      },
+    });
+  } catch (err) {
+    console.error('[FORGOT_PASSWORD] lookupPhoneByEmail error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to verify account right now. Please try again.',
+      error: 'Unable to verify account right now. Please try again.',
+    });
+  }
+}
+
+async function resolvePhoneTarget(body: any): Promise<{
+  ok: boolean;
+  status?: number;
+  error?: string;
+  phone?: string;
+  user?: any;
+}> {
+  const flowRef = body?.flowRef;
+  if (flowRef && typeof flowRef === 'string' && flowRef.trim().length > 0) {
+    try {
+      const decoded = jwt.verify(flowRef.trim(), JWT_SECRET) as any;
+      if (!decoded || decoded.purpose !== 'fp_flow' || !decoded.userId) {
+        return { ok: false, status: 400, error: 'Invalid or expired reset session. Please restart.' };
+      }
+      const user = await UserModel.findOne({ id: decoded.userId });
+      if (!user || !user.phone || user.phoneVerified === false) {
+        return { ok: false, status: 404, error: 'Registered verified mobile number not found for this account.' };
+      }
+      return { ok: true, phone: normalizePhoneNumber(user.phone), user };
+    } catch (_) {
+      return { ok: false, status: 400, error: 'Reset session expired. Please reopen Forgot Password.' };
+    }
+  }
+
+  const rawPhone = body?.phone;
+  if (!rawPhone || typeof rawPhone !== 'string') {
+    return { ok: false, status: 400, error: 'Please enter a valid registered phone number with country code.' };
+  }
+  const normalizedPhone = normalizePhoneNumber(rawPhone);
+  if (!isValidE164Phone(normalizedPhone)) {
+    return { ok: false, status: 400, error: 'Please enter a valid international phone number (e.g. +919876543210).' };
+  }
+  const user = await UserModel.findOne({ phone: normalizedPhone, phoneVerified: { $ne: false } });
+  return { ok: true, phone: normalizedPhone, user };
+}
+
 /**
  * Request SMS OTP for Forgot Password via Twilio Verify
- * Validates E.164 phone number, enforces 60s cooldown, and dispatches SMS OTP.
+ * Accepts either signed flowRef (from email lookup) or direct E.164 phone number.
  */
 export async function requestForgotPasswordOtp(req: Request, res: Response) {
   const requestId = (req.headers['x-request-id'] as string) || `fp_srv_${Date.now()}`;
-  const rawPhone = req.body?.phone;
   const dbReadyState = mongoose.connection.readyState;
 
   console.log(`[FP_TRACE][${requestId}] Request received: ${req.method} ${req.originalUrl} | MongoDB readyState=${dbReadyState}`);
@@ -434,25 +690,17 @@ export async function requestForgotPasswordOtp(req: Request, res: Response) {
     });
   }
 
-  if (!rawPhone || typeof rawPhone !== 'string') {
-    return res.status(400).json({ error: 'Please enter a valid registered phone number with country code.' });
-  }
-
-  const normalizedPhone = normalizePhoneNumber(rawPhone);
-  if (!isValidE164Phone(normalizedPhone)) {
-    console.warn(`[FP_TRACE][${requestId}] Phone validation failed -> HTTP 400`);
-    return res.status(400).json({
-      error: 'Please enter a valid international phone number (e.g. +919876543210).',
-    });
-  }
-
-  const maskedSuffix = normalizedPhone.slice(-4);
-  console.log(`[FP_TRACE][${requestId}] Phone validated (ending: ***${maskedSuffix})`);
-
   try {
-    // 1. Check whether registered account exists with this phone
-    const user = await UserModel.findOne({ phone: normalizedPhone });
-    console.log(`[FP_TRACE][${requestId}] MongoDB user lookup completed (found: ${Boolean(user)})`);
+    const resolved = await resolvePhoneTarget(req.body);
+    if (!resolved.ok || !resolved.phone) {
+      return res.status(resolved.status || 400).json({ error: resolved.error });
+    }
+
+    const normalizedPhone = resolved.phone;
+    const user = resolved.user;
+    const maskedSuffix = normalizedPhone.slice(-4);
+    console.log(`[FP_TRACE][${requestId}] Target resolved (ending: ***${maskedSuffix}, found: ${Boolean(user)})`);
+
     if (!user) {
       console.log(`[FP_TRACE][${requestId}] Unregistered phone handled safely -> HTTP 200`);
       return res.status(200).json({
@@ -534,16 +782,10 @@ export async function resendForgotPasswordOtp(req: Request, res: Response) {
  */
 export async function verifyForgotPasswordOtp(req: Request, res: Response) {
   const requestId = (req.headers['x-request-id'] as string) || `fp_verify_${Date.now()}`;
-  const rawPhone = req.body?.phone;
   const otp = req.body?.otp;
 
-  if (!rawPhone || typeof rawPhone !== 'string' || !otp) {
-    return res.status(400).json({ error: 'Phone number and 6-digit verification code are required.' });
-  }
-
-  const normalizedPhone = normalizePhoneNumber(rawPhone);
-  if (!isValidE164Phone(normalizedPhone)) {
-    return res.status(400).json({ error: 'Please enter a valid international phone number.' });
+  if (!otp) {
+    return res.status(400).json({ error: '6-digit verification code is required.' });
   }
 
   const cleanOtp = String(otp).trim();
@@ -552,6 +794,12 @@ export async function verifyForgotPasswordOtp(req: Request, res: Response) {
   }
 
   try {
+    const resolved = await resolvePhoneTarget(req.body);
+    if (!resolved.ok || !resolved.phone) {
+      return res.status(resolved.status || 400).json({ error: resolved.error });
+    }
+    const normalizedPhone = resolved.phone;
+
     const record = await PasswordResetOtpModel.findOne({ phone: normalizedPhone });
 
     if (!record) {
@@ -629,15 +877,10 @@ export async function verifyForgotPasswordOtp(req: Request, res: Response) {
  * Reset Password using verified Twilio SMS OTP Reset Authorization Token
  */
 export async function resetForgotPassword(req: Request, res: Response) {
-  const { phone, resetToken, newPassword, confirmPassword } = req.body;
+  const { resetToken, newPassword, confirmPassword } = req.body;
 
-  if (!phone || !newPassword) {
-    return res.status(400).json({ error: 'Phone number and new password are required.' });
-  }
-
-  const normalizedPhone = normalizePhoneNumber(String(phone));
-  if (!isValidE164Phone(normalizedPhone)) {
-    return res.status(400).json({ error: 'Please enter a valid international phone number.' });
+  if (!newPassword) {
+    return res.status(400).json({ error: 'New password is required.' });
   }
 
   // Validate new password rules & confirmation
@@ -650,6 +893,12 @@ export async function resetForgotPassword(req: Request, res: Response) {
   }
 
   try {
+    const resolved = await resolvePhoneTarget(req.body);
+    if (!resolved.ok || !resolved.phone) {
+      return res.status(resolved.status || 400).json({ error: resolved.error });
+    }
+    const normalizedPhone = resolved.phone;
+
     // 1. Look up verified reset authorization record
     const record = resetToken && typeof resetToken === 'string'
       ? await PasswordResetOtpModel.findOne({

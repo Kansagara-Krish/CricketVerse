@@ -10,17 +10,20 @@ import 'app_notification.dart';
 
 class ForgotPasswordSheet extends StatefulWidget {
   final String initialPhone;
+  final String initialEmail;
   final Function(String phone, String newPassword)? onSuccess;
 
   const ForgotPasswordSheet({
     super.key,
     this.initialPhone = '',
+    this.initialEmail = '',
     this.onSuccess,
   });
 
   static Future<void> show(
     BuildContext context, {
     String initialPhone = '',
+    String initialEmail = '',
     Function(String phone, String newPassword)? onSuccess,
   }) {
     return showModalBottomSheet(
@@ -29,6 +32,7 @@ class ForgotPasswordSheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => ForgotPasswordSheet(
         initialPhone: initialPhone,
+        initialEmail: initialEmail,
         onSuccess: onSuccess,
       ),
     );
@@ -47,13 +51,38 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
   // 4: Password Reset Success Screen
   int _currentStep = 1;
   bool _isLoading = false;
+  bool _isLookingUpPhone = false;
+  bool _hasVerifiedPhone = false;
+  bool _forceManualPhone = false;
+  String? _flowRef;
+  String? _maskedPhone;
+  String? _lookupError;
 
-  // Step 1: International Phone Input
+  bool get _isEmailFlow =>
+      !_forceManualPhone &&
+      widget.initialPhone.trim().isEmpty &&
+      widget.initialEmail.trim().isNotEmpty;
+
+  // Step 1: International Phone Input (used when no email was entered on Login)
   late TextEditingController _phoneController;
   Country _selectedCountry = CountryParser.parseCountryCode('IN');
   final _step1FormKey = GlobalKey<FormState>();
 
-  String get _fullPhoneE164 => '+${_selectedCountry.phoneCode}${_phoneController.text.trim()}';
+  String get _fullPhoneE164 {
+    if (_isEmailFlow) {
+      return '';
+    }
+    return '+${_selectedCountry.phoneCode}${_phoneController.text.trim()}';
+  }
+
+  String get _displayPhone {
+    if (_isEmailFlow) {
+      return _maskedPhone ?? '';
+    }
+    final digits = _phoneController.text.trim();
+    if (digits.isEmpty) return '';
+    return '+${_selectedCountry.phoneCode} $digits';
+  }
 
   // Step 2: 6 individual OTP boxes
   final List<TextEditingController> _otpControllers =
@@ -92,6 +121,69 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
       parent: _successAnimController,
       curve: Curves.elasticOut,
     );
+
+    if (_isEmailFlow) {
+      _autoFetchPhoneForEmail(widget.initialEmail.trim());
+    }
+  }
+
+  Future<void> _autoFetchPhoneForEmail(String email) async {
+    setState(() {
+      _isLookingUpPhone = true;
+      _lookupError = null;
+      _maskedPhone = null;
+      _hasVerifiedPhone = false;
+      _flowRef = null;
+    });
+    try {
+      final storage = Provider.of<StorageService>(context, listen: false);
+      final res = await storage.lookupForgotPasswordPhone(email);
+      if (!mounted) return;
+      final fetchedMaskedPhone = res['maskedPhone']?.toString();
+      final hasVerified = res['hasVerifiedPhone'] == true;
+      final flowRef = res['flowRef']?.toString();
+      if (res['found'] == true &&
+          hasVerified &&
+          fetchedMaskedPhone != null &&
+          fetchedMaskedPhone.trim().isNotEmpty &&
+          flowRef != null &&
+          flowRef.trim().isNotEmpty) {
+        final cleaned = fetchedMaskedPhone.trim();
+        Country matchedCountry = CountryParser.parseCountryCode('IN');
+
+        if (cleaned.startsWith('+')) {
+          final prefixDigits = cleaned.substring(1).split(RegExp(r'\s|\*')).first;
+          final countries = CountryService().getAll()
+            ..sort((a, b) => b.phoneCode.length.compareTo(a.phoneCode.length));
+          for (final c in countries) {
+            if (prefixDigits.startsWith(c.phoneCode)) {
+              matchedCountry = c;
+              break;
+            }
+          }
+        }
+
+        setState(() {
+          _selectedCountry = matchedCountry;
+          _maskedPhone = cleaned;
+          _hasVerifiedPhone = true;
+          _flowRef = flowRef.trim();
+          _lookupError = null;
+        });
+      } else {
+        setState(() {
+          _hasVerifiedPhone = false;
+          _maskedPhone = null;
+          _flowRef = null;
+          _lookupError = res['error']?.toString() ??
+              'No verified mobile number found for this email.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLookingUpPhone = false);
+      }
+    }
   }
 
   @override
@@ -109,15 +201,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  // Masking format matching: +91 ******3210
-  String _maskPhone(String phone) {
-    final trimmed = phone.trim();
-    if (trimmed.length <= 4) return trimmed;
-    final prefix = '+${_selectedCountry.phoneCode}';
-    final last4 = trimmed.substring(trimmed.length - 4);
-    return '$prefix ******$last4';
   }
 
   void _openCountryPicker() {
@@ -226,11 +309,21 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
   // --- Step 1: Request SMS OTP ---
   Future<void> _requestOtp() async {
     final requestId = 'fp_${DateTime.now().millisecondsSinceEpoch}';
-    debugPrint('[FP_TRACE][$requestId] Send Verification Code button tapped (isLoading=$_isLoading)');
+    debugPrint('[FP_TRACE][$requestId] Send Code button tapped (isLoading=$_isLoading, isEmailFlow=$_isEmailFlow)');
     if (_isLoading) return;
-    if (!_step1FormKey.currentState!.validate()) {
-      debugPrint('[FP_TRACE][$requestId] Phone form validation failed');
-      return;
+
+    if (_isEmailFlow) {
+      if (_isLookingUpPhone ||
+          !_hasVerifiedPhone ||
+          _maskedPhone == null ||
+          _flowRef == null) {
+        return;
+      }
+    } else {
+      if (!_step1FormKey.currentState!.validate()) {
+        debugPrint('[FP_TRACE][$requestId] Phone form validation failed');
+        return;
+      }
     }
 
     setState(() {
@@ -240,9 +333,14 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
       final phone = _fullPhoneE164;
-      final suffix = phone.length >= 4 ? phone.substring(phone.length - 4) : 'xxxx';
-      debugPrint('[FP_TRACE][$requestId] Phone validated (ending=***$suffix). Calling storage.requestForgotPasswordOtp');
-      final result = await storage.requestForgotPasswordOtp(phone, requestId: requestId);
+      final label = _displayPhone;
+      final suffix = label.length >= 4 ? label.substring(label.length - 4) : 'xxxx';
+      debugPrint('[FP_TRACE][$requestId] Target validated (ending=***$suffix). Calling storage.requestForgotPasswordOtp');
+      final result = await storage.requestForgotPasswordOtp(
+        phone,
+        flowRef: _isEmailFlow ? _flowRef : null,
+        requestId: requestId,
+      );
       debugPrint('[FP_TRACE][$requestId] Result received: success=${result['success']}');
 
       if (!mounted) return;
@@ -294,7 +392,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final result = await storage.resendForgotPasswordOtp(_fullPhoneE164);
+      final result = await storage.resendForgotPasswordOtp(
+        _fullPhoneE164,
+        flowRef: _isEmailFlow ? _flowRef : null,
+      );
 
       if (!mounted) return;
 
@@ -358,7 +459,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     try {
       final storage = Provider.of<StorageService>(context, listen: false);
-      final result = await storage.verifyForgotPasswordOtp(_fullPhoneE164, otp);
+      final result = await storage.verifyForgotPasswordOtp(
+        _fullPhoneE164,
+        otp,
+        flowRef: _isEmailFlow ? _flowRef : null,
+      );
 
       if (!mounted) return;
 
@@ -408,6 +513,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
       final result = await storage.resetForgotPassword(
         phone: _fullPhoneE164,
+        flowRef: _isEmailFlow ? _flowRef : null,
         resetToken: _resetToken,
         otp: _getEnteredOtp(),
         newPassword: newPass,
@@ -607,7 +713,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
 
     if (_currentStep == 1) {
       headerTitle = 'Forgot Password';
-      headerSubtitle = 'Enter your registered phone number to receive an SMS OTP';
+      headerSubtitle = _isEmailFlow
+          ? 'Verify your registered mobile number to receive an SMS code'
+          : 'Enter your registered mobile number to receive an SMS OTP';
       headerIcon = Icons.lock_reset_rounded;
     } else if (_currentStep == 2) {
       headerTitle = 'Verify Your Phone';
@@ -735,16 +843,251 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
     }
   }
 
-  // --- Step 1 View: International Phone Number Input ---
+  // --- Step 1 View: Email-Based Auto Lookup (State A) or Manual Mobile Input (State B) ---
   Widget _buildStep1Phone() {
-    return Form(
-      key: _step1FormKey,
-      child: Column(
-        key: const ValueKey('step1'),
+    if (_isEmailFlow) {
+      final canSendCode = !_isLoading &&
+          !_isLookingUpPhone &&
+          _hasVerifiedPhone &&
+          _maskedPhone != null &&
+          _flowRef != null;
+
+      return Column(
+        key: const ValueKey('step1_email_flow'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Registered Phone Number',
+            'Email',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.email_outlined, size: 18, color: Colors.white60),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.initialEmail.trim(),
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Registered mobile number:',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (_isLookingUpPhone)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.primaryGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Fetching your registered mobile number...',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_lookupError != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 18,
+                        color: Color(0xFFFCA5A5),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _lookupError!,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: const Color(0xFFFEE2E2),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _forceManualPhone = true;
+                            _lookupError = null;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Use Mobile Instead'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _autoFetchPhoneForEmail(widget.initialEmail.trim()),
+                        icon: const Icon(Icons.refresh_rounded, size: 15),
+                        label: const Text('Retry Lookup'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryGreen,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    _selectedCountry.flagEmoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _displayPhone,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.verified_user_outlined,
+                    size: 18,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: canSendCode ? _requestOtp : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.35),
+                disabledForegroundColor: Colors.white54,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Send Code',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Form(
+      key: _step1FormKey,
+      child: Column(
+        key: const ValueKey('step1_mobile_input'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mobile Number',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -803,7 +1146,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
                   ],
                   style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Enter 10-digit phone number',
+                    hintText: 'Enter your registered mobile number',
                     hintStyle: GoogleFonts.plusJakartaSans(
                       color: Colors.white.withValues(alpha: 0.35),
                       fontSize: 13,
@@ -828,7 +1171,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
                   validator: (value) {
                     final digits = (value ?? '').trim();
                     if (digits.isEmpty) {
-                      return 'Please enter your registered phone number.';
+                      return 'Please enter your registered mobile number.';
                     }
                     if (digits.length != 10) {
                       return 'Phone number must be exactly 10 digits.';
@@ -862,7 +1205,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
                       ),
                     )
                   : Text(
-                      'Send Verification Code',
+                      'Send Code',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
                         fontSize: 14.5,
@@ -886,7 +1229,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
       key: const ValueKey('step2'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Masked phone pill with option to edit
+        // Complete unmasked phone pill with option to go back
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -900,7 +1243,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Sent via SMS to: ${_maskPhone(_phoneController.text)}',
+                  'Sent via SMS to: $_displayPhone',
                   style: GoogleFonts.plusJakartaSans(
                     color: Colors.white,
                     fontSize: 12.5,
@@ -920,7 +1263,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet>
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Text(
-                    'Change',
+                    _isEmailFlow ? 'Back' : 'Change',
                     style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryGreen,
                       fontSize: 12,
